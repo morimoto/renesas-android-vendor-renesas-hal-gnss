@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssSalvatorHAL_GnssBatchingInterface"
+#define LOG_TAG "GnssKingfisherHAL_GnssBatchingInterface"
 
 #include "GnssBatching.h"
 #include <Gnss.h> // for wakelock consolidation
@@ -26,7 +26,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 sp<IGnssBatchingCallback> GnssBatching::sGnssBatchingCbIface = nullptr;
 bool GnssBatching::sFlpSupportsBatching = false;
@@ -171,7 +171,7 @@ Return<void> GnssBatching::cleanup() {
     return Void();
 }
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

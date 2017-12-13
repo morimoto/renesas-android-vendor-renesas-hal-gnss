@@ -24,7 +24,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 using ::android::hardware::gnss::V1_0::IGnssNavigationMessage;
 using ::android::hardware::gnss::V1_0::IGnssNavigationMessageCallback;
@@ -51,7 +51,7 @@ struct GnssNavigationMessage : public IGnssNavigationMessage {
     Return<void> close() override;
 };
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

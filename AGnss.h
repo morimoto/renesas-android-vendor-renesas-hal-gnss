@@ -27,7 +27,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 using ::android::hardware::gnss::V1_0::IAGnss;
 using ::android::hardware::gnss::V1_0::IAGnssCallback;
@@ -76,7 +76,7 @@ struct AGnss : public IAGnss {
     static bool sInterfaceExists;
 };
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

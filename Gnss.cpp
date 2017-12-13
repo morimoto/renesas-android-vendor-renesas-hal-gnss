@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssSalvatorHAL"
+#define LOG_TAG "GnssKingfisherHAL"
 //#define LOG_NDEBUG 0
 
 #include <cutils/log.h>
@@ -26,7 +26,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 sp<IGnssCallback> Gnss::sGnssCbIface = nullptr;
 bool Gnss::sWakelockHeldGnss = false;
@@ -36,7 +36,7 @@ Gnss::Gnss(void) :
     mDeathRecipient(new GnssHidlDeathRecipient(this))
 {
     char mode[PROPERTY_VALUE_MAX];
-    if (property_get("ro.boot.gps.mode", mode, "tty") > 0) {
+    if (property_get("persist.gps.mode", mode, "tty") > 0) {
         if (strcmp(mode, "fake") == 0) {
             ALOGI("Using FAKE backend");
             mGnssHwIface = new GnssHwFAKE();
@@ -389,7 +389,7 @@ Return<bool> Gnss::setPositionMode(IGnss::GnssPositionMode mode,
     return true;
 }
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

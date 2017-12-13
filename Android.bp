@@ -3,8 +3,8 @@ cc_binary {
     relative_install_path: "hw",
     proprietary: true,
 
-    name: "android.hardware.gnss@1.0-service.salvator",
-    init_rc: ["android.hardware.gnss@1.0-service.salvator.rc"],
+    name: "android.hardware.gnss@1.0-service.kingfisher",
+    init_rc: ["android.hardware.gnss@1.0-service.kingfisher.rc"],
 
     cflags: ["-Werror"],
 

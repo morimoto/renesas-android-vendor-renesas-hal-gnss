@@ -24,7 +24,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 using ::android::hardware::gnss::V1_0::IGnssDebug;
 using ::android::hardware::Return;
@@ -44,7 +44,7 @@ struct GnssDebug : public IGnssDebug {
     Return<void> getDebugData(getDebugData_cb _hidl_cb)  override;
 };
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

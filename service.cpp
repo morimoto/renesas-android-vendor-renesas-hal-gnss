@@ -13,7 +13,7 @@ using namespace android::hardware::gnss::V1_0;
 
 int main(void) {
     android::ProcessState::initWithDriver("/dev/vndbinder");
-    android::sp<IGnss> gnss_hal = new salvator::Gnss();
+    android::sp<IGnss> gnss_hal = new kingfisher::Gnss();
 
     configureRpcThreadpool(1, true);
 

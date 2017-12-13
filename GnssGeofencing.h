@@ -25,7 +25,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 using ::android::hardware::gnss::V1_0::IGnssGeofenceCallback;
 using ::android::hardware::gnss::V1_0::IGnssGeofencing;
@@ -63,7 +63,7 @@ struct GnssGeofencing : public IGnssGeofencing {
     Return<void> removeGeofence(int32_t geofenceId)  override;
 };
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

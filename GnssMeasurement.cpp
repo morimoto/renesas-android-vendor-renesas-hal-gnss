@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssSalvatorHAL_GnssMeasurementInterface"
+#define LOG_TAG "GnssKingfisherHAL_GnssMeasurementInterface"
 
 #include "GnssMeasurement.h"
 
@@ -22,7 +22,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 GnssMeasurement::GnssMeasurement() {}
 
@@ -38,7 +38,7 @@ Return<void> GnssMeasurement::close()  {
     return Void();
 }
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

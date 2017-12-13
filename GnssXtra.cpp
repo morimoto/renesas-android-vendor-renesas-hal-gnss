@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssSalvatorHAL_GnssXtraInterface"
+#define LOG_TAG "GnssKingfisherHAL_GnssXtraInterface"
 
 #include "GnssXtra.h"
 
@@ -22,7 +22,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 GnssXtra::~GnssXtra() {}
 
@@ -39,7 +39,7 @@ Return<bool> GnssXtra::injectXtraData(const hidl_string&)  {
     return false;
 }
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

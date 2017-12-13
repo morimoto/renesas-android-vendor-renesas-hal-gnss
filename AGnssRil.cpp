@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssSalvatorHAL_AGnssRilInterface"
+#define LOG_TAG "GnssKingfisherHAL_AGnssRilInterface"
 
 #include "AGnssRil.h"
 
@@ -22,7 +22,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 AGnssRil::AGnssRil() {}
 
@@ -56,7 +56,7 @@ Return<bool> AGnssRil::updateNetworkAvailability(bool, const hidl_string&)  {
     return false;
 }
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

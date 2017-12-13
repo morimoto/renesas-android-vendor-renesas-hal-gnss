@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssSalvatorHAL_GnssConfigurationInterface"
+#define LOG_TAG "GnssKingfisherHAL_GnssConfigurationInterface"
 
 #include <log/log.h>
 
@@ -24,7 +24,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 GnssConfiguration::GnssConfiguration() {}
 
@@ -64,7 +64,7 @@ Return<bool> GnssConfiguration::setEmergencySuplPdn(bool) {
     return false;
 }
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

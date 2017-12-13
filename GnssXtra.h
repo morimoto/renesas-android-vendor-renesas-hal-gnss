@@ -25,7 +25,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 using ::android::hardware::gnss::V1_0::IGnssXtra;
 using ::android::hardware::gnss::V1_0::IGnssXtraCallback;
@@ -52,7 +52,7 @@ struct GnssXtra : public IGnssXtra {
     Return<bool> injectXtraData(const hidl_string& xtraData) override;
 };
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

@@ -10,7 +10,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace salvator {
+namespace kingfisher {
 
 using ::android::hardware::gnss::V1_0::IGnssBatching;
 using ::android::hardware::gnss::V1_0::IGnssBatchingCallback;
@@ -58,7 +58,7 @@ struct GnssBatching : public IGnssBatching {
 
 extern "C" IGnssBatching* HIDL_FETCH_IGnssBatching(const char* name);
 
-}  // namespace salvator
+}  // namespace kingfisher
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware
