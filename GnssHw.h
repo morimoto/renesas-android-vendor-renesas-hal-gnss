@@ -21,6 +21,11 @@
 #include <thread>
 #include <vector>
 #include <string>
+#include <cstdint>
+#include <chrono>
+#include "circular_buffer.h"
+
+using namespace std::chrono_literals;
 
 using android::sp;
 using namespace android::hardware::gnss::V1_0;
@@ -42,6 +47,7 @@ public:
     virtual bool start(void) = 0;
     virtual bool stop(void) = 0;
     virtual void GnssHwHandleThread(void) = 0;
+    virtual bool setUpdatePeriod(int) = 0;
 
     void setCallback(const sp<::IGnssCallback>& callback) {
         mGnssCb = callback;
@@ -53,25 +59,150 @@ public:
     GnssLocation                    mGnssLocation;
     IGnssCallback::GnssSvStatus     mSvStatus;
 
+protected:
+    int requestedUpdateIntervalUs;
+
 private:
     std::thread         mThread;
 };
 
 class GnssHwTTY : public GnssHwIface
 {
-    int     mFd;
-    char    mNmeaReaderBuf[512];
-    size_t  mNmeaReaderBufPos = 0;
-    bool    mNmeaReaderInCapture = false;
+    enum class ReaderState {
+        WAITING,
+        CAPTURING_NMEA,
+        WAITING_UBX_SYNC2,
+        CAPTURING_UBX
+    };
 
-    int NMEA_Checksum(const char *s);
+    static const size_t mBufferSize = 512;
+    int          mFd;
+    char         mReaderBuf[mBufferSize];
+    size_t       mReaderBufPos = 0;
+    ReaderState  mReaderState  = ReaderState::WAITING;
+
+    struct NmeaBufferElement {
+        char data[mBufferSize];
+    };
+
+    struct UbxBufferElement {
+        char   data[mBufferSize];
+        size_t len;
+    };
+
+    CircularBuffer<NmeaBufferElement> *mNmeaBuffer;
+    CircularBuffer<UbxBufferElement>  *mUbxBuffer;
+
+    std::thread mNmeaThread;
+    std::thread mUbxThread;
+
+    enum class SatelliteType {
+        GPS_SBAS_GZSS = 0,
+        GLONASS       = 1,
+        GALILEO       = 2,
+        BEIDOU        = 3,
+        ANY           = 4,
+        COUNT         = 5,
+        UNKNOWN       = 6
+    };
+    std::vector<IGnssCallback::GnssSvInfo> mSatellites[static_cast<int>(SatelliteType::COUNT)];
+
+    std::vector<int> mSatellitesUsedInFix[static_cast<int>(SatelliteType::COUNT)];
+
+    enum class MajorGnssStatus {
+        GPS_GLONASS,
+        GPS_BEIDOU,
+        GPS_ONLY
+    };
+
+    MajorGnssStatus mMajorGnssStatus;
+
+    void ReaderPushChar(unsigned char ch);
+
+    void NMEA_Thread(void);
+    int  NMEA_Checksum(const char *s);
     void NMEA_ReaderSplitMessage(std::string msg, std::vector<std::string> &out);
-    void NMEA_ReaderPushChar(char ch);
 
     void NMEA_ReaderParse(char *msg);
     void NMEA_ReaderParse_GxRMC(char *msg);
     void NMEA_ReaderParse_GxGGA(char *msg);
-    void NMEA_ReaderParse_GPGSV(char *msg);
+    void NMEA_ReaderParse_xxGSV(char *msg);
+    void NMEA_ReaderParse_GNGSA(char *msg);
+    void NMEA_ReaderParse_PUBX00(char *msg);
+
+    enum class UbxState {
+        SYNC1,
+        SYNC2,
+        CLASS,
+        ID,
+        LENGTH1,
+        LENGTH2,
+        PAYLOAD,
+        CHECKSUM1,
+        CHECKSUM2,
+        FINISH
+    };
+
+    const uint8_t mAckClass = 0x05;
+    const uint8_t mAckAckId = 0x01;
+    const uint8_t mAckNakId = 0x00;
+
+    const uint8_t mUbxSync1               = 0xB5;
+    const uint8_t mUbxSync2               = 0x62;
+    const size_t  mUbxLengthFirstByteNo   = 4;
+    const size_t  mUbxLengthSecondByteNo  = 5;
+    const size_t  mUbxPacketSizeNoPayload = 8;
+    const size_t  mUbxFirstPayloadOffset  = 6;
+
+    const uint64_t mUbxTimeoutMs = 2000;
+
+    std::atomic<int> mUbxAckReceived;
+
+    enum class UbxRxState {
+        NORMAL,
+        WAITING_ANSWER,
+        WAITING_ACK
+    };
+
+    struct UbxMachine {
+        UbxState    state;
+        uint8_t     rx_class;
+        uint8_t     rx_id;
+        uint16_t    rx_payload_len;
+        uint16_t    rx_payload_ptr;
+        uint8_t     rx_checksum_a; // checksum that we get in the message itself
+        uint8_t     rx_checksum_b; // checksum that we get in the message itself
+        uint8_t     rx_exp_checksum_a; // checksum that we calculate ourselfs (expected checksum) to test the received data checksum (first part)
+        uint8_t     rx_exp_checksum_b; // checksum that we calculate ourselfs (expected checksum) to test the received data checksum (second part)
+
+        uint8_t     tx_class;
+        uint8_t     tx_id;
+
+        size_t      buffer_ptr;
+
+        bool        rx_timedout;
+    } mUM;
+
+    struct UbxStateQueueElement {
+        UbxRxState state;
+        uint8_t xclass;
+        uint8_t id;
+        const char *errormsg;
+    };
+
+    CircularBuffer<UbxStateQueueElement> *mUbxStateBuffer;
+
+    void UBX_Thread(void);
+    void UBX_Reset();
+    void UBX_ChecksumReset();
+    void UBX_ChecksumAdd(uint8_t ch);
+    void UBX_ReaderParse(UbxBufferElement *ubx);
+    void UBX_Send(uint8_t *msg, size_t len);
+    void UBX_Expect(UbxRxState, const char*); // Expect state (non blocking)
+    bool UBX_Wait(UbxRxState, const char*, uint64_t timeoutMs);   // Wait state (blocking)
+    void UBX_CriticalProtocolError(const char *errormsg);
+
+    void UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char *msg);
 
 public:
     GnssHwTTY(void);
@@ -79,6 +210,7 @@ public:
 
     bool start(void);
     bool stop(void);
+    bool setUpdatePeriod(int);
 
     void GnssHwHandleThread(void);
 };
@@ -100,6 +232,7 @@ public:
 
     bool start(void);
     bool stop(void);
+    bool setUpdatePeriod(int);
 
     void GnssHwHandleThread(void);
 };

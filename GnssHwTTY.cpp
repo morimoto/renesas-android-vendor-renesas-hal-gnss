@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssSalvatorHAL"
+#define LOG_TAG "GnssKingfisherHAL"
+//#define LOG_NDEBUG 0
 
 #include <termios.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <memory.h>
+#include <stdlib.h>
 #include <sys/param.h> /* for MIN(x,y) */
+#include <utils/SystemClock.h>
 
+#include <android-base/logging.h>
 #include <cutils/log.h>
 #include <cutils/properties.h>
 
@@ -29,39 +34,48 @@
 
 #include "GnssHw.h"
 
-enum SvidValues : uint16_t {
-    GLONASS_SVID_OFFSET = 64,
-    GLONASS_SVID_COUNT = 24,
-    BEIDOU_SVID_OFFSET = 200,
-    BEIDOU_SVID_COUNT = 35,
-    SBAS_SVID_MIN = 33,
-    SBAS_SVID_MAX = 64,
-    SBAS_SVID_ADD = 87,
-    QZSS_SVID_MIN = 193,
-    QZSS_SVID_MAX = 200
-};
-
 GnssHwTTY::GnssHwTTY(void) :
-    mFd(-1)
+    mFd(-1),
+    mUbxAckReceived(0)
 {
     memset(&mGnssLocation, 0, sizeof(GnssLocation));
     memset(&mSvStatus, 0, sizeof(IGnssCallback::GnssSvStatus));
+    mNmeaBuffer     = new(std::nothrow) CircularBuffer<NmeaBufferElement   >(32, sizeof(NmeaBufferElement));
+    mUbxBuffer      = new(std::nothrow) CircularBuffer<UbxBufferElement    >(32, sizeof(UbxBufferElement));
+    mUbxStateBuffer = new(std::nothrow) CircularBuffer<UbxStateQueueElement>(64, sizeof(UbxStateQueueElement));
+    if (mNmeaBuffer == NULL || mUbxBuffer == NULL || mUbxStateBuffer == NULL) {
+        ALOGE("Failed to allocate buffers");
+        CHECK_EQ(0, 1) << "Failed to allocate buffers";
+    }
+
+    mNmeaThread = std::thread(&GnssHwTTY::NMEA_Thread, this);
+    mUbxThread  = std::thread(&GnssHwTTY::UBX_Thread, this);
 }
 
 GnssHwTTY::~GnssHwTTY(void)
 {
+    delete mNmeaBuffer;
+    delete mUbxBuffer;
+    delete mUbxStateBuffer;
 }
 
 bool GnssHwTTY::start(void)
 {
-    char prop_tty_dev[PROPERTY_VALUE_MAX], prop_tty_baudrate[PROPERTY_VALUE_MAX];
+    char prop_tty_dev[PROPERTY_VALUE_MAX], prop_secmajor[PROPERTY_VALUE_MAX], prop_sbas[PROPERTY_VALUE_MAX];
 
     ALOGD("Start HW");
 
-    property_get("ro.boot.gps.tty_dev", prop_tty_dev, "/dev/ttyUSB0");
-    property_get("ro.boot.gps.tty_baudrate", prop_tty_baudrate, "9600");
+    property_get("ro.boot.gps.tty_dev", prop_tty_dev, "/dev/ttySC3");
+    property_get("ro.boot.gps.secmajor", prop_secmajor, "glonass");
+    property_get("ro.boot.gps.sbas", prop_sbas, "enable");
 
-    uint32_t baudrate = atoi(prop_tty_baudrate);
+    for (size_t i = 0; i < strnlen(prop_secmajor, PROPERTY_VALUE_MAX); i++) {
+        prop_secmajor[i] = toupper(prop_secmajor[i]);
+    }
+
+    for (size_t i = 0; i < strnlen(prop_sbas, PROPERTY_VALUE_MAX); i++) {
+        prop_sbas[i] = toupper(prop_sbas[i]);
+    }
 
      /* Open the serial tty device */
     do {
@@ -73,32 +87,113 @@ bool GnssHwTTY::start(void)
         return false;
     }
 
-    ALOGI("TTY %s@%d fd=%d", prop_tty_dev, baudrate, mFd);
+    ALOGI("TTY %s@9600 fd=%d", prop_tty_dev, mFd);
 
     /* Setup serial port */
     struct termios  ios;
     ::tcgetattr(mFd, &ios);
 
-    ios.c_cflag = CS8 | CLOCAL | CREAD;
-    ios.c_iflag = IGNPAR;
-    ios.c_oflag = 0;
-    ios.c_lflag = 0;  /* disable ECHO, ICANON, etc... */
-
-    /* Set baudrate */
-    switch(baudrate) {
-        case 2400: ios.c_cflag |= B2400; break;
-        case 4800: ios.c_cflag |= B4800; break;
-        case 9600: ios.c_cflag |= B9600; break;
-        case 19200: ios.c_cflag |= B19200; break;
-        case 38400: ios.c_cflag |= B38400; break;
-        default: {
-            ios.c_cflag |= B9600;
-            ALOGW("Unsupported baud rate %d.. setting default 9600", baudrate);
-        }
-    }
+    ios.c_cflag  = CS8 | CLOCAL | CREAD;
+    ios.c_iflag  = IGNPAR;
+    ios.c_oflag  = 0;
+    ios.c_lflag  = 0;  /* disable ECHO, ICANON, etc... */
+    ios.c_cflag |= B9600;
 
     ::tcsetattr(mFd, TCSANOW, &ios);
     ::tcflush(mFd, TCIOFLUSH);
+
+    // Reset parser
+    UBX_Reset();
+
+    // Clear current config
+    uint8_t ublox_cfg_clear[] = {0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+                                 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+                                 0x17} ;
+    UBX_Send(ublox_cfg_clear, sizeof(ublox_cfg_clear));
+    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to clear UBX config", mUbxTimeoutMs);
+
+    // Enabling NMEA 4.1 Extended satellite numbering
+    uint8_t ublox_enable_nmea41[] = {0x06, 0x17, 0x0F, 0x00, 0x00, 0x41,
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                     0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
+    UBX_Send(ublox_enable_nmea41, sizeof(ublox_enable_nmea41));
+    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NMEA version to 4.1", mUbxTimeoutMs);
+
+    // Set Nagivation Engine to automotive mode
+    uint8_t ublox_nav5[] = {0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x04, 0x03,
+                            0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
+                            0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00,
+                            0x5E, 0x01, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    UBX_Send(ublox_nav5, sizeof(ublox_nav5));
+    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NAV5 to automotive", mUbxTimeoutMs);
+
+    UBX_SetMessageRate(0xF1, 0x00, 1, "Failed to enable PUBX,00 message"); // enable PUBX,00
+    UBX_SetMessageRate(0xF0, 0x01, 0, NULL); // disable GLL
+    UBX_SetMessageRate(0xF0, 0x05, 0, NULL); // disable VTG
+
+//    CFG-GNSS example
+//    ID    - GNSS ID
+//    MN    - minimum (reserved) tracking channels for this GNSS
+//    MX    - maximum tracking channels
+//    XX    - reserved (always zero)
+//    F1-F4 - bitfield flags
+
+//              ID MN MX XX F1 F2 F3 F4
+//             ________________________
+//    GPS     | 00 08 10 00 01 00 01 01
+//    SBAS    | 01 01 03 00 01 00 01 01
+//    GALILEO | 02 04 08 00 00 00 01 01
+//    BEIDOU  | 03 08 10 00 00 00 01 01
+//    IMES    | 04 00 08 00 00 00 01 03
+//    QZSS    | 05 00 03 00 01 00 01 05
+//    GLONASS | 06 08 0E 00 01 00 01 01
+
+    const int CFG_GNSS_ENTRY_SIZE = 8;
+
+    const int CFG_GNSS_SBAS    = 2;
+    const int CFG_GNSS_BEIDOU  = 4;
+    const int CFG_GNSS_GLONASS = 7;
+
+    const int CFG_GNSS_MIN = 1;
+    const int CFG_GNSS_ENB = 4;
+
+    uint8_t ublox_cfg_gnss[] =
+    {0x06, 0x3E, 0x3C, 0x00, 0x00, 0x20, 0x20, 0x07,
+     0x00, 0x08, 0x10, 0x00, 0x01, 0x00, 0x01, 0x01,  // GPS
+     0x01, 0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x01,  // SBAS
+     0x02, 0x04, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01,  // GALILEO
+     0x03, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x01,  // BEIDOU
+     0x04, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x03,  // IMES
+     0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x05,  // QZSS
+     0x06, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x01, 0x01}; // GLONASS
+
+    bool sbas_enabled = true;
+    if (strncmp(prop_sbas, "DISABLE", PROPERTY_VALUE_MAX) == 0) {
+        sbas_enabled = false;
+        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_SBAS + CFG_GNSS_MIN] = 0x00; // set minimum tracking channels for SBAS to zero
+        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_SBAS + CFG_GNSS_ENB] = 0x00; // disable SBAS
+    }
+
+    ALOGI("Using GPS (major GNSS) and minor ones: GALILEO, QZSS%s", (sbas_enabled) ? ", SBAS" : "");
+    if (strncmp(prop_secmajor, "GLONASS", PROPERTY_VALUE_MAX) == 0) {
+        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_GLONASS + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for GLONASS to eight
+        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_GLONASS + CFG_GNSS_ENB] = 0x01; // enable GLONASS
+        ALOGI("Using GLONASS as second major GNSS");
+        mMajorGnssStatus = MajorGnssStatus::GPS_GLONASS;
+    } else if (strncmp(prop_secmajor, "BEIDOU", PROPERTY_VALUE_MAX) == 0) {
+        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_BEIDOU + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for BEIDOU to eight
+        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_BEIDOU + CFG_GNSS_ENB] = 0x01; // enable BEIDOU
+        ALOGI("Using BEIDOU as second major GNSS");
+        mMajorGnssStatus = MajorGnssStatus::GPS_BEIDOU;
+    } else {
+        // No need to change anything, by default the CFG GNSS message contains disabled GLONASS/BEIDOU part
+        ALOGI("No second major GNSS is being used");
+        mMajorGnssStatus = MajorGnssStatus::GPS_ONLY;
+    }
+
+    UBX_Send(ublox_cfg_gnss, sizeof(ublox_cfg_gnss));
+    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
 
     return true;
 }
@@ -134,7 +229,7 @@ void GnssHwTTY::GnssHwHandleThread(void)
         }
 
         if(ret > 0) {
-            NMEA_ReaderPushChar(ch);
+            ReaderPushChar(ch);
         } else {
             ALOGE("TTY read error: %s", strerror(errno));
             break;
@@ -142,6 +237,97 @@ void GnssHwTTY::GnssHwHandleThread(void)
     }
 
     ALOGD("GnssHwHandleThread() <-");
+}
+
+void GnssHwTTY::ReaderPushChar(unsigned char ch)
+{
+    if (mReaderBufPos >= sizeof(mReaderBuf)) {
+        mReaderBufPos = 0;
+        mReaderState = ReaderState::WAITING;
+    }
+
+    static uint16_t ubx_payload_len;
+
+    if (ch == '$' && mReaderState == ReaderState::WAITING) {
+        mReaderState = ReaderState::CAPTURING_NMEA;
+    }
+    else if (ch == mUbxSync1 && mReaderState == ReaderState::WAITING) {
+        mReaderState = ReaderState::WAITING_UBX_SYNC2;
+        ALOGV("UBX waiting sync2");
+    }
+    else if (mReaderState == ReaderState::CAPTURING_NMEA) {
+        if (ch == '$') {
+            /* Missed end of message CR LF ? Reset the reader */
+            mReaderBufPos = 0;
+        } else if (ch == '\r' || ch == '\n') {
+            /* End of message */
+            mReaderBuf[mReaderBufPos] = 0;
+
+            /* Parse NMEA */
+            mNmeaBuffer->put(mReaderBuf);
+
+            /* Reset the reader  */
+            mReaderBufPos = 0;
+            mReaderState = ReaderState::WAITING;
+            return;
+        }
+    }
+    else if (mReaderState == ReaderState::WAITING_UBX_SYNC2) {
+        if (ch == mUbxSync2) {
+            ALOGV("UBX capturing");
+            mReaderState = ReaderState::CAPTURING_UBX;
+        }
+    }
+    else if (mReaderState == ReaderState::CAPTURING_UBX) {
+        if (mReaderBufPos == mUbxLengthFirstByteNo) {
+            ALOGV("UBX rx payload len byte1: %02X", ch);
+            ubx_payload_len += ch;
+        }
+        else if (mReaderBufPos == mUbxLengthSecondByteNo) {
+            ubx_payload_len += ch << 8;
+            ALOGV("UBX rx payload len byte2: %02X", ch);
+            ALOGV("UBX rx payload len: %d", ubx_payload_len);
+        }
+    }
+
+    if (mReaderState != ReaderState::WAITING) {
+        mReaderBuf[mReaderBufPos++] = ch;
+
+        if (mReaderState == ReaderState::CAPTURING_UBX &&
+            mReaderBufPos >= (ubx_payload_len + mUbxPacketSizeNoPayload)) {
+
+            /* Parse UBX */
+            ALOGV("UBX rx putting buffer len: %ld", mReaderBufPos);
+
+            UbxBufferElement elem;
+            elem.len = mReaderBufPos;
+            memcpy(&elem.data, mReaderBuf, elem.len);
+            mUbxBuffer->put(&elem);
+
+            /* Reset the reader  */
+            mReaderBufPos = 0;
+            mReaderState = ReaderState::WAITING;
+            ubx_payload_len = 0;
+        }
+    }
+}
+
+void GnssHwTTY::NMEA_Thread(void)
+{
+    while (!mThreadExit) {
+        if (!mNmeaBuffer->empty()) {
+            NMEA_ReaderParse((char*)&mNmeaBuffer->get()->data);
+        }
+    }
+}
+
+void GnssHwTTY::UBX_Thread(void)
+{
+    while (!mThreadExit) {
+        if (!mUbxBuffer->empty()) {
+            UBX_ReaderParse(mUbxBuffer->get());
+        }
+    }
 }
 
 int GnssHwTTY::NMEA_Checksum(const char *s)
@@ -173,36 +359,6 @@ void GnssHwTTY::NMEA_ReaderSplitMessage(std::string msg, std::vector<std::string
     }
 }
 
-void GnssHwTTY::NMEA_ReaderPushChar(char ch)
-{
-    if (mNmeaReaderBufPos >= sizeof(mNmeaReaderBuf)) {
-        mNmeaReaderBufPos = 0;
-        mNmeaReaderInCapture = false;
-    }
-
-    if (ch == '$' && !mNmeaReaderInCapture) {
-        mNmeaReaderInCapture = true;
-    } else if (ch == '$' && mNmeaReaderInCapture) {
-        /* Missed end of message CR LF ? Reset the reader */
-        mNmeaReaderBufPos = 0;
-    } else if ((ch == '\r' || ch == '\n') && mNmeaReaderInCapture) {
-        /* End of message */
-        mNmeaReaderBuf[mNmeaReaderBufPos] = 0;
-
-        /* Parse NMEA */
-        NMEA_ReaderParse(mNmeaReaderBuf);
-
-        /* Reset the reader  */
-        mNmeaReaderBufPos = 0;
-        mNmeaReaderInCapture = false;
-        return;
-    }
-
-    if (mNmeaReaderInCapture) {
-        mNmeaReaderBuf[mNmeaReaderBufPos++] = ch;
-    }
-}
-
 void GnssHwTTY::NMEA_ReaderParse(char *msg)
 {
     int crc = 0;
@@ -220,16 +376,25 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
         return;
     }
 
-    /* Push RAW NMEA message to system */
-    android::hardware::hidl_string nmeaString;
-    nmeaString.setToExternal(msg, strlen(msg));
-
-    auto ret = mGnssCb->gnssNmeaCb(time(NULL), nmeaString);
-    if (!ret.isOk()) {
-        ALOGE("%s: Unable to invoke gnssNmeaCb", __func__);
+    bool isNMEA = true;
+    if (strncmp(msg, "$PUBX", 5) == 0) {
+        isNMEA = false;
     }
 
-    /* */
+    if (isNMEA) {
+        /* Push RAW NMEA message to system */
+        android::hardware::hidl_string nmeaString;
+        nmeaString.setToExternal(msg, strlen(msg));
+
+        auto ret = mGnssCb->gnssNmeaCb(time(NULL), nmeaString);
+        if (!ret.isOk()) {
+            ALOGE("%s: Unable to invoke gnssNmeaCb", __func__);
+        }
+    }
+
+    ALOGV("GPSRAW: %s", msg);
+
+    /* Parse message */
     if (strncmp(msg, "$GPRMC", 6) == 0)  {
         NMEA_ReaderParse_GxRMC(msg);
     } if (strncmp(msg, "$GNRMC", 6) == 0)  {
@@ -238,8 +403,18 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
         NMEA_ReaderParse_GxGGA(msg);
     } else if (strncmp(msg, "$GNGGA", 6) == 0) {
         NMEA_ReaderParse_GxGGA(msg);
-    } else if (strncmp(msg, "$GPGSV", 6) == 0) {
-        NMEA_ReaderParse_GPGSV(msg);
+    } else if (strncmp(msg, "$GNGSA", 6) == 0) {
+        NMEA_ReaderParse_GNGSA(msg);
+    } else if (strncmp(msg+3, "GSV", 3) == 0) {
+        NMEA_ReaderParse_xxGSV(msg);
+    } else if (isNMEA == false) {
+        if (strncmp(msg+6, "00", 2) == 0) {
+            NMEA_ReaderParse_PUBX00(msg);
+        } else {
+            ALOGV("Unhandled PUBX message");
+        }
+    } else {
+        ALOGV("GPSRAW: Unhandled message: %s", msg);
     }
 }
 
@@ -252,8 +427,9 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
     std::vector<std::string> rmc;
     NMEA_ReaderSplitMessage(std::string(msg), rmc);
 
-    /* Message parts count must be 13 */
-    if (rmc.size() != 13 || (rmc[0] != "$GPRMC" && rmc[0] != "$GNRMC")) {
+    /* Message parts count must be 14 */
+    if (rmc.size() != 14 || (rmc[0] != "$GPRMC" && rmc[0] != "$GNRMC")) {
+        ALOGV("Dropping RMC due to invalid size");
         return;
     }
 
@@ -285,7 +461,7 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
         t.tm_year += 100;
     }
 
-    mGnssLocation.timestamp = mktime(&t) * 1000;
+    mGnssLocation.timestamp = mktime(&t) * 1000; // timestamp of the event in milliseconds, mktime(&t) returns seconds, therefore we need to convert
 
     /* Parse longtitude and latitude */
     mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_LAT_LONG);
@@ -322,14 +498,6 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
         mGnssLocation.gnssLocationFlags &= ~static_cast<uint16_t>(GnssLocationFlags::HAS_BEARING);
     }
 
-    // Magnetic Variation
-    mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_HORIZONTAL_ACCURACY);
-    mGnssLocation.horizontalAccuracyMeters = 1.f;
-
-    if (rmc[10].length() > 0) {
-        mGnssLocation.horizontalAccuracyMeters = atof(rmc[10].c_str());
-    }
-
     auto ret = mGnssCb->gnssLocationCb(mGnssLocation);
     if (!ret.isOk()) {
         ALOGE("%s: Unable to invoke gnssLocationCb", __func__);
@@ -341,9 +509,10 @@ void GnssHwTTY::NMEA_ReaderParse_GxGGA(char *msg)
     std::vector<std::string> gga;
     NMEA_ReaderSplitMessage(std::string(msg), gga);
 
-    /* Message parts count must be 15 */
-    if (gga.size() != 15 ||
+    /* Message parts count must be 14 */
+    if (gga.size() != 14 ||
             (gga[0] != "$GPGGA" && gga[0] != "$GNGGA")) {
+        ALOGV("Dropping GGA due to invalid size");
         return;
     }
 
@@ -357,83 +526,547 @@ void GnssHwTTY::NMEA_ReaderParse_GxGGA(char *msg)
     }
 }
 
-void GnssHwTTY::NMEA_ReaderParse_GPGSV(char *msg)
+void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 {
     std::vector<std::string> gsv;
     NMEA_ReaderSplitMessage(std::string(msg), gsv);
 
     /* Message must have least 4 parts */
-    if (gsv.size() < 4 || gsv[0] != "$GPGSV") {
+    if (gsv.size() < 4 || strncmp(msg+3, "GSV", 3) != 0) {
+        ALOGV("Dropping GSV due to invalid size");
         return;
     }
+
+    /*
+     * snippet from
+     *   u-blox 8 / u-blox M8
+     *   Receiver Description
+     *
+     * GPS, SBAS, QZSS         | GP
+     * GLONASS                 | GL
+     * Galileo                 | GA
+     * BeiDou                  | GB
+     * Any combination of GNSS | GN
+     */
+
+    SatelliteType currentSatelliteType = SatelliteType::UNKNOWN;
+    if (strncmp(msg, "$GP", 3) == 0) {
+        currentSatelliteType = SatelliteType::GPS_SBAS_GZSS;
+    }
+    else if (strncmp(msg, "$GL", 3) == 0) {
+        currentSatelliteType = SatelliteType::GLONASS;
+    }
+    else if (strncmp(msg, "$GA", 3) == 0) {
+        currentSatelliteType = SatelliteType::GALILEO;
+    }
+    else if (strncmp(msg, "$GB", 3) == 0) {
+        currentSatelliteType = SatelliteType::BEIDOU;
+    }
+    else if (strncmp(msg, "$GN", 3) == 0) {
+        currentSatelliteType = SatelliteType::ANY;
+    }
+    else {
+        ALOGW("Invalid satellite type received in GSV parser");
+        return;
+    }
+
+    std::vector<IGnssCallback::GnssSvInfo>* satelliteList = &mSatellites[static_cast<int>(currentSatelliteType)];
 
     if (gsv.size() % 4) { /* Ommited sattelite c_n0_dbhz param ? */
         gsv.push_back(std::string("0")); /* Append with zero */
     }
 
-    int sentences = atoi(gsv[1].c_str());
-    int sentence_idx = atoi(gsv[2].c_str());
-    int num_svs = atoi(gsv[3].c_str());
+    int sentences = atoi(gsv[1].c_str());    // total amount of sentences
+    int sentence_idx = atoi(gsv[2].c_str()); // current sentence
+    int num_svs = atoi(gsv[3].c_str());      // number of satellites in sentences
+    bool valid_msg = true;
+    bool callback_ready = false;
+    static int glonass_fcn; // GLONASS SVID can be equal to zero, which is not acceptable by Android
+                            // in this case we are supposed to report FCN (frequency channel number),
+                            // we don't have a real one, so let's use a simulated one
 
     if( sentence_idx <= 0 || sentence_idx > sentences || num_svs <= 0 ) {
+        valid_msg = false;
+    }
+
+    if (sentences == sentence_idx) {
+        callback_ready = true;
+    }
+
+    if (sentence_idx == 1) {
+        // GPS is always enabled
+        // Only one secondary major GNSS can be enabled
+        // Make sure that GLONASS messages are not handled when BEIDOU is active and vice versa
+        switch (mMajorGnssStatus) {
+            case MajorGnssStatus::GPS_GLONASS:
+                mSatellites[static_cast<int>(SatelliteType::BEIDOU)].clear();
+                mSatellitesUsedInFix[static_cast<int>(SatelliteType::BEIDOU)].clear();
+                if (currentSatelliteType == SatelliteType::BEIDOU) {
+                    return;
+                }
+                break;
+
+            case MajorGnssStatus::GPS_BEIDOU:
+                mSatellites[static_cast<int>(SatelliteType::GLONASS)].clear();
+                mSatellitesUsedInFix[static_cast<int>(SatelliteType::GLONASS)].clear();
+                if (currentSatelliteType == SatelliteType::GLONASS) {
+                    return;
+                }
+                break;
+
+            case MajorGnssStatus::GPS_ONLY:
+                mSatellites[static_cast<int>(SatelliteType::BEIDOU)].clear();
+                mSatellites[static_cast<int>(SatelliteType::GLONASS)].clear();
+                mSatellitesUsedInFix[static_cast<int>(SatelliteType::BEIDOU)].clear();
+                mSatellitesUsedInFix[static_cast<int>(SatelliteType::GLONASS)].clear();
+                break;
+        }
+
+        satelliteList->clear();
+
+        if (currentSatelliteType == SatelliteType::GLONASS) {
+            glonass_fcn = 93;
+        }
+    }
+
+    if (valid_msg) {
+        /* Per one GPGSV message max 4 sattelite records */
+        size_t offset = (sentence_idx - 1) * 4;
+        size_t parts = MIN((num_svs - offset), 4);
+
+        for (size_t p = 0; p < parts; p++) {
+            if ((offset + p) >= static_cast<int>(GnssMax::SVS_COUNT)) {
+                break; /* out of space */
+            }
+
+            IGnssCallback::GnssSvInfo sv;
+
+            sv.svFlag = static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_ALMANAC_DATA);
+
+            int idx = 4 + (p * 4);
+
+            /**
+             * Pseudo-random number for the SV, or FCN/OSN number for Glonass. The
+             * distinction is made by looking at constellation field. Values must be
+             * in the range of:
+             *
+             * - GNSS:    1-32
+             * - SBAS:    120-151, 183-192
+             * - GLONASS: 1-24, the orbital slot number (OSN), if known.  Or, if not:
+             *            93-106, the frequency channel number (FCN) (-7 to +6) offset by
+             *            + 100
+             *            i.e. report an FCN of -7 as 93, FCN of 0 as 100, and FCN of +6
+             *            as 106.
+             * - QZSS:    193-200
+             * - Galileo: 1-36
+             * - Beidou:  1-37
+             */
+
+            sv.svid = atoi(gsv[idx + 0].c_str());
+
+            std::vector<int>* usedInFix = &mSatellitesUsedInFix[static_cast<int>(currentSatelliteType)];
+            for (auto it = usedInFix->begin(); it != usedInFix->end();) {
+                if (*it == sv.svid) {
+                    sv.svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::USED_IN_FIX);
+                    it = usedInFix->erase(it);
+                } else {
+                    it++;
+                }
+            }
+
+            if ((sv.svid >= 1 && sv.svid <= 32) && (currentSatelliteType == SatelliteType::GPS_SBAS_GZSS)) {
+                sv.constellation = GnssConstellationType::GPS;
+            }
+            else if ((sv.svid >= 1 && sv.svid <= 36) && (currentSatelliteType == SatelliteType::GALILEO)) {
+                sv.constellation = GnssConstellationType::GALILEO;
+            }
+            else if (currentSatelliteType == SatelliteType::GLONASS) {
+                sv.constellation = GnssConstellationType::GLONASS;
+                if (sv.svid != 0) {
+                    sv.svid -= 64;
+                } else {
+                    sv.svid = glonass_fcn;
+                    glonass_fcn++;
+                    if (glonass_fcn >= 106) {
+                        ALOGW("Failed to generate a fake FCN for GLONASS satellite");
+                        glonass_fcn = 0;
+                    }
+                }
+            }
+            else if (currentSatelliteType == SatelliteType::BEIDOU) {
+                sv.constellation = GnssConstellationType::BEIDOU;
+            }
+            else if ((sv.svid >=  33) && (sv.svid <=  64)) {
+                sv.constellation = GnssConstellationType::SBAS;
+                sv.svid += 87;
+            }
+            else if ((sv.svid >= 152) && (sv.svid <= 158)) {
+                sv.constellation = GnssConstellationType::SBAS;
+                sv.svid += 31;
+            }
+            else if ((sv.svid >= 193) && (sv.svid <= 197)) {
+                sv.constellation = GnssConstellationType::QZSS;
+            }
+            else {
+                if (currentSatelliteType != SatelliteType::ANY) {
+                    ALOGW("Unknown constellation type with Svid = %d", sv.svid);
+                }
+                sv.constellation = GnssConstellationType::UNKNOWN;
+            }
+
+            sv.elevationDegrees    = atof(gsv[idx + 1].c_str());
+            sv.azimuthDegrees      = atof(gsv[idx + 2].c_str());
+            sv.cN0Dbhz             = atof(gsv[idx + 3].c_str());
+
+            satelliteList->push_back(sv);
+
+            ALOGV("GPGSV: [%zu] svid=%d, elevation=%f, azimuth=%f, c_n0_dbhz=%f", offset + p,
+                  sv.svid, sv.elevationDegrees, sv.azimuthDegrees, sv.cN0Dbhz);
+        }
+    }
+
+    if (callback_ready) {
+        unsigned int svCount = 0;
+        for (unsigned int i = 0; i < static_cast<int>(SatelliteType::COUNT); i++) {
+            for (unsigned int j = 0; j < mSatellites[i].size(); j++) {
+                mSvStatus.gnssSvList[svCount++] = mSatellites[i].at(j);
+
+                if (svCount >= static_cast<unsigned int>(GnssMax::SVS_COUNT)) {
+                    i = static_cast<int>(SatelliteType::COUNT);
+                    j = mSatellites[i].size();
+                }
+            }
+        }
+        mSvStatus.numSvs = svCount;
+
+        ALOGV("GPS SV: GPS/SBAS/GZSS: %lu | GLONASS: %lu | GALILEO: %lu | BEIDOU: %lu | UNKNOWN: %lu | total: %u", mSatellites[0].size(), mSatellites[1].size(), mSatellites[2].size(), mSatellites[3].size(), mSatellites[4].size(), svCount);
+
+        if (sentences == sentence_idx) { /* Last SVS received and parsed */
+            auto ret = mGnssCb->gnssSvStatusCb(mSvStatus);
+            if (!ret.isOk()) {
+                ALOGE("%s: Unable to invoke gnssSvStatusCb", __func__);
+            }
+        }
+    }
+}
+
+void GnssHwTTY::NMEA_ReaderParse_GNGSA(char *msg)
+{
+    std::vector<std::string> gsa;
+    NMEA_ReaderSplitMessage(std::string(msg), gsa);
+
+    /* GSA is expected to have 19 parts */
+    if (gsa.size() != 19) {
+        ALOGV("Dropping GSA due to invalid size (%lu)", gsa.size());
         return;
     }
 
-    /* Per one GPGSV message max 4 sattelite records */
-    size_t offset = (sentence_idx - 1) * 4;
-    size_t parts = MIN((num_svs - offset), 4);
+    std::vector<int>* satelliteList = nullptr;
+    switch (gsa[18][0]) {
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+            satelliteList = &mSatellitesUsedInFix[gsa[18][0] - '1'];
+            break;
+        default:
+            ALOGI("Unknown GSA GNSS System ID");
+            return;
+            break;
+    }
 
-    for (size_t p = 0; p < parts; p++) {
-
-        if ((offset + p) >= static_cast<int>(GnssMax::SVS_COUNT)) {
-            break; /* out of space */
-        }
-
-        IGnssCallback::GnssSvInfo * sv = &mSvStatus.gnssSvList[offset + p];
-
-        sv->svFlag = static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_ALMANAC_DATA);
-
-        int idx = 4 + (p * 4);
-
-        sv->svid = atoi(gsv[idx + 0].c_str());
-
-        if (sv->svid >= 1 && sv->svid <= 32) {
-            sv->constellation = GnssConstellationType::GPS;
-        } else if (sv->svid > GLONASS_SVID_OFFSET && sv->svid <= GLONASS_SVID_OFFSET + GLONASS_SVID_COUNT) {
-            sv->constellation = GnssConstellationType::GLONASS;
-            sv->svid -= GLONASS_SVID_OFFSET;
-        } else if (sv->svid > BEIDOU_SVID_OFFSET && sv->svid <= BEIDOU_SVID_OFFSET + BEIDOU_SVID_COUNT) {
-            sv->constellation = GnssConstellationType::BEIDOU;
-            sv->svid -= BEIDOU_SVID_OFFSET;
-        } else if (sv->svid >= SBAS_SVID_MIN && sv->svid <= SBAS_SVID_MAX) {
-            sv->constellation = GnssConstellationType::SBAS;
-            sv->svid += SBAS_SVID_ADD;
-        } else if (sv->svid >= QZSS_SVID_MIN && sv->svid <= QZSS_SVID_MAX) {
-            sv->constellation = GnssConstellationType::QZSS;
+    satelliteList->clear();
+    for (int i = 3; i < 15; i++) {
+        if (gsa[i].length() > 0) {
+            satelliteList->push_back(strtol(gsa[i].c_str(), NULL, 10));
         } else {
-            ALOGW("Unknown constellation type with Svid = %d", sv->svid);
-            sv->constellation = GnssConstellationType::UNKNOWN;
-        }
-
-        sv->elevationDegrees    = atof(gsv[idx + 1].c_str());
-        sv->azimuthDegrees      = atof(gsv[idx + 2].c_str());
-        sv->cN0Dbhz             = atof(gsv[idx + 3].c_str());
-
-        if (sv->cN0Dbhz > 1.f) {
-            sv->svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::USED_IN_FIX);
-        }
-
-        ALOGV("GPGSV: [%zu] svid=%d, elevation=%f, azimuth=%f, c_n0_dbhz=%f", offset + p,
-              sv->svid, sv->elevationDegrees, sv->azimuthDegrees, sv->cN0Dbhz);
-    }
-
-    mSvStatus.numSvs = (num_svs > static_cast<int>(GnssMax::SVS_COUNT) ?
-               static_cast<int>(GnssMax::SVS_COUNT) : num_svs);
-
-    if (sentences == sentence_idx) { /* Last SVS received and parsed */
-        auto ret = mGnssCb->gnssSvStatusCb(mSvStatus);
-        if (!ret.isOk()) {
-            ALOGE("%s: Unable to invoke gnssSvStatusCb", __func__);
+            break;
         }
     }
+}
+
+void GnssHwTTY::NMEA_ReaderParse_PUBX00(char *msg)
+{
+    std::vector<std::string> pubx;
+    NMEA_ReaderSplitMessage(std::string(msg), pubx);
+
+    /* PUBX,00 is expected to have 21 parts */
+    if ((pubx.size() != 21) ||
+        (pubx[0] != "$PUBX" && pubx[1] != "00")) {
+        ALOGV("Dropping PUBX due to invalid size (%lu)", pubx.size());
+        return;
+    }
+
+    if (pubx[9].length() > 0) {
+        mGnssLocation.horizontalAccuracyMeters = strtof(pubx[9].c_str(), NULL);
+        mGnssLocation.gnssLocationFlags       |= static_cast<uint16_t>(GnssLocationFlags::HAS_HORIZONTAL_ACCURACY);
+    } else {
+        mGnssLocation.horizontalAccuracyMeters = 0.f;
+        mGnssLocation.gnssLocationFlags       &= ~static_cast<uint16_t>(GnssLocationFlags::HAS_HORIZONTAL_ACCURACY);
+    }
+
+    if (pubx[10].length() > 0) {
+        mGnssLocation.verticalAccuracyMeters = strtof(pubx[10].c_str(), NULL);
+        mGnssLocation.gnssLocationFlags     |= static_cast<uint16_t>(GnssLocationFlags::HAS_VERTICAL_ACCURACY);
+    } else {
+        mGnssLocation.verticalAccuracyMeters = 0.f;
+        mGnssLocation.gnssLocationFlags     &= ~static_cast<uint16_t>(GnssLocationFlags::HAS_VERTICAL_ACCURACY);
+    }
+}
+
+bool GnssHwTTY::setUpdatePeriod(int periodMs)
+{
+    requestedUpdateIntervalUs = periodMs * 1000;
+    return true;
+}
+
+void GnssHwTTY::UBX_Reset()
+{
+    mUM.state             = UbxState::SYNC1;
+    mUM.rx_class          = 0;
+    mUM.rx_id             = 0;
+    mUM.rx_payload_len    = 0;
+    mUM.rx_payload_ptr    = 0;
+    mUM.rx_checksum_a     = 0;
+    mUM.rx_checksum_b     = 0;
+    mUM.rx_exp_checksum_a = 0;
+    mUM.rx_exp_checksum_b = 0;
+    mUM.buffer_ptr        = 0;
+    mUM.rx_timedout       = false;
+}
+
+void GnssHwTTY::UBX_ChecksumAdd(uint8_t ch)
+{
+    mUM.rx_checksum_a = mUM.rx_checksum_a + ch;
+    mUM.rx_checksum_b = mUM.rx_checksum_b + mUM.rx_checksum_a;
+}
+
+void GnssHwTTY::UBX_CriticalProtocolError(const char *errormsg)
+{
+    ALOGE("UBX Critical protocol error: %s", errormsg);
+    CHECK_EQ(0, 1) << "UBX Critical protocol error: " << errormsg;
+}
+
+void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
+{
+    for (mUM.buffer_ptr = 0; mUM.buffer_ptr < ubx->len; mUM.buffer_ptr++) {
+        ALOGV("UBX parser state: %d (buffer ptr: %lu)", mUM.state, mUM.buffer_ptr);
+        switch (mUM.state) {
+            case UbxState::SYNC1:
+                if (ubx->data[mUM.buffer_ptr] == mUbxSync1) {
+                    mUM.state = UbxState::SYNC2;
+                } else {
+                    ALOGW("UBX parser error on state UbxState::SYNC1 (%02X)", ubx->data[mUM.buffer_ptr]);
+                }
+                break;
+
+            case UbxState::SYNC2:
+                if (ubx->data[mUM.buffer_ptr] == mUbxSync2) {
+                    mUM.state = UbxState::CLASS;
+                } else {
+                    ALOGW("UBX parser error on state UbxState::SYNC2 (%02X)", ubx->data[mUM.buffer_ptr]);
+                }
+                break;
+
+            case UbxState::CLASS:
+                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+                mUM.rx_class = ubx->data[mUM.buffer_ptr];
+                mUM.state    = UbxState::ID;
+                break;
+
+            case UbxState::ID:
+                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+                mUM.rx_id = ubx->data[mUM.buffer_ptr];
+                mUM.state = UbxState::LENGTH1;
+                break;
+
+            case UbxState::LENGTH1:
+                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+                mUM.rx_payload_len = ubx->data[mUM.buffer_ptr];
+                mUM.state          = UbxState::LENGTH2;
+                break;
+
+            case UbxState::LENGTH2:
+                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+                mUM.rx_payload_len += ubx->data[mUM.buffer_ptr] << 8;
+                mUM.state           = UbxState::PAYLOAD;
+                ALOGV("UBX payload len: %d", mUM.rx_payload_len);
+                if (mUM.rx_payload_len == 0) {
+                    mUM.state = UbxState::CHECKSUM1;
+                }
+                break;
+
+            case UbxState::PAYLOAD:
+                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+                mUM.rx_payload_ptr++;
+                if (mUM.rx_payload_ptr == mUM.rx_payload_len) {
+                    mUM.state = UbxState::CHECKSUM1;
+                }
+                break;
+
+            case UbxState::CHECKSUM1:
+                mUM.rx_exp_checksum_a = ubx->data[mUM.buffer_ptr];
+                mUM.state = UbxState::CHECKSUM2;
+                break;
+
+            case UbxState::CHECKSUM2:
+                mUM.rx_exp_checksum_b = ubx->data[mUM.buffer_ptr];
+                mUM.state = UbxState::FINISH;
+                break;
+
+            case UbxState::FINISH:
+                ALOGW("UBX Unexpected FINISH state in parser");
+                break;
+        }
+    }
+
+    if (mUM.state == UbxState::FINISH) {
+        ALOGV("UBX parser finished parsing message");
+        ALOGV("UBX received message CLASS: %02X ID: %02X", mUM.rx_class, mUM.rx_id);
+        if (mUM.rx_exp_checksum_a != mUM.rx_checksum_a ||
+            mUM.rx_exp_checksum_b != mUM.rx_checksum_b) {
+            ALOGI("UBX parser checksum fail %02X%02X/%02X%02X", mUM.rx_exp_checksum_a, mUM.rx_exp_checksum_b,
+                  mUM.rx_checksum_a, mUM.rx_checksum_b);
+        } else {
+            ALOGV("UBX parser checksum ok");
+        }
+
+        UbxStateQueueElement *st = nullptr;
+        if (!mUbxStateBuffer->empty()) {
+            st = mUbxStateBuffer->get();
+        }
+
+        if (st != nullptr) {
+            switch (st->state) {
+                case (UbxRxState::WAITING_ANSWER):
+                    if (st->xclass == mUM.rx_class && st->id == mUM.rx_id) {
+                        ALOGV("UBX got answer with CLASS: %02X ID: %02X", mUM.rx_class, mUM.rx_id);
+                    } else {
+                        ALOGI("UBX got INVALID answer with CLASS: %02X ID: %02X (expected: %02X/%02X)", mUM.rx_class, mUM.rx_id, st->xclass, st->id);
+                    }
+                    break;
+
+                case (UbxRxState::WAITING_ACK):
+                    if (mUM.rx_class == mAckClass) {
+                        if (st->xclass != ubx->data[mUbxFirstPayloadOffset] || st->id != ubx->data[mUbxFirstPayloadOffset + 1]) {
+                            ALOGI("UBX Invalid ACK/NAK tx class/id (CLASS: %02X | ID: %02X), expected: %02X/%02X", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1], st->xclass, st->id);
+                            UBX_CriticalProtocolError(st->errormsg);
+                        }
+                        if (mUM.rx_id == mAckAckId) {
+                            ALOGV("UBX Got ACK (CLASS: %02X | ID: %02X)", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1]);
+                            mUbxAckReceived++;
+                        } else if (mUM.rx_id == mAckNakId) {
+                            ALOGV("UBX Got NAK (CLASS: %02X | ID: %02X)", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1]);
+                            UBX_CriticalProtocolError(st->errormsg);
+                        } else {
+                            ALOGI("UBX Invalid ACK ID");
+                            UBX_CriticalProtocolError(st->errormsg);
+                        }
+                    }
+                    break;
+
+                default:
+                    ALOGW("UBX Unhandled message state");
+                    break;
+            }
+        }
+    } else {
+        ALOGI("UBX message incomplete, dropping (state: %d, buf: %lu/%lu, buf[ptr]: %02X", static_cast<int>(mUM.state), mUM.buffer_ptr, ubx->len, ubx->data[mUM.buffer_ptr]);
+        for (size_t i = 0; i < ubx->len; i++) {
+            ALOGV("UBX payload[%lu] = %02X", i, ubx->data[i]);
+        }
+    }
+
+    UBX_Reset();
+}
+
+void GnssHwTTY::UBX_Send(uint8_t *msg, size_t len)
+{
+    if (len >= mBufferSize) {
+        len = mBufferSize - 1;
+    }
+
+    uint8_t tx_buffer[mBufferSize];
+
+    // header (sync)
+    tx_buffer[0] = mUbxSync1;
+    tx_buffer[1] = mUbxSync2;
+
+    // data
+    memcpy(&tx_buffer[2], msg, len);
+
+    // checksum
+    size_t checksum_offset_a = 2 + len;
+    size_t checksum_offset_b = checksum_offset_a + 1;
+
+    tx_buffer[checksum_offset_a] = 0;
+    tx_buffer[checksum_offset_b] = 0;
+
+    for (size_t i = 0; i < len; i++) {
+        tx_buffer[checksum_offset_a] = tx_buffer[checksum_offset_a] + msg[i];
+        tx_buffer[checksum_offset_b] = tx_buffer[checksum_offset_b] + tx_buffer[checksum_offset_a];
+    }
+
+    // class, id
+    mUM.tx_class = msg[0];
+    mUM.tx_id    = msg[1];
+
+    ALOGV("UBX sending msg...");
+    int exp_len = len + 4;
+
+    int ret = write(mFd, tx_buffer, exp_len);
+    if (ret < exp_len) {
+        ALOGE("UBX send msg: failed to transmit fully (only %d of %d bytes trasmitted)\n", ret, exp_len);
+    } else if (ret == -1) {
+        ALOGE("UBX send msg: failed to write message, write error: %s\n", strerror(errno));
+    } else {
+        ALOGV("UBX send msg: CLASS: %02X ID: %02X CHECKSUM: %02X%02X", tx_buffer[2], tx_buffer[3], tx_buffer[checksum_offset_a], tx_buffer[checksum_offset_b]);
+    }
+}
+
+void GnssHwTTY::UBX_Expect(UbxRxState astate, const char *errormsg)
+{
+    UbxStateQueueElement element;
+    element.state    = astate;
+    element.xclass   = mUM.tx_class;
+    element.id       = mUM.tx_id;
+    if (errormsg != nullptr) {
+        element.errormsg = errormsg;
+    } else {
+        element.errormsg = "UBX protocol error (hardware response timeout)";
+    }
+    mUbxStateBuffer->put(&element);
+}
+
+bool GnssHwTTY::UBX_Wait(UbxRxState astate, const char *errormsg, uint64_t timeoutMs)
+{
+    UBX_Expect(astate, errormsg);
+
+    timeoutMs *= 1024 * 1024; // mili to micro to nano
+    uint64_t start = android::elapsedRealtimeNano();
+    while (mUbxAckReceived <= 0) {
+        if ((android::elapsedRealtimeNano() - start) > timeoutMs) {
+            if (errormsg != NULL) {
+                ALOGE("%s", errormsg);
+                UBX_CriticalProtocolError(errormsg);
+            } else {
+                ALOGE("UBX protocol failure (no ACK received)");
+                UBX_CriticalProtocolError("UBX protocol failure (no ACK received)");
+            }
+            return false;
+        }
+        ALOGV("UBX Wait...");
+        usleep(25000); // sleep for 25 ms
+    }
+
+    mUbxAckReceived--;
+    return true;
+}
+
+void GnssHwTTY::UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char *msg)
+{
+    uint8_t ublox_buf[] = {0x06, 0x01, 0x08, 0x00, msg_class, msg_id,
+                           rate, rate, 0x00, rate, rate, 0x00};
+    UBX_Send(ublox_buf, sizeof(ublox_buf));
+    UBX_Wait(UbxRxState::WAITING_ACK, msg, mUbxTimeoutMs);
 }

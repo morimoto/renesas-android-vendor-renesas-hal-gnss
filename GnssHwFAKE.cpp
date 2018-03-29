@@ -171,16 +171,22 @@ void GnssHwFAKE::GnssHwHandleThread(void)
                 location.longitudeDegrees += lonStep;
             }
 
-            location.timestamp = time(NULL) * 1000;
+            location.timestamp = time(NULL) * 1000; // timestamp of the event in milliseconds, time(NULL) returns seconds, therefore we need to convert
 
             auto ret = mGnssCb->gnssLocationCb(location);
             if (!ret.isOk()) {
                 ALOGE("%s: Unable to invoke gnssLocationCb", __func__);
             }
 
-            usleep(1000000);
+            usleep(requestedUpdateIntervalUs);
         }
     }
 
     ALOGD("GnssFakeHandleThread() <-");
+}
+
+bool GnssHwFAKE::setUpdatePeriod(int periodMs)
+{
+    requestedUpdateIntervalUs = periodMs * 1000;
+    return true;
 }

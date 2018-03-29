@@ -386,6 +386,7 @@ Return<bool> Gnss::setPositionMode(IGnss::GnssPositionMode mode,
 {
     ALOGD("%s: mode=%d, recurrence=%d, minIntervalMs=%d, preferredAccuracyMeters=%d, preferredTimeMs=%d",
         __func__, (int)mode, recurrence, minIntervalMs, preferredAccuracyMeters, preferredTimeMs);
+    mGnssHwIface->setUpdatePeriod(minIntervalMs);
     return true;
 }
 
