@@ -36,7 +36,7 @@ Gnss::Gnss(void) :
     mDeathRecipient(new GnssHidlDeathRecipient(this))
 {
     char mode[PROPERTY_VALUE_MAX];
-    if (property_get("persist.gps.mode", mode, "tty") > 0) {
+    if (property_get("ro.boot.gps.mode", mode, "tty") > 0) {
         if (strcmp(mode, "fake") == 0) {
             ALOGI("Using FAKE backend");
             mGnssHwIface = new GnssHwFAKE();
