@@ -23,6 +23,7 @@
 #include <string>
 #include <cstdint>
 #include <chrono>
+#include <condition_variable>
 #include "circular_buffer.h"
 
 using namespace std::chrono_literals;
@@ -95,6 +96,12 @@ class GnssHwTTY : public GnssHwIface
 
     std::thread mNmeaThread;
     std::thread mUbxThread;
+
+    std::condition_variable mNmeaThreadCv;
+    std::condition_variable mUbxThreadCv;
+
+    std::mutex mNmeaThreadLock;
+    std::mutex mUbxThreadLock;
 
     enum class SatelliteType {
         GPS_SBAS_GZSS = 0,

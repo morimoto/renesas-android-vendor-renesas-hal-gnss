@@ -266,6 +266,8 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
             /* Parse NMEA */
             mNmeaBuffer->put(mReaderBuf);
 
+            mNmeaThreadCv.notify_all();
+
             /* Reset the reader  */
             mReaderBufPos = 0;
             mReaderState = ReaderState::WAITING;
@@ -301,8 +303,13 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
 
             UbxBufferElement elem;
             elem.len = mReaderBufPos;
-            memcpy(&elem.data, mReaderBuf, elem.len);
-            mUbxBuffer->put(&elem);
+            if (elem.len < (sizeof(UbxBufferElement) - sizeof(size_t))) {
+                memcpy(&elem.data, mReaderBuf, elem.len);
+                mUbxBuffer->put(&elem);
+                mUbxThreadCv.notify_all();
+            } else {
+                ALOGE("Received UBX message that is too large for the buffer (%lu)", elem.len);
+            }
 
             /* Reset the reader  */
             mReaderBufPos = 0;
@@ -317,6 +324,9 @@ void GnssHwTTY::NMEA_Thread(void)
     while (!mThreadExit) {
         if (!mNmeaBuffer->empty()) {
             NMEA_ReaderParse((char*)&mNmeaBuffer->get()->data);
+        } else {
+            std::unique_lock<std::mutex> lock(mNmeaThreadLock);
+            mNmeaThreadCv.wait(lock);
         }
     }
 }
@@ -326,6 +336,9 @@ void GnssHwTTY::UBX_Thread(void)
     while (!mThreadExit) {
         if (!mUbxBuffer->empty()) {
             UBX_ReaderParse(mUbxBuffer->get());
+        } else {
+            std::unique_lock<std::mutex> lock(mUbxThreadLock);
+            mUbxThreadCv.wait(lock);
         }
     }
 }
