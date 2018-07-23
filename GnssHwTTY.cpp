@@ -306,7 +306,6 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
             if (elem.len < (sizeof(UbxBufferElement) - sizeof(size_t))) {
                 memcpy(&elem.data, mReaderBuf, elem.len);
                 mUbxBuffer->put(&elem);
-                mUbxThreadCv.notify_all();
             } else {
                 ALOGE("Received UBX message that is too large for the buffer (%lu)", elem.len);
             }
@@ -995,11 +994,11 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
 
 void GnssHwTTY::UBX_Send(uint8_t *msg, size_t len)
 {
-    if (len >= mBufferSize) {
-        len = mBufferSize - 1;
+    if (len >= mUbxBufferSize) {
+        len = mUbxBufferSize - 1;
     }
 
-    uint8_t tx_buffer[mBufferSize];
+    uint8_t tx_buffer[mUbxBufferSize];
 
     // header (sync)
     tx_buffer[0] = mUbxSync1;

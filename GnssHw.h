@@ -76,18 +76,20 @@ class GnssHwTTY : public GnssHwIface
         CAPTURING_UBX
     };
 
-    static const size_t mBufferSize = 512;
+    static const size_t mNmeaBufferSize = 128;
+    static const size_t mUbxBufferSize  = 65536;
+
     int          mFd;
-    char         mReaderBuf[mBufferSize];
+    char         mReaderBuf[mUbxBufferSize];
     size_t       mReaderBufPos = 0;
     ReaderState  mReaderState  = ReaderState::WAITING;
 
     struct NmeaBufferElement {
-        char data[mBufferSize];
+        char data[mNmeaBufferSize];
     };
 
     struct UbxBufferElement {
-        char   data[mBufferSize];
+        char   data[mUbxBufferSize];
         size_t len;
     };
 
