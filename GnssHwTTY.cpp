@@ -36,6 +36,8 @@
 
 GnssHwTTY::GnssHwTTY(void) :
     mFd(-1),
+    mEnabled(false),
+    mInitInProgress(false),
     mUbxAckReceived(0)
 {
     memset(&mGnssLocation, 0, sizeof(GnssLocation));
@@ -50,6 +52,7 @@ GnssHwTTY::GnssHwTTY(void) :
 
     mNmeaThread = std::thread(&GnssHwTTY::NMEA_Thread, this);
     mUbxThread  = std::thread(&GnssHwTTY::UBX_Thread, this);
+    mHwInitThread  = std::thread(&GnssHwTTY::GnssHwInitThread, this);
 }
 
 GnssHwTTY::~GnssHwTTY(void)
@@ -61,9 +64,27 @@ GnssHwTTY::~GnssHwTTY(void)
 
 bool GnssHwTTY::start(void)
 {
+    ALOGD("Start HW");
+
+    mEnabled = true;
+
+    return true;
+}
+
+bool GnssHwTTY::stop(void)
+{
+    ALOGD("Stop HW");
+
+    mEnabled = false;
+
+    return true;
+}
+
+void GnssHwTTY::GnssHwInitThread(void)
+{
     char prop_tty_dev[PROPERTY_VALUE_MAX], prop_secmajor[PROPERTY_VALUE_MAX], prop_sbas[PROPERTY_VALUE_MAX];
 
-    ALOGD("Start HW");
+    ALOGD("GnssHwInitThread() ->");
 
     property_get("ro.boot.gps.tty_dev", prop_tty_dev, "/dev/ttySC3");
     property_get("ro.boot.gps.secmajor", prop_secmajor, "glonass");
@@ -77,14 +98,15 @@ bool GnssHwTTY::start(void)
         prop_sbas[i] = toupper(prop_sbas[i]);
     }
 
-     /* Open the serial tty device */
+    /* Open the serial tty device */
     do {
         mFd = ::open(prop_tty_dev, O_RDWR | O_NOCTTY);
     } while(mFd < 0 && errno == EINTR);
+    mInitInProgress = true;
 
     if (mFd < 0) {
         ALOGE("Could not open TTY device %s, error: %s", prop_tty_dev, strerror(errno));
-        return false;
+        CHECK_EQ(0, 1) << "Could not open TTY device " <<  prop_tty_dev << ", error: " << strerror(errno);
     }
 
     ALOGI("TTY %s@9600 fd=%d", prop_tty_dev, mFd);
@@ -195,19 +217,7 @@ bool GnssHwTTY::start(void)
     UBX_Send(ublox_cfg_gnss, sizeof(ublox_cfg_gnss));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
 
-    return true;
-}
-
-bool GnssHwTTY::stop(void)
-{
-    ALOGD("Stop HW");
-
-    if (mFd != -1) {
-        ::close(mFd);
-        mFd = -1;
-    }
-
-    return true;
+    mInitInProgress = false;
 }
 
 void GnssHwTTY::GnssHwHandleThread(void)
@@ -216,7 +226,7 @@ void GnssHwTTY::GnssHwHandleThread(void)
 
     while (!mThreadExit)
     {
-        if (mFd == -1) {
+        if (mEnabled == false && mInitInProgress == false) {
             usleep(1000000); /* Sleeping if TTY device not accessible */
             continue;
         }
@@ -232,7 +242,7 @@ void GnssHwTTY::GnssHwHandleThread(void)
             ReaderPushChar(ch);
         } else {
             ALOGE("TTY read error: %s", strerror(errno));
-            break;
+            continue;
         }
     }
 
@@ -320,6 +330,8 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
 
 void GnssHwTTY::NMEA_Thread(void)
 {
+    ALOGD("NMEA_Thread() ->");
+
     while (!mThreadExit) {
         if (!mNmeaBuffer->empty()) {
             NMEA_ReaderParse((char*)&mNmeaBuffer->get()->data);
@@ -332,6 +344,8 @@ void GnssHwTTY::NMEA_Thread(void)
 
 void GnssHwTTY::UBX_Thread(void)
 {
+    ALOGD("UBX_Thread() ->");
+
     while (!mThreadExit) {
         if (!mUbxBuffer->empty()) {
             UBX_ReaderParse(mUbxBuffer->get());
@@ -398,9 +412,12 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
         android::hardware::hidl_string nmeaString;
         nmeaString.setToExternal(msg, strlen(msg));
 
-        auto ret = mGnssCb->gnssNmeaCb(time(NULL), nmeaString);
-        if (!ret.isOk()) {
-            ALOGE("%s: Unable to invoke gnssNmeaCb", __func__);
+        if (mEnabled)
+        {
+            auto ret = mGnssCb->gnssNmeaCb(time(NULL), nmeaString);
+            if (!ret.isOk()) {
+                ALOGE("%s: Unable to invoke gnssNmeaCb", __func__);
+            }
         }
     }
 
@@ -510,9 +527,12 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
         mGnssLocation.gnssLocationFlags &= ~static_cast<uint16_t>(GnssLocationFlags::HAS_BEARING);
     }
 
-    auto ret = mGnssCb->gnssLocationCb(mGnssLocation);
-    if (!ret.isOk()) {
-        ALOGE("%s: Unable to invoke gnssLocationCb", __func__);
+    if (mEnabled)
+    {
+        auto ret = mGnssCb->gnssLocationCb(mGnssLocation);
+        if (!ret.isOk()) {
+            ALOGE("%s: Unable to invoke gnssLocationCb", __func__);
+        }
     }
 }
 
@@ -754,9 +774,12 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
         ALOGV("GPS SV: GPS/SBAS/GZSS: %lu | GLONASS: %lu | GALILEO: %lu | BEIDOU: %lu | UNKNOWN: %lu | total: %u", mSatellites[0].size(), mSatellites[1].size(), mSatellites[2].size(), mSatellites[3].size(), mSatellites[4].size(), svCount);
 
         if (sentences == sentence_idx) { /* Last SVS received and parsed */
-            auto ret = mGnssCb->gnssSvStatusCb(mSvStatus);
-            if (!ret.isOk()) {
-                ALOGE("%s: Unable to invoke gnssSvStatusCb", __func__);
+            if (mEnabled)
+            {
+                auto ret = mGnssCb->gnssSvStatusCb(mSvStatus);
+                if (!ret.isOk()) {
+                    ALOGE("%s: Unable to invoke gnssSvStatusCb", __func__);
+                }
             }
         }
     }
@@ -1069,6 +1092,8 @@ bool GnssHwTTY::UBX_Wait(UbxRxState astate, const char *errormsg, uint64_t timeo
         }
         ALOGV("UBX Wait...");
         usleep(25000); // sleep for 25 ms
+        mNmeaThreadCv.notify_all();
+        mUbxThreadCv.notify_all();
     }
 
     mUbxAckReceived--;

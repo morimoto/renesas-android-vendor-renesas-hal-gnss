@@ -80,6 +80,8 @@ class GnssHwTTY : public GnssHwIface
     static const size_t mUbxBufferSize  = 65536;
 
     int          mFd;
+    bool         mEnabled;
+    bool         mInitInProgress;
     char         mReaderBuf[mUbxBufferSize];
     size_t       mReaderBufPos = 0;
     ReaderState  mReaderState  = ReaderState::WAITING;
@@ -98,6 +100,7 @@ class GnssHwTTY : public GnssHwIface
 
     std::thread mNmeaThread;
     std::thread mUbxThread;
+    std::thread mHwInitThread;
 
     std::condition_variable mNmeaThreadCv;
     std::condition_variable mUbxThreadCv;
@@ -163,7 +166,7 @@ class GnssHwTTY : public GnssHwIface
     const size_t  mUbxPacketSizeNoPayload = 8;
     const size_t  mUbxFirstPayloadOffset  = 6;
 
-    const uint64_t mUbxTimeoutMs = 2000;
+    const uint64_t mUbxTimeoutMs = 5000;
 
     std::atomic<int> mUbxAckReceived;
 
@@ -222,6 +225,7 @@ public:
     bool setUpdatePeriod(int);
 
     void GnssHwHandleThread(void);
+    void GnssHwInitThread(void);
 };
 
 class GnssHwFAKE : public GnssHwIface
