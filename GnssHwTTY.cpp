@@ -460,7 +460,9 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
 
     // Status A=active or V=Void
     if (rmc[2] != "A") {
-        ALOGD("GPRMC: No valid fix coordinates, wait...");
+        if (mEnabled) {
+            ALOGD("GPRMC: No valid fix coordinates, wait...");
+        }
 
         /* Invalidate location data*/
         memset(&mGnssLocation, 0, sizeof(GnssLocation));
