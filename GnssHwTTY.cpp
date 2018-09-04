@@ -37,7 +37,6 @@
 GnssHwTTY::GnssHwTTY(void) :
     mFd(-1),
     mEnabled(false),
-    mInitInProgress(false),
     mUbxAckReceived(0)
 {
     memset(&mGnssLocation, 0, sizeof(GnssLocation));
@@ -102,7 +101,6 @@ void GnssHwTTY::GnssHwInitThread(void)
     do {
         mFd = ::open(prop_tty_dev, O_RDWR | O_NOCTTY);
     } while(mFd < 0 && errno == EINTR);
-    mInitInProgress = true;
 
     if (mFd < 0) {
         ALOGE("Could not open TTY device %s, error: %s", prop_tty_dev, strerror(errno));
@@ -216,8 +214,6 @@ void GnssHwTTY::GnssHwInitThread(void)
 
     UBX_Send(ublox_cfg_gnss, sizeof(ublox_cfg_gnss));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
-
-    mInitInProgress = false;
 }
 
 void GnssHwTTY::GnssHwHandleThread(void)
@@ -226,7 +222,7 @@ void GnssHwTTY::GnssHwHandleThread(void)
 
     while (!mThreadExit)
     {
-        if (mEnabled == false && mInitInProgress == false) {
+        if (mFd == -1) {
             usleep(1000000); /* Sleeping if TTY device not accessible */
             continue;
         }

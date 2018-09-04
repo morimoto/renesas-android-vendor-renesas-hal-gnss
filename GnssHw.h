@@ -81,7 +81,6 @@ class GnssHwTTY : public GnssHwIface
 
     int          mFd;
     bool         mEnabled;
-    bool         mInitInProgress;
     char         mReaderBuf[mUbxBufferSize];
     size_t       mReaderBufPos = 0;
     ReaderState  mReaderState  = ReaderState::WAITING;
