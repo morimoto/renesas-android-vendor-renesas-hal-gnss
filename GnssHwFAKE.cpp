@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssSalvatorHAL"
+#define LOG_TAG "GnssRenesasHAL"
 
 #include <unistd.h>
 #include <inttypes.h>
@@ -22,7 +22,7 @@
 #include <fstream>
 #include <string>
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/properties.h>
 
 #include <android/hardware/gnss/1.0/IGnss.h>

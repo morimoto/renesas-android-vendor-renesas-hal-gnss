@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2017 GlobalLogic
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,29 +14,56 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssKingfisherHAL"
-//#define LOG_NDEBUG 0
+#define LOG_TAG "GnssRenesasHAL"
+//#define LOG_NDEBUG  1
 
 #include <termios.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <inttypes.h>
 #include <memory.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <sys/param.h> /* for MIN(x,y) */
+#include <cstdlib>
+#include <memory>
+
 #include <utils/SystemClock.h>
+#include <sys/system_properties.h>
 
 #include <android-base/logging.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/properties.h>
 
 #include <android/hardware/gnss/1.0/IGnss.h>
 
 #include "GnssHw.h"
+#include "UsbHandler.h"
+
+// According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.14 RMC, p. 124
+// NMEA protocol version 4.1 and above has 14 fields.
+static const size_t rmcFieldsNumberNMEAv41 = 14;
+static const size_t ggaFieldsNumber = 15; // According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.4 GGA, p. 114
+static const size_t gsaFieldsNumber = 19;
+static const size_t pubxFieldsNumber = 21;
+static const size_t gsvFieldsNumber = 4;
+
+static const std::string ttyUsbDefault("/dev/ttyACM0");
+static const std::string ttyDefaultKf("/dev/ttySC3");
+
+template <typename mPtr>
+static inline void CheckNotNull(mPtr val, const char* msg)
+{
+    if (nullptr == val) {
+        ALOGE("%s", msg);
+        std::abort();
+    }
+}
 
 GnssHwTTY::GnssHwTTY(void) :
     mFd(-1),
     mEnabled(false),
+    mRmcFieldsNumber(rmcFieldsNumberNMEAv41),
+    mHelpThreadExit(false),
     mUbxAckReceived(0)
 {
     memset(&mGnssLocation, 0, sizeof(GnssLocation));
@@ -44,18 +71,46 @@ GnssHwTTY::GnssHwTTY(void) :
     mNmeaBuffer     = new(std::nothrow) CircularBuffer<NmeaBufferElement   >(32, sizeof(NmeaBufferElement));
     mUbxBuffer      = new(std::nothrow) CircularBuffer<UbxBufferElement    >(32, sizeof(UbxBufferElement));
     mUbxStateBuffer = new(std::nothrow) CircularBuffer<UbxStateQueueElement>(64, sizeof(UbxStateQueueElement));
-    if (mNmeaBuffer == NULL || mUbxBuffer == NULL || mUbxStateBuffer == NULL) {
-        ALOGE("Failed to allocate buffers");
-        CHECK_EQ(0, 1) << "Failed to allocate buffers";
-    }
 
-    mNmeaThread = std::thread(&GnssHwTTY::NMEA_Thread, this);
-    mUbxThread  = std::thread(&GnssHwTTY::UBX_Thread, this);
-    mHwInitThread  = std::thread(&GnssHwTTY::GnssHwInitThread, this);
+    CheckNotNull(mNmeaBuffer, "Failed to allocate buffers");
+    CheckNotNull(mUbxBuffer, "Failed to allocate buffers");
+    CheckNotNull(mUbxStateBuffer, "Failed to allocate buffers");
+
+    if(CheckHwPropertyKf()) {
+        ALOGV("[%s, line %d] Kingfisher", __func__, __LINE__);
+        CHECK_EQ(1, OpenDevice(ttyDefaultKf.c_str())) << "Failed to open device";
+
+        mIsUbloxDevice = true;
+
+        mHwInitThread = std::thread(&GnssHwTTY::GnssHwUbxInitThread, this);
+        mUbxThread  = std::thread(&GnssHwTTY::UBX_Thread, this);
+        mNmeaThread = std::thread(&GnssHwTTY::NMEA_Thread, this);
+    }
 }
 
 GnssHwTTY::~GnssHwTTY(void)
 {
+    mHelpThreadExit.store(true);
+
+    if (mIsUbloxDevice) {
+        mNmeaThreadCv.notify_all();
+        if (mNmeaThread.joinable()) {
+            mNmeaThread.join();
+            ALOGD("[%s, line %d] Nmea thread joined", __func__, __LINE__);
+        }
+
+        mUbxThreadCv.notify_all();
+        if (mUbxThread.joinable()) {
+            mUbxThread.join();
+            ALOGD("[%s, line %d] Ubx thread joined", __func__, __LINE__);
+        }
+
+        if (mHwInitThread.joinable()) {
+            mHwInitThread.join();
+            ALOGD("[%s, line %d] Init thread joined", __func__, __LINE__);
+        }
+    }
+
     delete mNmeaBuffer;
     delete mUbxBuffer;
     delete mUbxStateBuffer;
@@ -64,50 +119,54 @@ GnssHwTTY::~GnssHwTTY(void)
 bool GnssHwTTY::start(void)
 {
     ALOGD("Start HW");
+    if (mIsKingfisher){
+        mEnabled = true;
+    } else {
+        mEnabled = StartSalvatorProcedure();
+    }
 
-    mEnabled = true;
-
-    return true;
+    return mEnabled;
 }
 
 bool GnssHwTTY::stop(void)
 {
     ALOGD("Stop HW");
-
-    mEnabled = false;
+    if (mIsKingfisher) {
+        mEnabled = false;
+    } else {
+       ALOGD("[%s, line %d] Stop salvator proc", __func__, __LINE__);
+       StopSalvatorProcedure();
+    }
 
     return true;
 }
 
-void GnssHwTTY::GnssHwInitThread(void)
+
+bool GnssHwTTY::OpenDevice(const char* ttyDevDefault)
 {
-    char prop_tty_dev[PROPERTY_VALUE_MAX], prop_secmajor[PROPERTY_VALUE_MAX], prop_sbas[PROPERTY_VALUE_MAX];
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    ALOGD("GnssHwInitThread() ->");
+    char prop_tty_dev[PROPERTY_VALUE_MAX] = {};
+    char prop_tty_baudrate[PROPERTY_VALUE_MAX] = {};
 
-    property_get("ro.boot.gps.tty_dev", prop_tty_dev, "/dev/ttySC3");
-    property_get("ro.boot.gps.secmajor", prop_secmajor, "glonass");
-    property_get("ro.boot.gps.sbas", prop_sbas, "enable");
+    property_get("ro.boot.gps.tty_dev", prop_tty_dev, ttyDevDefault);
+    property_get("ro.boot.gps.tty_baudrate", prop_tty_baudrate, "9600");
 
-    for (size_t i = 0; i < strnlen(prop_secmajor, PROPERTY_VALUE_MAX); i++) {
-        prop_secmajor[i] = toupper(prop_secmajor[i]);
-    }
-
-    for (size_t i = 0; i < strnlen(prop_sbas, PROPERTY_VALUE_MAX); i++) {
-        prop_sbas[i] = toupper(prop_sbas[i]);
-    }
+    uint32_t baudrate = atoi(prop_tty_baudrate);
 
     /* Open the serial tty device */
     do {
         mFd = ::open(prop_tty_dev, O_RDWR | O_NOCTTY);
-    } while(mFd < 0 && errno == EINTR);
+    } while (mFd < 0 && errno == EINTR);
 
     if (mFd < 0) {
-        ALOGE("Could not open TTY device %s, error: %s", prop_tty_dev, strerror(errno));
-        CHECK_EQ(0, 1) << "Could not open TTY device " <<  prop_tty_dev << ", error: " << strerror(errno);
+        ALOGE("Could not open TTY device");
+        return false;
     }
 
-    ALOGI("TTY %s@9600 fd=%d", prop_tty_dev, mFd);
+    mHandleThreadCv.notify_one();
+
+    ALOGI("TTY %s@%s fd=%d", prop_tty_dev, prop_tty_baudrate, mFd);
 
     /* Setup serial port */
     struct termios  ios;
@@ -117,10 +176,89 @@ void GnssHwTTY::GnssHwInitThread(void)
     ios.c_iflag  = IGNPAR;
     ios.c_oflag  = 0;
     ios.c_lflag  = 0;  /* disable ECHO, ICANON, etc... */
-    ios.c_cflag |= B9600;
+
+    /* Set baudrate */
+    switch(baudrate) {
+    case 2400: ios.c_cflag |= B2400; break;
+    case 4800: ios.c_cflag |= B4800; break;
+    case 9600: ios.c_cflag |= B9600; break;
+    case 19200: ios.c_cflag |= B19200; break;
+    case 38400: ios.c_cflag |= B38400; break;
+    default: {
+        ios.c_cflag |= B9600;
+        ALOGW("Unsupported baud rate %d.. setting default 9600", baudrate);
+    }
+    }
 
     ::tcsetattr(mFd, TCSANOW, &ios);
     ::tcflush(mFd, TCIOFLUSH);
+
+    return true;
+}
+
+bool GnssHwTTY::StartSalvatorProcedure()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    bool retStatus = false;
+    mHelpThreadExit.store(false);
+
+    retStatus = OpenDevice(ttyUsbDefault.c_str());
+    if(!retStatus) {
+        ALOGE("Failed to open device");
+        return retStatus;
+    }
+
+    if(!mIsUbloxDevice) {
+        retStatus = CheckUsbDeviceVendorUbx();
+        if(!retStatus) {
+            ALOGE("No u-blox device connected");
+            return retStatus;
+        }
+
+        ALOGV("[%s, line %d] u-blox device", __func__, __LINE__);
+        mIsUbloxDevice = retStatus;
+
+        mHwInitThread  = std::thread(&GnssHwTTY::GnssHwUbxInitThread, this);
+        mNmeaThread = std::thread(&GnssHwTTY::NMEA_Thread, this);
+        mUbxThread  = std::thread(&GnssHwTTY::UBX_Thread, this);
+    }
+
+    return retStatus;
+}
+
+void GnssHwTTY::StopSalvatorProcedure()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    mEnabled = false;
+
+    if (mFd != -1) {
+        ALOGV("[%s, line %d] closing mFd = %d\n", __func__, __LINE__, mFd);
+        ::close(mFd);
+        mFd = -1;
+    }
+}
+
+void GnssHwTTY::GnssHwUbxInitThread(void)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
+    char prop_secmajor[PROPERTY_VALUE_MAX] = {};
+    char prop_sbas[PROPERTY_VALUE_MAX] = {};
+
+    property_get("ro.boot.gps.secmajor", prop_secmajor, "glonass");
+    property_get("ro.boot.gps.sbas", prop_sbas, "enable");
+
+    auto prop_secmajor_len = strnlen(prop_secmajor, PROPERTY_VALUE_MAX);
+    auto prop_sbas_len = strnlen(prop_sbas, PROPERTY_VALUE_MAX);
+
+    for (size_t i = 0; i < prop_secmajor_len; i++) {
+        prop_secmajor[i] = toupper(prop_secmajor[i]);
+    }
+
+    for (size_t i = 0; i < prop_sbas_len; i++) {
+        prop_sbas[i] = toupper(prop_sbas[i]);
+    }
+
 
     // Reset parser
     UBX_Reset();
@@ -129,18 +267,19 @@ void GnssHwTTY::GnssHwInitThread(void)
     uint8_t ublox_cfg_clear[] = {0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00,
                                  0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
                                  0x17} ;
+    ALOGD("[%s, line %d] ubx send config clear", __func__, __LINE__);
     UBX_Send(ublox_cfg_clear, sizeof(ublox_cfg_clear));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to clear UBX config", mUbxTimeoutMs);
 
-    // Enabling NMEA 4.1 Extended satellite numbering
-    uint8_t ublox_enable_nmea41[] = {0x06, 0x17, 0x0F, 0x00, 0x00, 0x41,
+    // Enabling NMEA 4.1 Extended satellite numbering, set flag freeze bearing
+    uint8_t ublox_enable_nmea41[] = {0x06, 0x17, 0x0F, 0x00, 0x20, 0x41,
                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                      0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
     UBX_Send(ublox_enable_nmea41, sizeof(ublox_enable_nmea41));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NMEA version to 4.1", mUbxTimeoutMs);
 
-    // Set Nagivation Engine to automotive mode
-    uint8_t ublox_nav5[] = {0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x04, 0x03,
+    // Set Nagivation Engine to automotive mode, 3D Fix only
+    uint8_t ublox_nav5[] = {0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x04, 0x02,
                             0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
                             0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00,
                             0x5E, 0x01, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x00,
@@ -152,22 +291,22 @@ void GnssHwTTY::GnssHwInitThread(void)
     UBX_SetMessageRate(0xF0, 0x01, 0, NULL); // disable GLL
     UBX_SetMessageRate(0xF0, 0x05, 0, NULL); // disable VTG
 
-//    CFG-GNSS example
-//    ID    - GNSS ID
-//    MN    - minimum (reserved) tracking channels for this GNSS
-//    MX    - maximum tracking channels
-//    XX    - reserved (always zero)
-//    F1-F4 - bitfield flags
+    //    CFG-GNSS example
+    //    ID    - GNSS ID
+    //    MN    - minimum (reserved) tracking channels for this GNSS
+    //    MX    - maximum tracking channels
+    //    XX    - reserved (always zero)
+    //    F1-F4 - bitfield flags
 
-//              ID MN MX XX F1 F2 F3 F4
-//             ________________________
-//    GPS     | 00 08 10 00 01 00 01 01
-//    SBAS    | 01 01 03 00 01 00 01 01
-//    GALILEO | 02 04 08 00 00 00 01 01
-//    BEIDOU  | 03 08 10 00 00 00 01 01
-//    IMES    | 04 00 08 00 00 00 01 03
-//    QZSS    | 05 00 03 00 01 00 01 05
-//    GLONASS | 06 08 0E 00 01 00 01 01
+    //              ID MN MX XX F1 F2 F3 F4
+    //             ________________________
+    //    GPS     | 00 08 10 00 01 00 01 01
+    //    SBAS    | 01 01 03 00 01 00 01 01
+    //    GALILEO | 02 04 08 00 00 00 01 01
+    //    BEIDOU  | 03 08 10 00 00 00 01 01
+    //    IMES    | 04 00 08 00 00 00 01 03
+    //    QZSS    | 05 00 03 00 01 00 01 05
+    //    GLONASS | 06 08 0E 00 01 00 01 01
 
     const int CFG_GNSS_ENTRY_SIZE = 8;
 
@@ -214,16 +353,19 @@ void GnssHwTTY::GnssHwInitThread(void)
 
     UBX_Send(ublox_cfg_gnss, sizeof(ublox_cfg_gnss));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
+
+    ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
 void GnssHwTTY::GnssHwHandleThread(void)
 {
-    ALOGD("GnssHwHandleThread() ->");
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
     while (!mThreadExit)
     {
         if (mFd == -1) {
-            usleep(1000000); /* Sleeping if TTY device not accessible */
+            std::unique_lock<std::mutex> lock(mHandleThreadLock);
+            mHandleThreadCv.wait(lock);
             continue;
         }
 
@@ -238,11 +380,13 @@ void GnssHwTTY::GnssHwHandleThread(void)
             ReaderPushChar(ch);
         } else {
             ALOGE("TTY read error: %s", strerror(errno));
+            mFd  = -1;
+            usleep(50000);
             continue;
         }
     }
 
-    ALOGD("GnssHwHandleThread() <-");
+    ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
 void GnssHwTTY::ReaderPushChar(unsigned char ch)
@@ -259,7 +403,7 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
     }
     else if (ch == mUbxSync1 && mReaderState == ReaderState::WAITING) {
         mReaderState = ReaderState::WAITING_UBX_SYNC2;
-        ALOGV("UBX waiting sync2");
+        ALOGD("UBX waiting sync2");
     }
     else if (mReaderState == ReaderState::CAPTURING_NMEA) {
         if (ch == '$') {
@@ -282,19 +426,19 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
     }
     else if (mReaderState == ReaderState::WAITING_UBX_SYNC2) {
         if (ch == mUbxSync2) {
-            ALOGV("UBX capturing");
+            ALOGD("UBX capturing");
             mReaderState = ReaderState::CAPTURING_UBX;
         }
     }
     else if (mReaderState == ReaderState::CAPTURING_UBX) {
         if (mReaderBufPos == mUbxLengthFirstByteNo) {
-            ALOGV("UBX rx payload len byte1: %02X", ch);
+            ALOGD("UBX rx payload len byte1: %02X", ch);
             ubx_payload_len += ch;
         }
         else if (mReaderBufPos == mUbxLengthSecondByteNo) {
             ubx_payload_len += ch << 8;
-            ALOGV("UBX rx payload len byte2: %02X", ch);
-            ALOGV("UBX rx payload len: %d", ubx_payload_len);
+            ALOGD("UBX rx payload len byte2: %02X", ch);
+            ALOGD("UBX rx payload len: %d", ubx_payload_len);
         }
     }
 
@@ -302,16 +446,18 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
         mReaderBuf[mReaderBufPos++] = ch;
 
         if (mReaderState == ReaderState::CAPTURING_UBX &&
-            mReaderBufPos >= (ubx_payload_len + mUbxPacketSizeNoPayload)) {
+                mReaderBufPos >= (ubx_payload_len + mUbxPacketSizeNoPayload)) {
 
             /* Parse UBX */
-            ALOGV("UBX rx putting buffer len: %ld", mReaderBufPos);
+            ALOGD("UBX rx putting buffer len: %ld", mReaderBufPos);
 
             UbxBufferElement elem;
             elem.len = mReaderBufPos;
             if (elem.len < (sizeof(UbxBufferElement) - sizeof(size_t))) {
+                ALOGD("[%s, line %d] add, notify all", __func__, __LINE__);
                 memcpy(&elem.data, mReaderBuf, elem.len);
                 mUbxBuffer->put(&elem);
+                mUbxThreadCv.notify_all();
             } else {
                 ALOGE("Received UBX message that is too large for the buffer (%lu)", elem.len);
             }
@@ -326,9 +472,9 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
 
 void GnssHwTTY::NMEA_Thread(void)
 {
-    ALOGD("NMEA_Thread() ->");
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    while (!mThreadExit) {
+    while (!mHelpThreadExit) {
         if (!mNmeaBuffer->empty()) {
             NMEA_ReaderParse((char*)&mNmeaBuffer->get()->data);
         } else {
@@ -336,13 +482,15 @@ void GnssHwTTY::NMEA_Thread(void)
             mNmeaThreadCv.wait(lock);
         }
     }
+
+    ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
 void GnssHwTTY::UBX_Thread(void)
 {
-    ALOGD("UBX_Thread() ->");
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    while (!mThreadExit) {
+    while (!mHelpThreadExit) {
         if (!mUbxBuffer->empty()) {
             UBX_ReaderParse(mUbxBuffer->get());
         } else {
@@ -350,6 +498,8 @@ void GnssHwTTY::UBX_Thread(void)
             mUbxThreadCv.wait(lock);
         }
     }
+
+    ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
 int GnssHwTTY::NMEA_Checksum(const char *s)
@@ -379,6 +529,10 @@ void GnssHwTTY::NMEA_ReaderSplitMessage(std::string msg, std::vector<std::string
         out.push_back(std::string(msg.c_str(), end));
         msg.erase(0, end + (separator ? 1 : 0));
     }
+
+    if(separator) {
+        out.push_back(std::string(msg.c_str(), msg.length()));
+    }
 }
 
 void GnssHwTTY::NMEA_ReaderParse(char *msg)
@@ -386,8 +540,9 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
     int crc = 0;
     char * p = strstr(msg, "*");
 
-    if (p == NULL) /* No CRC field found? Drop message. */
+    if (p == NULL) {/* No CRC field found? Drop message. */
         return;
+    }
 
     crc = strtol(p + 1, NULL, 16);
     *p = '\0';
@@ -408,21 +563,22 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
         android::hardware::hidl_string nmeaString;
         nmeaString.setToExternal(msg, strlen(msg));
 
-        if (mEnabled)
-        {
+        if (mEnabled) {
             auto ret = mGnssCb->gnssNmeaCb(time(NULL), nmeaString);
             if (!ret.isOk()) {
-                ALOGE("%s: Unable to invoke gnssNmeaCb", __func__);
+                ALOGE("Unable to invoke gnssNmeaCb");
+                ALOGD("[%s, line %d] Unable to invoke gnssNmeaCb", __func__, __LINE__);
             }
         }
     }
 
-    ALOGV("GPSRAW: %s", msg);
+    ALOGD("[%s, line %d] GPSRAW: %s", __func__, __LINE__, msg);
+
 
     /* Parse message */
     if (strncmp(msg, "$GPRMC", 6) == 0)  {
         NMEA_ReaderParse_GxRMC(msg);
-    } if (strncmp(msg, "$GNRMC", 6) == 0)  {
+    } else if (strncmp(msg, "$GNRMC", 6) == 0)  {
         NMEA_ReaderParse_GxRMC(msg);
     } else if (strncmp(msg, "$GPGGA", 6) == 0) {
         NMEA_ReaderParse_GxGGA(msg);
@@ -436,15 +592,17 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
         if (strncmp(msg+6, "00", 2) == 0) {
             NMEA_ReaderParse_PUBX00(msg);
         } else {
-            ALOGV("Unhandled PUBX message");
+            ALOGD("Unhandled PUBX message");
         }
     } else {
-        ALOGV("GPSRAW: Unhandled message: %s", msg);
+        ALOGD("[%s, line %d] GPSRAW: Unhandled message: %s", __func__, __LINE__, msg);
     }
 }
 
 void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
 {
+    ALOGV("[%s, line %d] Entry", __func__ ,__LINE__);
+
     int degree;
     double raw, minutes, polarity;
     struct tm t;
@@ -452,9 +610,8 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
     std::vector<std::string> rmc;
     NMEA_ReaderSplitMessage(std::string(msg), rmc);
 
-    /* Message parts count must be 14 */
-    if (rmc.size() != 14 || (rmc[0] != "$GPRMC" && rmc[0] != "$GNRMC")) {
-        ALOGV("Dropping RMC due to invalid size");
+    if (rmc.size() != mRmcFieldsNumber || (rmc[0] != "$GPRMC" && rmc[0] != "$GNRMC")) {
+        ALOGD("Dropping RMC due to invalid size");
         return;
     }
 
@@ -525,24 +682,34 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
         mGnssLocation.gnssLocationFlags &= ~static_cast<uint16_t>(GnssLocationFlags::HAS_BEARING);
     }
 
-    if (mEnabled)
-    {
+    // For ublox devices location callback depends on speed, bearing and altitude existence
+    // Provide location only for 3D fix (has altitude)
+    // Provide location only if speed and bearing (course over ground) are provided simultaneously
+    bool hasSpeed = (mGnssLocation.gnssLocationFlags & GnssLocationFlags::HAS_SPEED);
+    bool hasBearing = (mGnssLocation.gnssLocationFlags & GnssLocationFlags::HAS_BEARING);
+    bool hasAltitude = (mGnssLocation.gnssLocationFlags & GnssLocationFlags::HAS_ALTITUDE);
+    bool provideLocation = ((!hasSpeed || (hasSpeed && hasBearing)) && hasAltitude);
+
+    if (mEnabled && provideLocation) {
+        ALOGD("[%s, line %d] Provide location callback", __func__, __LINE__);
         auto ret = mGnssCb->gnssLocationCb(mGnssLocation);
         if (!ret.isOk()) {
-            ALOGE("%s: Unable to invoke gnssLocationCb", __func__);
+            ALOGE("[%s, line %d]: Unable to invoke gnssLocationCb", __func__, __LINE__);
         }
     }
 }
 
 void GnssHwTTY::NMEA_ReaderParse_GxGGA(char *msg)
 {
+    ALOGV("[%s, line %d] Entry", __func__ ,__LINE__);
+
     std::vector<std::string> gga;
     NMEA_ReaderSplitMessage(std::string(msg), gga);
 
-    /* Message parts count must be 14 */
-    if (gga.size() != 14 ||
+    /* Message parts count must be 15 */
+    if (gga.size() != ggaFieldsNumber ||
             (gga[0] != "$GPGGA" && gga[0] != "$GNGGA")) {
-        ALOGV("Dropping GGA due to invalid size");
+        ALOGD("Dropping GGA due to invalid size");
         return;
     }
 
@@ -558,12 +725,14 @@ void GnssHwTTY::NMEA_ReaderParse_GxGGA(char *msg)
 
 void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 {
+    ALOGV("[%s, line %d] Entry", __func__ ,__LINE__);
+
     std::vector<std::string> gsv;
     NMEA_ReaderSplitMessage(std::string(msg), gsv);
 
     /* Message must have least 4 parts */
-    if (gsv.size() < 4 || strncmp(msg+3, "GSV", 3) != 0) {
-        ALOGV("Dropping GSV due to invalid size");
+    if (gsv.size() < gsvFieldsNumber || strncmp(msg+3, "GSV", 3) != 0) {
+        ALOGD("Dropping GSV due to invalid size");
         return;
     }
 
@@ -612,8 +781,8 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
     bool valid_msg = true;
     bool callback_ready = false;
     static int glonass_fcn; // GLONASS SVID can be equal to zero, which is not acceptable by Android
-                            // in this case we are supposed to report FCN (frequency channel number),
-                            // we don't have a real one, so let's use a simulated one
+    // in this case we are supposed to report FCN (frequency channel number),
+    // we don't have a real one, so let's use a simulated one
 
     if( sentence_idx <= 0 || sentence_idx > sentences || num_svs <= 0 ) {
         valid_msg = false;
@@ -628,28 +797,28 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
         // Only one secondary major GNSS can be enabled
         // Make sure that GLONASS messages are not handled when BEIDOU is active and vice versa
         switch (mMajorGnssStatus) {
-            case MajorGnssStatus::GPS_GLONASS:
-                mSatellites[static_cast<int>(SatelliteType::BEIDOU)].clear();
-                mSatellitesUsedInFix[static_cast<int>(SatelliteType::BEIDOU)].clear();
-                if (currentSatelliteType == SatelliteType::BEIDOU) {
-                    return;
-                }
-                break;
+        case MajorGnssStatus::GPS_GLONASS:
+            mSatellites[static_cast<int>(SatelliteType::BEIDOU)].clear();
+            mSatellitesUsedInFix[static_cast<int>(SatelliteType::BEIDOU)].clear();
+            if (currentSatelliteType == SatelliteType::BEIDOU) {
+                return;
+            }
+            break;
 
-            case MajorGnssStatus::GPS_BEIDOU:
-                mSatellites[static_cast<int>(SatelliteType::GLONASS)].clear();
-                mSatellitesUsedInFix[static_cast<int>(SatelliteType::GLONASS)].clear();
-                if (currentSatelliteType == SatelliteType::GLONASS) {
-                    return;
-                }
-                break;
+        case MajorGnssStatus::GPS_BEIDOU:
+            mSatellites[static_cast<int>(SatelliteType::GLONASS)].clear();
+            mSatellitesUsedInFix[static_cast<int>(SatelliteType::GLONASS)].clear();
+            if (currentSatelliteType == SatelliteType::GLONASS) {
+                return;
+            }
+            break;
 
-            case MajorGnssStatus::GPS_ONLY:
-                mSatellites[static_cast<int>(SatelliteType::BEIDOU)].clear();
-                mSatellites[static_cast<int>(SatelliteType::GLONASS)].clear();
-                mSatellitesUsedInFix[static_cast<int>(SatelliteType::BEIDOU)].clear();
-                mSatellitesUsedInFix[static_cast<int>(SatelliteType::GLONASS)].clear();
-                break;
+        case MajorGnssStatus::GPS_ONLY:
+            mSatellites[static_cast<int>(SatelliteType::BEIDOU)].clear();
+            mSatellites[static_cast<int>(SatelliteType::GLONASS)].clear();
+            mSatellitesUsedInFix[static_cast<int>(SatelliteType::BEIDOU)].clear();
+            mSatellitesUsedInFix[static_cast<int>(SatelliteType::GLONASS)].clear();
+            break;
         }
 
         satelliteList->clear();
@@ -676,21 +845,21 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
             int idx = 4 + (p * 4);
 
             /**
-             * Pseudo-random number for the SV, or FCN/OSN number for Glonass. The
-             * distinction is made by looking at constellation field. Values must be
-             * in the range of:
-             *
-             * - GNSS:    1-32
-             * - SBAS:    120-151, 183-192
-             * - GLONASS: 1-24, the orbital slot number (OSN), if known.  Or, if not:
-             *            93-106, the frequency channel number (FCN) (-7 to +6) offset by
-             *            + 100
-             *            i.e. report an FCN of -7 as 93, FCN of 0 as 100, and FCN of +6
-             *            as 106.
-             * - QZSS:    193-200
-             * - Galileo: 1-36
-             * - Beidou:  1-37
-             */
+         * Pseudo-random number for the SV, or FCN/OSN number for Glonass. The
+         * distinction is made by looking at constellation field. Values must be
+         * in the range of:
+         *
+         * - GNSS:    1-32
+         * - SBAS:    120-151, 183-192
+         * - GLONASS: 1-24, the orbital slot number (OSN), if known.  Or, if not:
+         *            93-106, the frequency channel number (FCN) (-7 to +6) offset by
+         *            + 100
+         *            i.e. report an FCN of -7 as 93, FCN of 0 as 100, and FCN of +6
+         *            as 106.
+         * - QZSS:    193-200
+         * - Galileo: 1-36
+         * - Beidou:  1-37
+         */
 
             sv.svid = atoi(gsv[idx + 0].c_str());
 
@@ -750,7 +919,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 
             satelliteList->push_back(sv);
 
-            ALOGV("GPGSV: [%zu] svid=%d, elevation=%f, azimuth=%f, c_n0_dbhz=%f", offset + p,
+            ALOGD("GPGSV: [%zu] svid=%d, elevation=%f, azimuth=%f, c_n0_dbhz=%f", offset + p,
                   sv.svid, sv.elevationDegrees, sv.azimuthDegrees, sv.cN0Dbhz);
         }
     }
@@ -769,14 +938,15 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
         }
         mSvStatus.numSvs = svCount;
 
-        ALOGV("GPS SV: GPS/SBAS/GZSS: %lu | GLONASS: %lu | GALILEO: %lu | BEIDOU: %lu | UNKNOWN: %lu | total: %u", mSatellites[0].size(), mSatellites[1].size(), mSatellites[2].size(), mSatellites[3].size(), mSatellites[4].size(), svCount);
+        ALOGD("GPS SV: GPS/SBAS/GZSS: %lu | GLONASS: %lu | GALILEO: %lu | BEIDOU: %lu | UNKNOWN: %lu | total: %u",
+              mSatellites[0].size(), mSatellites[1].size(), mSatellites[2].size(), mSatellites[3].size(),
+              mSatellites[4].size(), svCount);
 
         if (sentences == sentence_idx) { /* Last SVS received and parsed */
-            if (mEnabled)
-            {
+            if (mEnabled) {
                 auto ret = mGnssCb->gnssSvStatusCb(mSvStatus);
                 if (!ret.isOk()) {
-                    ALOGE("%s: Unable to invoke gnssSvStatusCb", __func__);
+                    ALOGE("[%s, line %d]: Unable to invoke gnssSvStatusCb", __func__, __LINE__);
                 }
             }
         }
@@ -785,27 +955,29 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 
 void GnssHwTTY::NMEA_ReaderParse_GNGSA(char *msg)
 {
+    ALOGV("[%s, line %d] Entry", __func__ ,__LINE__);
+
     std::vector<std::string> gsa;
     NMEA_ReaderSplitMessage(std::string(msg), gsa);
 
     /* GSA is expected to have 19 parts */
-    if (gsa.size() != 19) {
-        ALOGV("Dropping GSA due to invalid size (%lu)", gsa.size());
+    if (gsa.size() != gsaFieldsNumber) {
+        ALOGD("Dropping GSA due to invalid size (%lu)", gsa.size());
         return;
     }
 
     std::vector<int>* satelliteList = nullptr;
-    switch (gsa[18][0]) {
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-            satelliteList = &mSatellitesUsedInFix[gsa[18][0] - '1'];
-            break;
-        default:
-            ALOGI("Unknown GSA GNSS System ID");
-            return;
-            break;
+    switch (gsa.back().c_str()[0]) {
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+        satelliteList = &mSatellitesUsedInFix[gsa.back().c_str()[0] - '1'];
+        break;
+    default:
+        ALOGI("Unknown GSA GNSS System ID");
+        return;
+        break;
     }
 
     satelliteList->clear();
@@ -824,9 +996,9 @@ void GnssHwTTY::NMEA_ReaderParse_PUBX00(char *msg)
     NMEA_ReaderSplitMessage(std::string(msg), pubx);
 
     /* PUBX,00 is expected to have 21 parts */
-    if ((pubx.size() != 21) ||
-        (pubx[0] != "$PUBX" && pubx[1] != "00")) {
-        ALOGV("Dropping PUBX due to invalid size (%lu)", pubx.size());
+    if ((pubx.size() != pubxFieldsNumber) ||
+            (pubx[0] != "$PUBX" && pubx[1] != "00")) {
+        ALOGD("Dropping PUBX due to invalid size (%lu)", pubx.size());
         return;
     }
 
@@ -882,74 +1054,85 @@ void GnssHwTTY::UBX_CriticalProtocolError(const char *errormsg)
 
 void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
 {
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
     for (mUM.buffer_ptr = 0; mUM.buffer_ptr < ubx->len; mUM.buffer_ptr++) {
-        ALOGV("UBX parser state: %d (buffer ptr: %lu)", mUM.state, mUM.buffer_ptr);
+        ALOGD("UBX parser state: %d (buffer ptr: %lu)", mUM.state, mUM.buffer_ptr);
         switch (mUM.state) {
-            case UbxState::SYNC1:
-                if (ubx->data[mUM.buffer_ptr] == mUbxSync1) {
-                    mUM.state = UbxState::SYNC2;
-                } else {
-                    ALOGW("UBX parser error on state UbxState::SYNC1 (%02X)", ubx->data[mUM.buffer_ptr]);
-                }
-                break;
+        case UbxState::SYNC1:
+            ALOGV("[%s, line %d] Sync1", __func__, __LINE__);
+            if (ubx->data[mUM.buffer_ptr] == mUbxSync1) {
+                mUM.state = UbxState::SYNC2;
+            } else {
+                ALOGW("UBX parser error on state UbxState::SYNC1 (%02X)", ubx->data[mUM.buffer_ptr]);
+            }
+            break;
 
-            case UbxState::SYNC2:
-                if (ubx->data[mUM.buffer_ptr] == mUbxSync2) {
-                    mUM.state = UbxState::CLASS;
-                } else {
-                    ALOGW("UBX parser error on state UbxState::SYNC2 (%02X)", ubx->data[mUM.buffer_ptr]);
-                }
-                break;
+        case UbxState::SYNC2:
+            ALOGV("[%s, line %d] Sync2", __func__, __LINE__);
+            if (ubx->data[mUM.buffer_ptr] == mUbxSync2) {
+                mUM.state = UbxState::CLASS;
+            } else {
+                ALOGW("UBX parser error on state UbxState::SYNC2 (%02X)", ubx->data[mUM.buffer_ptr]);
+            }
+            break;
 
-            case UbxState::CLASS:
-                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
-                mUM.rx_class = ubx->data[mUM.buffer_ptr];
-                mUM.state    = UbxState::ID;
-                break;
+        case UbxState::CLASS:
+            ALOGV("[%s, line %d] Class", __func__, __LINE__);
+            UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+            mUM.rx_class = ubx->data[mUM.buffer_ptr];
+            mUM.state    = UbxState::ID;
+            break;
 
-            case UbxState::ID:
-                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
-                mUM.rx_id = ubx->data[mUM.buffer_ptr];
-                mUM.state = UbxState::LENGTH1;
-                break;
+        case UbxState::ID:
+            ALOGV("[%s, line %d] Id", __func__, __LINE__);
+            UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+            mUM.rx_id = ubx->data[mUM.buffer_ptr];
+            mUM.state = UbxState::LENGTH1;
+            break;
 
-            case UbxState::LENGTH1:
-                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
-                mUM.rx_payload_len = ubx->data[mUM.buffer_ptr];
-                mUM.state          = UbxState::LENGTH2;
-                break;
+        case UbxState::LENGTH1:
+            ALOGV("[%s, line %d] Length1", __func__, __LINE__);
+            UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+            mUM.rx_payload_len = ubx->data[mUM.buffer_ptr];
+            mUM.state          = UbxState::LENGTH2;
+            break;
 
-            case UbxState::LENGTH2:
-                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
-                mUM.rx_payload_len += ubx->data[mUM.buffer_ptr] << 8;
-                mUM.state           = UbxState::PAYLOAD;
-                ALOGV("UBX payload len: %d", mUM.rx_payload_len);
-                if (mUM.rx_payload_len == 0) {
-                    mUM.state = UbxState::CHECKSUM1;
-                }
-                break;
+        case UbxState::LENGTH2:
+            ALOGV("[%s, line %d] Length2", __func__, __LINE__);
+            UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+            mUM.rx_payload_len += ubx->data[mUM.buffer_ptr] << 8;
+            mUM.state           = UbxState::PAYLOAD;
+            ALOGV("UBX payload len: %d", mUM.rx_payload_len);
+            if (mUM.rx_payload_len == 0) {
+                mUM.state = UbxState::CHECKSUM1;
+            }
+            break;
 
-            case UbxState::PAYLOAD:
-                UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
-                mUM.rx_payload_ptr++;
-                if (mUM.rx_payload_ptr == mUM.rx_payload_len) {
-                    mUM.state = UbxState::CHECKSUM1;
-                }
-                break;
+        case UbxState::PAYLOAD:
+            ALOGV("[%s, line %d] Payload", __func__, __LINE__);
+            UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+            mUM.rx_payload_ptr++;
+            if (mUM.rx_payload_ptr == mUM.rx_payload_len) {
+                mUM.state = UbxState::CHECKSUM1;
+            }
+            break;
 
-            case UbxState::CHECKSUM1:
-                mUM.rx_exp_checksum_a = ubx->data[mUM.buffer_ptr];
-                mUM.state = UbxState::CHECKSUM2;
-                break;
+        case UbxState::CHECKSUM1:
+            ALOGV("[%s, line %d] crc 1", __func__, __LINE__);
+            mUM.rx_exp_checksum_a = ubx->data[mUM.buffer_ptr];
+            mUM.state = UbxState::CHECKSUM2;
+            break;
 
-            case UbxState::CHECKSUM2:
-                mUM.rx_exp_checksum_b = ubx->data[mUM.buffer_ptr];
-                mUM.state = UbxState::FINISH;
-                break;
+        case UbxState::CHECKSUM2:
+            ALOGV("[%s, line %d] crc 2", __func__, __LINE__);
+            mUM.rx_exp_checksum_b = ubx->data[mUM.buffer_ptr];
+            mUM.state = UbxState::FINISH;
+            break;
 
-            case UbxState::FINISH:
-                ALOGW("UBX Unexpected FINISH state in parser");
-                break;
+        case UbxState::FINISH:
+            ALOGW("UBX Unexpected FINISH state in parser");
+            break;
         }
     }
 
@@ -957,7 +1140,7 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
         ALOGV("UBX parser finished parsing message");
         ALOGV("UBX received message CLASS: %02X ID: %02X", mUM.rx_class, mUM.rx_id);
         if (mUM.rx_exp_checksum_a != mUM.rx_checksum_a ||
-            mUM.rx_exp_checksum_b != mUM.rx_checksum_b) {
+                mUM.rx_exp_checksum_b != mUM.rx_checksum_b) {
             ALOGI("UBX parser checksum fail %02X%02X/%02X%02X", mUM.rx_exp_checksum_a, mUM.rx_exp_checksum_b,
                   mUM.rx_checksum_a, mUM.rx_checksum_b);
         } else {
@@ -971,36 +1154,36 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
 
         if (st != nullptr) {
             switch (st->state) {
-                case (UbxRxState::WAITING_ANSWER):
-                    if (st->xclass == mUM.rx_class && st->id == mUM.rx_id) {
-                        ALOGV("UBX got answer with CLASS: %02X ID: %02X", mUM.rx_class, mUM.rx_id);
+            case (UbxRxState::WAITING_ANSWER):
+                if (st->xclass == mUM.rx_class && st->id == mUM.rx_id) {
+                    ALOGV("UBX got answer with CLASS: %02X ID: %02X", mUM.rx_class, mUM.rx_id);
+                } else {
+                    ALOGI("UBX got INVALID answer with CLASS: %02X ID: %02X (expected: %02X/%02X)", mUM.rx_class, mUM.rx_id, st->xclass, st->id);
+                }
+                break;
+
+            case (UbxRxState::WAITING_ACK):
+                if (mUM.rx_class == mAckClass) {
+                    if (st->xclass != ubx->data[mUbxFirstPayloadOffset] || st->id != ubx->data[mUbxFirstPayloadOffset + 1]) {
+                        ALOGI("UBX Invalid ACK/NAK tx class/id (CLASS: %02X | ID: %02X), expected: %02X/%02X", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1], st->xclass, st->id);
+                        UBX_CriticalProtocolError(st->errormsg);
+                    }
+                    if (mUM.rx_id == mAckAckId) {
+                        ALOGD("UBX Got ACK (CLASS: %02X | ID: %02X)", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1]);
+                        mUbxAckReceived++;
+                    } else if (mUM.rx_id == mAckNakId) {
+                        ALOGD("UBX Got NAK (CLASS: %02X | ID: %02X)", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1]);
+                        UBX_CriticalProtocolError(st->errormsg);
                     } else {
-                        ALOGI("UBX got INVALID answer with CLASS: %02X ID: %02X (expected: %02X/%02X)", mUM.rx_class, mUM.rx_id, st->xclass, st->id);
+                        ALOGI("UBX Invalid ACK ID");
+                        UBX_CriticalProtocolError(st->errormsg);
                     }
-                    break;
+                }
+                break;
 
-                case (UbxRxState::WAITING_ACK):
-                    if (mUM.rx_class == mAckClass) {
-                        if (st->xclass != ubx->data[mUbxFirstPayloadOffset] || st->id != ubx->data[mUbxFirstPayloadOffset + 1]) {
-                            ALOGI("UBX Invalid ACK/NAK tx class/id (CLASS: %02X | ID: %02X), expected: %02X/%02X", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1], st->xclass, st->id);
-                            UBX_CriticalProtocolError(st->errormsg);
-                        }
-                        if (mUM.rx_id == mAckAckId) {
-                            ALOGV("UBX Got ACK (CLASS: %02X | ID: %02X)", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1]);
-                            mUbxAckReceived++;
-                        } else if (mUM.rx_id == mAckNakId) {
-                            ALOGV("UBX Got NAK (CLASS: %02X | ID: %02X)", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1]);
-                            UBX_CriticalProtocolError(st->errormsg);
-                        } else {
-                            ALOGI("UBX Invalid ACK ID");
-                            UBX_CriticalProtocolError(st->errormsg);
-                        }
-                    }
-                    break;
-
-                default:
-                    ALOGW("UBX Unhandled message state");
-                    break;
+            default:
+                ALOGW("[%s, line %d] UBX Unhandled message state", __func__, __LINE__);
+                break;
             }
         }
     } else {
@@ -1015,6 +1198,7 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
 
 void GnssHwTTY::UBX_Send(uint8_t *msg, size_t len)
 {
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     if (len >= mUbxBufferSize) {
         len = mUbxBufferSize - 1;
     }
@@ -1049,11 +1233,14 @@ void GnssHwTTY::UBX_Send(uint8_t *msg, size_t len)
 
     int ret = write(mFd, tx_buffer, exp_len);
     if (ret < exp_len) {
-        ALOGE("UBX send msg: failed to transmit fully (only %d of %d bytes trasmitted)\n", ret, exp_len);
+        ALOGE("[%s, line %d] UBX send msg: failed to transmit fully (only %d of %d bytes trasmitted)\n",
+              __func__, __LINE__, ret, exp_len);
     } else if (ret == -1) {
-        ALOGE("UBX send msg: failed to write message, write error: %s\n", strerror(errno));
+        ALOGE("[%s, line %d] UBX send msg: failed to write message, write error: %s\n",
+              __func__, __LINE__, strerror(errno));
     } else {
-        ALOGV("UBX send msg: CLASS: %02X ID: %02X CHECKSUM: %02X%02X", tx_buffer[2], tx_buffer[3], tx_buffer[checksum_offset_a], tx_buffer[checksum_offset_b]);
+        ALOGD("[%s, line %d] UBX sent msg: CLASS: %02X ID: %02X CHECKSUM: %02X%02X", __func__, __LINE__,
+              tx_buffer[2], tx_buffer[3], tx_buffer[checksum_offset_a], tx_buffer[checksum_offset_b]);
     }
 }
 
@@ -1080,10 +1267,9 @@ bool GnssHwTTY::UBX_Wait(UbxRxState astate, const char *errormsg, uint64_t timeo
     while (mUbxAckReceived <= 0) {
         if ((android::elapsedRealtimeNano() - start) > timeoutMs) {
             if (errormsg != NULL) {
-                ALOGE("%s", errormsg);
                 UBX_CriticalProtocolError(errormsg);
             } else {
-                ALOGE("UBX protocol failure (no ACK received)");
+                ALOGE("[%s, line %d] UBX protocol failure (no ACK received)", __func__, __LINE__);
                 UBX_CriticalProtocolError("UBX protocol failure (no ACK received)");
             }
             return false;
@@ -1105,3 +1291,27 @@ void GnssHwTTY::UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t ra
     UBX_Send(ublox_buf, sizeof(ublox_buf));
     UBX_Wait(UbxRxState::WAITING_ACK, msg, mUbxTimeoutMs);
 }
+
+
+bool GnssHwTTY::CheckHwPropertyKf()
+{
+    char prop_hardware[PROPERTY_VALUE_MAX] = {};
+    std::string kingfisher("kingfisher");
+    std::string propHardware("ro.hardware");
+
+    int result = __system_property_get(propHardware.c_str(), prop_hardware);
+    if(result > 0) {
+        if ( 0 == kingfisher.compare(prop_hardware)) {
+            mIsKingfisher = true;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool GnssHwTTY::CheckUsbDeviceVendorUbx()
+{
+    UsbHandler usbHandler;
+    return usbHandler.ScanUsbDevices();
+}
+

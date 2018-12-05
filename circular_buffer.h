@@ -4,7 +4,7 @@
 #include <mutex>
 #include <string.h>
 
-#include <cutils/log.h>
+#include <log/log.h>
 
 template <class T>
 class CircularBuffer {

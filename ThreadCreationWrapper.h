@@ -19,7 +19,7 @@
 
 #include <pthread.h>
 #include <vector>
-#include <cutils/log.h>
+#include <log/log.h>
 
 typedef void (*threadEntryFunc)(void* ret);
 

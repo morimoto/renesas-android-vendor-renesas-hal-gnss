@@ -1,6 +1,6 @@
 
 
-#define LOG_TAG "GnssSalvatorHAL"
+#define LOG_TAG "GnssRenesasHAL"
 
 #include <android-base/logging.h>
 #include <binder/ProcessState.h>
@@ -13,7 +13,7 @@ using namespace android::hardware::gnss::V1_0;
 
 int main(void) {
     android::ProcessState::initWithDriver("/dev/vndbinder");
-    android::sp<IGnss> gnss_hal = new kingfisher::Gnss();
+    android::sp<IGnss> gnss_hal = new renesas::Gnss();
 
     configureRpcThreadpool(1, true);
 

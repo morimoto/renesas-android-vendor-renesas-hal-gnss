@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ANDROID_HARDWARE_GNSS_V1_0_KINGFISHER_H_
-#define ANDROID_HARDWARE_GNSS_V1_0_KINGFISHER_H_
+#ifndef ANDROID_HARDWARE_GNSS_V1_0_RENESAS_H_
+#define ANDROID_HARDWARE_GNSS_V1_0_RENESAS_H_
 
 #include <android/hardware/gnss/1.0/IGnss.h>
 #include <hidl/Status.h>
@@ -37,7 +37,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 using ::android::hardware::Return;
 using ::android::hardware::Void;
@@ -139,10 +139,10 @@ private:
     static sp<IGnssCallback> sGnssCbIface;
 };
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware
 }  // namespace android
 
-#endif  // ANDROID_HARDWARE_GNSS_V1_0_KINGFISHER_H_
+#endif  // ANDROID_HARDWARE_GNSS_V1_0_RENESAS_H_

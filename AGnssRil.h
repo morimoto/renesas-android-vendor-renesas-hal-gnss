@@ -25,7 +25,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 using ::android::hardware::gnss::V1_0::IAGnssRil;
 using ::android::hardware::gnss::V1_0::IAGnssRilCallback;
@@ -59,7 +59,7 @@ struct AGnssRil : public IAGnssRil {
     Return<bool> updateNetworkAvailability(bool available, const hidl_string& apn) override;
 };
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

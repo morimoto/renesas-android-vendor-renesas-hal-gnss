@@ -85,6 +85,12 @@ class GnssHwTTY : public GnssHwIface
     size_t       mReaderBufPos = 0;
     ReaderState  mReaderState  = ReaderState::WAITING;
 
+
+    bool mIsKingfisher = false;
+    bool mIsUbloxDevice = false;
+    size_t mRmcFieldsNumber;
+
+
     struct NmeaBufferElement {
         char data[mNmeaBufferSize];
     };
@@ -101,11 +107,15 @@ class GnssHwTTY : public GnssHwIface
     std::thread mUbxThread;
     std::thread mHwInitThread;
 
+    std::atomic<bool> mHelpThreadExit;
+
     std::condition_variable mNmeaThreadCv;
     std::condition_variable mUbxThreadCv;
+    std::condition_variable mHandleThreadCv;
 
     std::mutex mNmeaThreadLock;
     std::mutex mUbxThreadLock;
+    std::mutex mHandleThreadLock;
 
     enum class SatelliteType {
         GPS_SBAS_GZSS = 0,
@@ -127,6 +137,9 @@ class GnssHwTTY : public GnssHwIface
     };
 
     MajorGnssStatus mMajorGnssStatus;
+
+    bool CheckUsbDeviceVendorUbx();
+    bool CheckHwPropertyKf();
 
     void ReaderPushChar(unsigned char ch);
 
@@ -203,6 +216,11 @@ class GnssHwTTY : public GnssHwIface
 
     CircularBuffer<UbxStateQueueElement> *mUbxStateBuffer;
 
+    bool OpenDevice(const char *ttyDevDefault);
+    bool StartSalvatorProcedure();
+    void StopSalvatorProcedure();
+
+    void GnssHwUbxInitThread(void);
     void UBX_Thread(void);
     void UBX_Reset();
     void UBX_ChecksumReset();
@@ -224,7 +242,6 @@ public:
     bool setUpdatePeriod(int);
 
     void GnssHwHandleThread(void);
-    void GnssHwInitThread(void);
 };
 
 class GnssHwFAKE : public GnssHwIface

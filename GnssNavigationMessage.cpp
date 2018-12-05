@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssKingfisherHAL_GnssNavigationMessageInterface"
+#define LOG_TAG "GnssRenesasHAL_GnssNavigationMessageInterface"
 
 #include <log/log.h>
 
@@ -24,7 +24,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 GnssNavigationMessage::GnssNavigationMessage() {}
 
@@ -40,7 +40,7 @@ Return<void> GnssNavigationMessage::close()  {
     return Void();
 }
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

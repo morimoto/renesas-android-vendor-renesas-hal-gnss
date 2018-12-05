@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssKingfisherHAL_AGnssInterface"
+#define LOG_TAG "GnssRenesasHAL_AGnssInterface"
 
 #include "AGnss.h"
 
@@ -22,7 +22,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 std::vector<std::unique_ptr<ThreadFuncArgs>> AGnss::sThreadFuncArgsList;
 sp<IAGnssCallback> AGnss::sAGnssCbIface = nullptr;
@@ -191,7 +191,7 @@ Return<bool> AGnss::dataConnOpen(const hidl_string& apn, IAGnss::ApnIpType apnIp
                                                      static_cast<uint16_t>(apnIpType)) == 0);
 }
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

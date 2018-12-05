@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssKingfisherHAL_GnssNiInterface"
+#define LOG_TAG "GnssRenesasHAL_GnssNiInterface"
 
 #include "GnssNi.h"
 
@@ -22,7 +22,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 GnssNi::GnssNi()   {}
 
@@ -39,7 +39,7 @@ Return<void> GnssNi::respond(int32_t, IGnssNiCallback::GnssUserResponseType)  {
     return Void();
 }
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

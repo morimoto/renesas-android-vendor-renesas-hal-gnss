@@ -25,7 +25,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 using ::android::hardware::gnss::V1_0::IGnssNi;
 using ::android::hardware::gnss::V1_0::IGnssNiCallback;
@@ -53,7 +53,7 @@ struct GnssNi : public IGnssNi {
                          IGnssNiCallback::GnssUserResponseType userResponse) override;
 };
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

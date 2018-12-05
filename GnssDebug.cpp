@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssKingfisherHAL_GnssDebugInterface"
+#define LOG_TAG "GnssRenesasHAL_GnssDebugInterface"
 
 #include <log/log.h>
 
@@ -24,7 +24,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 GnssDebug::GnssDebug() {}
 
@@ -42,7 +42,7 @@ Return<void> GnssDebug::getDebugData(getDebugData_cb _hidl_cb)  {
     return Void();
 }
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

@@ -24,7 +24,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 using ::android::hardware::gnss::V1_0::IGnssNavigationMessage;
 using ::android::hardware::gnss::V1_0::IGnssNavigationMessageCallback;
@@ -51,7 +51,7 @@ struct GnssNavigationMessage : public IGnssNavigationMessage {
     Return<void> close() override;
 };
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

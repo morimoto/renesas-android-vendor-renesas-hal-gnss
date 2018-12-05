@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssKingfisherHAL_GnssBatchingInterface"
+#define LOG_TAG "GnssRenesasHAL_GnssBatchingInterface"
 
 #include "GnssBatching.h"
 #include <Gnss.h> // for wakelock consolidation
 
-#include <cutils/log.h>  // for ALOGE
+#include <log/log.h>  // for ALOGE
 #include <vector>
 
 namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 sp<IGnssBatchingCallback> GnssBatching::sGnssBatchingCbIface = nullptr;
 bool GnssBatching::sFlpSupportsBatching = false;
@@ -171,7 +171,7 @@ Return<void> GnssBatching::cleanup() {
     return Void();
 }
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware

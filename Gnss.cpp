@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "GnssKingfisherHAL"
-//#define LOG_NDEBUG 0
+#define LOG_TAG "GnssRenesasHAL"
+#define LOG_NDEBUG 1
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/properties.h>
 
 #include "Gnss.h"
@@ -26,7 +26,7 @@ namespace android {
 namespace hardware {
 namespace gnss {
 namespace V1_0 {
-namespace kingfisher {
+namespace renesas {
 
 sp<IGnssCallback> Gnss::sGnssCbIface = nullptr;
 bool Gnss::sWakelockHeldGnss = false;
@@ -390,7 +390,7 @@ Return<bool> Gnss::setPositionMode(IGnss::GnssPositionMode mode,
     return true;
 }
 
-}  // namespace kingfisher
+}  // namespace renesas
 }  // namespace V1_0
 }  // namespace gnss
 }  // namespace hardware
