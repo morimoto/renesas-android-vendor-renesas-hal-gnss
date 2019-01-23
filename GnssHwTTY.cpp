@@ -15,7 +15,7 @@
  */
 
 #define LOG_TAG "GnssRenesasHAL"
-//#define LOG_NDEBUG  1
+// #define LOG_NDEBUG 0
 
 #include <termios.h>
 #include <unistd.h>
@@ -572,7 +572,7 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
         }
     }
 
-    ALOGD("[%s, line %d] GPSRAW: %s", __func__, __LINE__, msg);
+    ALOGV("[%s, line %d] GPSRAW: %s", __func__, __LINE__, msg);
 
 
     /* Parse message */
@@ -938,7 +938,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
         }
         mSvStatus.numSvs = svCount;
 
-        ALOGD("GPS SV: GPS/SBAS/GZSS: %lu | GLONASS: %lu | GALILEO: %lu | BEIDOU: %lu | UNKNOWN: %lu | total: %u",
+        ALOGV("GPS SV: GPS/SBAS/GZSS: %lu | GLONASS: %lu | GALILEO: %lu | BEIDOU: %lu | UNKNOWN: %lu | total: %u",
               mSatellites[0].size(), mSatellites[1].size(), mSatellites[2].size(), mSatellites[3].size(),
               mSatellites[4].size(), svCount);
 
