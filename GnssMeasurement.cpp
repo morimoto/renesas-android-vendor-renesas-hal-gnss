@@ -16,7 +16,11 @@
 
 #define LOG_TAG "GnssRenesasHAL_GnssMeasurementInterface"
 
+#include <memory>
 #include "GnssMeasurement.h"
+#include "GnssRxmMeasxParser.h"
+#include "GnssMeasQueue.h"
+#include "GnssIParser.h"
 
 namespace android {
 namespace hardware {
@@ -24,18 +28,79 @@ namespace gnss {
 namespace V1_0 {
 namespace renesas {
 
-GnssMeasurement::GnssMeasurement() {}
+static const bool on = true;
+static const bool off = false;
+
+sp<IGnssMeasurementCallback> GnssMeasurement::sGnssMeasurementsCbIface = nullptr;
+
+GnssMeasurement::GnssMeasurement():
+    mThreadExit(false)
+{}
 
 // Methods from ::android::hardware::gnss::V1_0::IGnssMeasurement follow.
 Return<GnssMeasurement::GnssMeasurementStatus> GnssMeasurement::setCallback(
-        const sp<IGnssMeasurementCallback>&)  {
-    ALOGE("%s: Not implemented", __func__);
-    return GnssMeasurementStatus::ERROR_GENERIC;
+        const sp<IGnssMeasurementCallback>& callback)  {
+
+    if (sGnssMeasurementsCbIface != nullptr) {
+        ALOGE("%s: GnssMeasurements already init", __func__);
+        return GnssMeasurementStatus::ERROR_ALREADY_INIT;
+    }
+
+    sGnssMeasurementsCbIface = callback;
+    ALOGD("%s: GnssMeasurements initialized", __func__);
+
+    mThreadExit = false;
+    if (!mGnssMeasurementsCallbackThread.joinable()) {
+        mGnssMeasurementsCallbackThread = std::thread(&GnssMeasurement::callbackThread, this);
+    }
+
+    return GnssMeasurementStatus::SUCCESS;
 }
 
 Return<void> GnssMeasurement::close()  {
-    ALOGE("%s: GnssMeasure interface is unavailable", __func__);
+    if (sGnssMeasurementsCbIface == nullptr) {
+        ALOGD("%s: called before setCallback", __func__);
+        return Void();
+    }
+
+    sGnssMeasurementsCbIface = nullptr;
+    mThreadExit = true;
+    mGnssMeasurementsCallbackThread.detach();
+    ALOGD("%s: GnssMeasurements closed", __func__);
+
     return Void();
+}
+
+void GnssMeasurement::callbackThread(void)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
+    GnssMeasQueue &instance = GnssMeasQueue::getInstance();
+    instance.setState(on);
+    while (!mThreadExit) {
+        uint8_t flagReady = 0;
+        auto data = std::make_unique<IGnssMeasurementCallback::GnssData> ();
+
+        while (!instance.empty()) {
+            auto parser = instance.pop();
+            if (nullptr == parser) {
+                ALOGV("[%s, line %d] parser is null", __func__, __LINE__);
+                continue;
+            }
+            flagReady |= parser->retrieveSvInfo(*data);
+
+            if (sGnssMeasurementsCbIface != nullptr && GnssIParser::Ready == flagReady) {
+                sGnssMeasurementsCbIface->GnssMeasurementCb(*data);
+                ALOGD("GNSS Measurements sent");
+                break;
+            }
+        }
+
+        usleep(1000 * 1000);
+    }
+
+    instance.setState(off);
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 }
 
 }  // namespace renesas

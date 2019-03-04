@@ -20,6 +20,8 @@
 #include <ThreadCreationWrapper.h>
 #include <android/hardware/gnss/1.0/IGnssMeasurement.h>
 #include <hidl/Status.h>
+#include <thread>
+#include <utils/SystemClock.h>
 
 namespace android {
 namespace hardware {
@@ -50,6 +52,12 @@ struct GnssMeasurement : public IGnssMeasurement {
     Return<GnssMeasurementStatus> setCallback(
         const sp<IGnssMeasurementCallback>& callback) override;
     Return<void> close() override;
+
+    void callbackThread(void);
+private:
+    std::atomic<bool> mThreadExit;
+    static sp<IGnssMeasurementCallback> sGnssMeasurementsCbIface;
+    std::thread mGnssMeasurementsCallbackThread;
 };
 
 }  // namespace renesas
