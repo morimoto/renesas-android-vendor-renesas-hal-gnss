@@ -15,12 +15,11 @@
  */
 
 #define LOG_TAG "GnssRenesasHAL"
-//#define LOG_NDEBUG 1
+#define LOG_NDEBUG 1
 
 #include <cstring>
 
 #include "UsbHandler.h"
-
 
 // list of known product ids of u-blox usb devices, represented as decimal integers
 static const std::vector<uint16_t> idProductListInt = {420, 421, 422, 423, 424, 4354};
@@ -28,7 +27,6 @@ static const std::vector<uint16_t> idProductListInt = {420, 421, 422, 423, 424, 
 // u-blox vendor id represented as decimal integer
 static const uint16_t idVendorUbxInt = 5446;
 static const std::string devBusUsbPath("/dev/bus/usb");
-
 
 void UsbHandler::GetDeviceInfo(const char *name)
 {
@@ -46,7 +44,6 @@ void UsbHandler::GetDeviceInfo(const char *name)
     }
 }
 
-
 void UsbHandler::ScanSubdir(const char * subDir, std::vector<std::string> &listDeviceNames)
 {
     if (nullptr == subDir) {
@@ -59,17 +56,16 @@ void UsbHandler::ScanSubdir(const char * subDir, std::vector<std::string> &listD
     DIR* devDir = opendir(curPath.c_str());
     ALOGV("[%s, line %d] opendir errno %d, %s", __func__, __LINE__, errno, strerror(errno));
 
-    if(devDir) {
+    if (devDir) {
         struct dirent *dev;
         while ((dev = readdir(devDir)) != nullptr) {
-            if( DT_CHR == dev->d_type) {
+            if (DT_CHR == dev->d_type) {
                 listDeviceNames.push_back(curPath + "/" + dev->d_name);
             }
         }
         closedir(devDir);
     }
 }
-
 
 void UsbHandler::PrepareUsbDeviceList()
 {
@@ -79,7 +75,7 @@ void UsbHandler::PrepareUsbDeviceList()
     ALOGV("[%s, line %d] opendir errno %d, %s", __func__, __LINE__, errno, strerror(errno));
 
     if (pDir != nullptr) {
-        struct dirent * entry;
+        struct dirent* entry;
         while ((entry = readdir(pDir)) != nullptr) {
             /* skip current and previous directory entries . and .. */
             if (0 != std::strncmp(entry->d_name, ".", 1)) {
@@ -87,7 +83,7 @@ void UsbHandler::PrepareUsbDeviceList()
             }
         }
 
-        for(auto &devEntry : listDeviceNames) {
+        for (auto &devEntry : listDeviceNames) {
             GetDeviceInfo(devEntry.c_str());
         }
 
@@ -95,8 +91,7 @@ void UsbHandler::PrepareUsbDeviceList()
     }
 }
 
-
-bool UsbHandler::ScanUsbDevices()
+bool UsbHandler::ScanUsbDevices(uint16_t &outProductId)
 {
     PrepareUsbDeviceList();
 
@@ -105,6 +100,7 @@ bool UsbHandler::ScanUsbDevices()
             for (auto idProduct : idProductListInt) {
                 if (idProduct == dev.idProduct) {
                     ALOGD("[%s, line %d] idVendor=%u, idProduct=%u", __func__, __LINE__, dev.idVendor, dev.idProduct);
+                    outProductId = idProduct;
                     return true;
                 }
             }

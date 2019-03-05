@@ -39,6 +39,9 @@
 #include "GnssHw.h"
 #include "UsbHandler.h"
 
+static const uint16_t ublox7 = 0x01a7;
+static const uint16_t ublox8 = 0x01a8;
+
 // According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.14 RMC, p. 124
 // NMEA protocol version 4.1 and above has 14 fields.
 static const size_t rmcFieldsNumberNMEAv41 = 14;
@@ -221,6 +224,7 @@ bool GnssHwTTY::StartSalvatorProcedure()
 
         ALOGV("[%s, line %d] u-blox device", __func__, __LINE__);
         mIsUbloxDevice = retStatus;
+        SetYearOfHardware();
 
         mHwInitThread  = std::thread(&GnssHwTTY::GnssHwUbxInitThread, this);
         mNmeaThread = std::thread(&GnssHwTTY::NMEA_Thread, this);
@@ -524,8 +528,7 @@ void GnssHwTTY::NMEA_ReaderSplitMessage(std::string msg, std::vector<std::string
 
     out.clear();
 
-    while (!msg.empty())
-    {
+    while (!msg.empty()) {
         if ((end = msg.find(",")) < 0) {
             separator = false;
             end = (int)msg.length();
@@ -578,9 +581,8 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
 
     ALOGV("[%s, line %d] GPSRAW: %s", __func__, __LINE__, msg);
 
-
     /* Parse message */
-    if (strncmp(msg, "$GPRMC", 6) == 0)  {
+    if (strncmp(msg, "$GPRMC", 6) == 0) {
         NMEA_ReaderParse_GxRMC(msg);
     } else if (strncmp(msg, "$GNRMC", 6) == 0)  {
         NMEA_ReaderParse_GxRMC(msg);
@@ -601,6 +603,28 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
     } else {
         ALOGV("[%s, line %d] GPSRAW: Unhandled message: %s", __func__, __LINE__, msg);
     }
+}
+
+void GnssHwTTY::SetYearOfHardware()
+
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    switch (mUbxGeneration) {
+    case ublox7:
+        mYearOfHardware = 2012;
+        break;
+    case ublox8:
+        mYearOfHardware = 2016;
+        break;
+    default:
+        mYearOfHardware = 0;
+    }
+}
+
+uint16_t GnssHwTTY::GetYearOfHardware()
+{
+    ALOGV("[%s, line %d] YearOfHw %u", __func__, __LINE__, mYearOfHardware);
+    return mYearOfHardware;
 }
 
 void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
@@ -1265,7 +1289,6 @@ void GnssHwTTY::UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t ra
     UBX_Wait(UbxRxState::WAITING_ACK, msg, mUbxTimeoutMs);
 }
 
-
 bool GnssHwTTY::CheckHwPropertyKf()
 {
     char prop_hardware[PROPERTY_VALUE_MAX] = {};
@@ -1274,8 +1297,10 @@ bool GnssHwTTY::CheckHwPropertyKf()
 
     int result = __system_property_get(propHardware.c_str(), prop_hardware);
     if (result > 0) {
-        if ( 0 == kingfisher.compare(prop_hardware)) {
+        if (0 == kingfisher.compare(prop_hardware)) {
             mIsKingfisher = true;
+            mUbxGeneration = ublox8;
+            SetYearOfHardware();
             return true;
         }
     }
@@ -1285,9 +1310,8 @@ bool GnssHwTTY::CheckHwPropertyKf()
 bool GnssHwTTY::CheckUsbDeviceVendorUbx()
 {
     UsbHandler usbHandler;
-    return usbHandler.ScanUsbDevices();
+    return usbHandler.ScanUsbDevices(mUbxGeneration);
 }
-
 
 void GnssHwTTY::selectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen)
 {
@@ -1305,7 +1329,6 @@ void GnssHwTTY::selectParser(uint8_t cl, uint8_t id, const char* data, uint16_t 
 
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
-
 
 void GnssHwTTY::UBX_ACKParse(const char* data, uint16_t dataLen)
 {
@@ -1329,7 +1352,6 @@ void GnssHwTTY::UBX_ACKParse(const char* data, uint16_t dataLen)
     }
 }
 
-
 void GnssHwTTY::UBX_NACKParse(const char* data, uint16_t dataLen)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
@@ -1349,4 +1371,3 @@ void GnssHwTTY::UBX_NACKParse(const char* data, uint16_t dataLen)
         }
     }
 }
-

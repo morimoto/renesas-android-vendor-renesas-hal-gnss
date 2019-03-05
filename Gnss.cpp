@@ -324,6 +324,8 @@ Return<bool> Gnss::setCallback(const sp<IGnssCallback>& callback)
     mGnssCbIface = callback;
     mGnssCbIface->gnssSetCapabilitesCb(IGnssCallback::Capabilities::GEOFENCING | IGnssCallback::Capabilities::NAV_MESSAGES);
 
+    mGnssCbIface->gnssSetSystemInfoCb({mGnssHwIface->GetYearOfHardware()});
+
     mGnssHwIface->setCallback(callback);
 
     callback->linkToDeath(mDeathRecipient, 0 /*cookie*/);

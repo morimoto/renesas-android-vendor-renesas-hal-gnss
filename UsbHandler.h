@@ -39,9 +39,10 @@ public:
     /**
      * @brief ScanUsbDevices
      * @brief Check each connected usb device for product id and vendor id
+     * @param outProductId - reference to provide product id of connected usb device
      * @return true if ublox device exists, otherwise false
      */
-    bool ScanUsbDevices();
+    bool ScanUsbDevices(uint16_t &outProductId);
 
 private:
 

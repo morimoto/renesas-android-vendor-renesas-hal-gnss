@@ -24,6 +24,8 @@
 #include <cstdint>
 #include <chrono>
 #include <condition_variable>
+#include <log/log.h>
+
 #include "circular_buffer.h"
 
 using namespace std::chrono_literals;
@@ -49,6 +51,7 @@ public:
     virtual bool stop(void) = 0;
     virtual void GnssHwHandleThread(void) = 0;
     virtual bool setUpdatePeriod(int) = 0;
+    virtual uint16_t GetYearOfHardware() = 0;
 
     void setCallback(const sp<::IGnssCallback>& callback) {
         mGnssCb = callback;
@@ -85,11 +88,12 @@ class GnssHwTTY : public GnssHwIface
     size_t       mReaderBufPos = 0;
     ReaderState  mReaderState  = ReaderState::WAITING;
 
-
     bool mIsKingfisher = false;
     bool mIsUbloxDevice = false;
-    size_t mRmcFieldsNumber;
+    uint16_t mUbxGeneration = 0;
 
+    size_t mRmcFieldsNumber;
+    uint16_t mYearOfHardware = 0; // for under 2016 year zero is legal value.
 
     struct NmeaBufferElement {
         char data[mNmeaBufferSize];
@@ -217,6 +221,7 @@ class GnssHwTTY : public GnssHwIface
 
     CircularBuffer<UbxStateQueueElement> *mUbxStateBuffer;
 
+protected:
     bool OpenDevice(const char* ttyDevDefault);
     bool StartSalvatorProcedure();
     void StopSalvatorProcedure();
@@ -236,8 +241,7 @@ class GnssHwTTY : public GnssHwIface
 
     void UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg);
 
-    void UBX_PollMonVer();
-    void UBX_MonVerParse(const char* data, uint16_t dataLen);
+    void SetYearOfHardware();
     void UBX_ACKParse(const char* data, uint16_t dataLen);
     void UBX_NACKParse(const char* data, uint16_t dataLen);
 
@@ -249,6 +253,7 @@ public:
     bool stop(void);
     bool setUpdatePeriod(int);
 
+    uint16_t GetYearOfHardware();
     void GnssHwHandleThread(void);
 };
 
@@ -272,6 +277,7 @@ public:
     bool setUpdatePeriod(int);
 
     void GnssHwHandleThread(void);
+    uint16_t GetYearOfHardware() {return 0;}
 };
 
 
