@@ -15,7 +15,7 @@
  */
 
 #define LOG_TAG "GnssRenesasHAL"
-// #define LOG_NDEBUG 0
+#define LOG_NDEBUG  1
 
 #include <termios.h>
 #include <unistd.h>
@@ -47,6 +47,10 @@ static const size_t gsaFieldsNumber = 19;
 static const size_t pubxFieldsNumber = 21;
 static const size_t gsvFieldsNumber = 4;
 
+static const size_t ackNackMsgLen = 2;
+static const size_t ackNackClassOffset = 0;
+static const size_t ackNackIdOffset = 1;
+
 static const std::string ttyUsbDefault("/dev/ttyACM0");
 static const std::string ttyDefaultKf("/dev/ttySC3");
 
@@ -76,7 +80,7 @@ GnssHwTTY::GnssHwTTY(void) :
     CheckNotNull(mUbxBuffer, "Failed to allocate buffers");
     CheckNotNull(mUbxStateBuffer, "Failed to allocate buffers");
 
-    if(CheckHwPropertyKf()) {
+    if (CheckHwPropertyKf()) {
         ALOGV("[%s, line %d] Kingfisher", __func__, __LINE__);
         CHECK_EQ(1, OpenDevice(ttyDefaultKf.c_str())) << "Failed to open device";
 
@@ -96,18 +100,18 @@ GnssHwTTY::~GnssHwTTY(void)
         mNmeaThreadCv.notify_all();
         if (mNmeaThread.joinable()) {
             mNmeaThread.join();
-            ALOGD("[%s, line %d] Nmea thread joined", __func__, __LINE__);
+            ALOGV("[%s, line %d] Nmea thread joined", __func__, __LINE__);
         }
 
         mUbxThreadCv.notify_all();
         if (mUbxThread.joinable()) {
             mUbxThread.join();
-            ALOGD("[%s, line %d] Ubx thread joined", __func__, __LINE__);
+            ALOGV("[%s, line %d] Ubx thread joined", __func__, __LINE__);
         }
 
         if (mHwInitThread.joinable()) {
             mHwInitThread.join();
-            ALOGD("[%s, line %d] Init thread joined", __func__, __LINE__);
+            ALOGV("[%s, line %d] Init thread joined", __func__, __LINE__);
         }
     }
 
@@ -134,7 +138,7 @@ bool GnssHwTTY::stop(void)
     if (mIsKingfisher) {
         mEnabled = false;
     } else {
-       ALOGD("[%s, line %d] Stop salvator proc", __func__, __LINE__);
+       ALOGV("[%s, line %d] Stop salvator proc", __func__, __LINE__);
        StopSalvatorProcedure();
     }
 
@@ -203,14 +207,14 @@ bool GnssHwTTY::StartSalvatorProcedure()
     mHelpThreadExit.store(false);
 
     retStatus = OpenDevice(ttyUsbDefault.c_str());
-    if(!retStatus) {
+    if (!retStatus) {
         ALOGE("Failed to open device");
         return retStatus;
     }
 
-    if(!mIsUbloxDevice) {
+    if (!mIsUbloxDevice) {
         retStatus = CheckUsbDeviceVendorUbx();
-        if(!retStatus) {
+        if (!retStatus) {
             ALOGE("No u-blox device connected");
             return retStatus;
         }
@@ -267,7 +271,7 @@ void GnssHwTTY::GnssHwUbxInitThread(void)
     uint8_t ublox_cfg_clear[] = {0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00,
                                  0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
                                  0x17} ;
-    ALOGD("[%s, line %d] ubx send config clear", __func__, __LINE__);
+    ALOGV("[%s, line %d] ubx send config clear", __func__, __LINE__);
     UBX_Send(ublox_cfg_clear, sizeof(ublox_cfg_clear));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to clear UBX config", mUbxTimeoutMs);
 
@@ -376,7 +380,7 @@ void GnssHwTTY::GnssHwHandleThread(void)
             continue;
         }
 
-        if(ret > 0) {
+        if (ret > 0) {
             ReaderPushChar(ch);
         } else {
             ALOGE("TTY read error: %s", strerror(errno));
@@ -403,7 +407,7 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
     }
     else if (ch == mUbxSync1 && mReaderState == ReaderState::WAITING) {
         mReaderState = ReaderState::WAITING_UBX_SYNC2;
-        ALOGD("UBX waiting sync2");
+        ALOGV("UBX waiting sync2");
     }
     else if (mReaderState == ReaderState::CAPTURING_NMEA) {
         if (ch == '$') {
@@ -426,19 +430,19 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
     }
     else if (mReaderState == ReaderState::WAITING_UBX_SYNC2) {
         if (ch == mUbxSync2) {
-            ALOGD("UBX capturing");
+            ALOGV("UBX capturing");
             mReaderState = ReaderState::CAPTURING_UBX;
         }
     }
     else if (mReaderState == ReaderState::CAPTURING_UBX) {
         if (mReaderBufPos == mUbxLengthFirstByteNo) {
-            ALOGD("UBX rx payload len byte1: %02X", ch);
+            ALOGV("UBX rx payload len byte1: %02X", ch);
             ubx_payload_len += ch;
         }
         else if (mReaderBufPos == mUbxLengthSecondByteNo) {
             ubx_payload_len += ch << 8;
-            ALOGD("UBX rx payload len byte2: %02X", ch);
-            ALOGD("UBX rx payload len: %d", ubx_payload_len);
+            ALOGV("UBX rx payload len byte2: %02X", ch);
+            ALOGV("UBX rx payload len: %d", ubx_payload_len);
         }
     }
 
@@ -449,7 +453,7 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
                 mReaderBufPos >= (ubx_payload_len + mUbxPacketSizeNoPayload)) {
 
             /* Parse UBX */
-            ALOGD("UBX rx putting buffer len: %ld", mReaderBufPos);
+            ALOGV("UBX rx putting buffer len: %ld", mReaderBufPos);
 
             UbxBufferElement elem;
             elem.len = mReaderBufPos;
@@ -506,7 +510,7 @@ int GnssHwTTY::NMEA_Checksum(const char *s)
 {
     int crc = 0;
 
-    while(*s) {
+    while (*s) {
         crc ^= *s++;
     }
 
@@ -530,7 +534,7 @@ void GnssHwTTY::NMEA_ReaderSplitMessage(std::string msg, std::vector<std::string
         msg.erase(0, end + (separator ? 1 : 0));
     }
 
-    if(separator) {
+    if (separator) {
         out.push_back(std::string(msg.c_str(), msg.length()));
     }
 }
@@ -595,7 +599,7 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
             ALOGD("Unhandled PUBX message");
         }
     } else {
-        ALOGD("[%s, line %d] GPSRAW: Unhandled message: %s", __func__, __LINE__, msg);
+        ALOGV("[%s, line %d] GPSRAW: Unhandled message: %s", __func__, __LINE__, msg);
     }
 }
 
@@ -784,7 +788,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
     // in this case we are supposed to report FCN (frequency channel number),
     // we don't have a real one, so let's use a simulated one
 
-    if( sentence_idx <= 0 || sentence_idx > sentences || num_svs <= 0 ) {
+    if ( sentence_idx <= 0 || sentence_idx > sentences || num_svs <= 0 ) {
         valid_msg = false;
     }
 
@@ -1038,6 +1042,7 @@ void GnssHwTTY::UBX_Reset()
     mUM.rx_exp_checksum_b = 0;
     mUM.buffer_ptr        = 0;
     mUM.rx_timedout       = false;
+    mUM.msg_payload       = nullptr;
 }
 
 void GnssHwTTY::UBX_ChecksumAdd(uint8_t ch)
@@ -1112,6 +1117,10 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
         case UbxState::PAYLOAD:
             ALOGV("[%s, line %d] Payload", __func__, __LINE__);
             UBX_ChecksumAdd(ubx->data[mUM.buffer_ptr]);
+            if (nullptr == mUM.msg_payload) {
+                mUM.msg_payload = &(ubx->data[mUM.buffer_ptr]);
+            }
+
             mUM.rx_payload_ptr++;
             if (mUM.rx_payload_ptr == mUM.rx_payload_len) {
                 mUM.state = UbxState::CHECKSUM1;
@@ -1137,59 +1146,23 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
     }
 
     if (mUM.state == UbxState::FINISH) {
-        ALOGV("UBX parser finished parsing message");
-        ALOGV("UBX received message CLASS: %02X ID: %02X", mUM.rx_class, mUM.rx_id);
+        ALOGV("[%s, line %d] GnssUbx received message CLASS: %02X ID: %02X, len = %u", __func__, __LINE__, mUM.rx_class, mUM.rx_id, mUM.rx_payload_len);
+
         if (mUM.rx_exp_checksum_a != mUM.rx_checksum_a ||
                 mUM.rx_exp_checksum_b != mUM.rx_checksum_b) {
-            ALOGI("UBX parser checksum fail %02X%02X/%02X%02X", mUM.rx_exp_checksum_a, mUM.rx_exp_checksum_b,
+            ALOGI("[%s, line %d] UBX parser checksum fail %02X%02X/%02X%02X", __func__, __LINE__, mUM.rx_exp_checksum_a, mUM.rx_exp_checksum_b,
                   mUM.rx_checksum_a, mUM.rx_checksum_b);
         } else {
-            ALOGV("UBX parser checksum ok");
+            ALOGV("[%s, line %d] UBX parser checksum ok", __func__, __LINE__);
         }
 
-        UbxStateQueueElement *st = nullptr;
-        if (!mUbxStateBuffer->empty()) {
-            st = mUbxStateBuffer->get();
-        }
+        selectParser(mUM.rx_class, mUM.rx_id, mUM.msg_payload, mUM.rx_payload_len);
 
-        if (st != nullptr) {
-            switch (st->state) {
-            case (UbxRxState::WAITING_ANSWER):
-                if (st->xclass == mUM.rx_class && st->id == mUM.rx_id) {
-                    ALOGV("UBX got answer with CLASS: %02X ID: %02X", mUM.rx_class, mUM.rx_id);
-                } else {
-                    ALOGI("UBX got INVALID answer with CLASS: %02X ID: %02X (expected: %02X/%02X)", mUM.rx_class, mUM.rx_id, st->xclass, st->id);
-                }
-                break;
-
-            case (UbxRxState::WAITING_ACK):
-                if (mUM.rx_class == mAckClass) {
-                    if (st->xclass != ubx->data[mUbxFirstPayloadOffset] || st->id != ubx->data[mUbxFirstPayloadOffset + 1]) {
-                        ALOGI("UBX Invalid ACK/NAK tx class/id (CLASS: %02X | ID: %02X), expected: %02X/%02X", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1], st->xclass, st->id);
-                        UBX_CriticalProtocolError(st->errormsg);
-                    }
-                    if (mUM.rx_id == mAckAckId) {
-                        ALOGD("UBX Got ACK (CLASS: %02X | ID: %02X)", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1]);
-                        mUbxAckReceived++;
-                    } else if (mUM.rx_id == mAckNakId) {
-                        ALOGD("UBX Got NAK (CLASS: %02X | ID: %02X)", ubx->data[mUbxFirstPayloadOffset], ubx->data[mUbxFirstPayloadOffset + 1]);
-                        UBX_CriticalProtocolError(st->errormsg);
-                    } else {
-                        ALOGI("UBX Invalid ACK ID");
-                        UBX_CriticalProtocolError(st->errormsg);
-                    }
-                }
-                break;
-
-            default:
-                ALOGW("[%s, line %d] UBX Unhandled message state", __func__, __LINE__);
-                break;
-            }
-        }
     } else {
-        ALOGI("UBX message incomplete, dropping (state: %d, buf: %lu/%lu, buf[ptr]: %02X", static_cast<int>(mUM.state), mUM.buffer_ptr, ubx->len, ubx->data[mUM.buffer_ptr]);
+        ALOGI("[%s, line %d] UBX message incomplete, dropping (state: %d, buf: %zu/%zu, buf[ptr]: %02X",__func__, __LINE__, static_cast<int>(mUM.state),
+              mUM.buffer_ptr, ubx->len, ubx->data[mUM.buffer_ptr]);
         for (size_t i = 0; i < ubx->len; i++) {
-            ALOGV("UBX payload[%lu] = %02X", i, ubx->data[i]);
+            ALOGD("[%s, line %d] UBX payload[%zu] = %02X", __func__, __LINE__, i, ubx->data[i]);
         }
     }
 
@@ -1300,7 +1273,7 @@ bool GnssHwTTY::CheckHwPropertyKf()
     std::string propHardware("ro.hardware");
 
     int result = __system_property_get(propHardware.c_str(), prop_hardware);
-    if(result > 0) {
+    if (result > 0) {
         if ( 0 == kingfisher.compare(prop_hardware)) {
             mIsKingfisher = true;
             return true;
@@ -1313,5 +1286,67 @@ bool GnssHwTTY::CheckUsbDeviceVendorUbx()
 {
     UsbHandler usbHandler;
     return usbHandler.ScanUsbDevices();
+}
+
+
+void GnssHwTTY::selectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    if (nullptr == data) {
+        ALOGV("[%s, line %d] Wrong input", __func__, __LINE__);
+        return;
+    }
+
+    if (mAckClass == cl && mAckAckId == id) {
+        UBX_ACKParse(data, dataLen);
+    } else if (mAckClass == cl && mAckNakId == id) {
+        UBX_NACKParse(data, dataLen);
+    }
+
+    ALOGV("[%s, line %d] Exit", __func__, __LINE__);
+}
+
+
+void GnssHwTTY::UBX_ACKParse(const char* data, uint16_t dataLen)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
+    if (nullptr == data || ackNackMsgLen != dataLen) {
+        ALOGV("[%s, line %d] Wrong input", __func__, __LINE__);
+        return;
+    }
+
+    UbxStateQueueElement *st = nullptr;
+    if (!mUbxStateBuffer->empty()) {
+        st = mUbxStateBuffer->get();
+        if (UbxRxState::WAITING_ACK == st->state) {
+            if (st->xclass == data[ackNackClassOffset] && st->id == data[ackNackIdOffset]) {
+                mUbxAckReceived++;
+            } else {
+                UBX_CriticalProtocolError(st->errormsg);
+            }
+        }
+    }
+}
+
+
+void GnssHwTTY::UBX_NACKParse(const char* data, uint16_t dataLen)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
+    if (nullptr == data || ackNackMsgLen != dataLen) {
+        ALOGV("[%s, line %d] Wrong input", __func__, __LINE__);
+        return;
+    }
+
+    UbxStateQueueElement *st = nullptr;
+    if (!mUbxStateBuffer->empty()) {
+        st = mUbxStateBuffer->get();
+        if (UbxRxState::WAITING_ACK == st->state) {
+            if (st->xclass == data[ackNackClassOffset] && st->id == data[ackNackIdOffset]) {
+                UBX_CriticalProtocolError(st->errormsg);
+            }
+        }
+    }
 }
 

@@ -144,15 +144,15 @@ class GnssHwTTY : public GnssHwIface
     void ReaderPushChar(unsigned char ch);
 
     void NMEA_Thread(void);
-    int  NMEA_Checksum(const char *s);
+    int  NMEA_Checksum(const char* s);
     void NMEA_ReaderSplitMessage(std::string msg, std::vector<std::string> &out);
 
-    void NMEA_ReaderParse(char *msg);
-    void NMEA_ReaderParse_GxRMC(char *msg);
-    void NMEA_ReaderParse_GxGGA(char *msg);
-    void NMEA_ReaderParse_xxGSV(char *msg);
-    void NMEA_ReaderParse_GNGSA(char *msg);
-    void NMEA_ReaderParse_PUBX00(char *msg);
+    void NMEA_ReaderParse(char* msg);
+    void NMEA_ReaderParse_GxRMC(char* msg);
+    void NMEA_ReaderParse_GxGGA(char* msg);
+    void NMEA_ReaderParse_xxGSV(char* msg);
+    void NMEA_ReaderParse_GNGSA(char* msg);
+    void NMEA_ReaderParse_PUBX00(char* msg);
 
     enum class UbxState {
         SYNC1,
@@ -205,20 +205,23 @@ class GnssHwTTY : public GnssHwIface
         size_t      buffer_ptr;
 
         bool        rx_timedout;
+        char*       msg_payload;
     } mUM;
 
     struct UbxStateQueueElement {
         UbxRxState state;
         uint8_t xclass;
         uint8_t id;
-        const char *errormsg;
+        const char* errormsg;
     };
 
     CircularBuffer<UbxStateQueueElement> *mUbxStateBuffer;
 
-    bool OpenDevice(const char *ttyDevDefault);
+    bool OpenDevice(const char* ttyDevDefault);
     bool StartSalvatorProcedure();
     void StopSalvatorProcedure();
+
+    void selectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen);
 
     void GnssHwUbxInitThread(void);
     void UBX_Thread(void);
@@ -229,9 +232,14 @@ class GnssHwTTY : public GnssHwIface
     void UBX_Send(uint8_t *msg, size_t len);
     void UBX_Expect(UbxRxState, const char*); // Expect state (non blocking)
     bool UBX_Wait(UbxRxState, const char*, uint64_t timeoutMs);   // Wait state (blocking)
-    void UBX_CriticalProtocolError(const char *errormsg);
+    void UBX_CriticalProtocolError(const char* errormsg);
 
-    void UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char *msg);
+    void UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg);
+
+    void UBX_PollMonVer();
+    void UBX_MonVerParse(const char* data, uint16_t dataLen);
+    void UBX_ACKParse(const char* data, uint16_t dataLen);
+    void UBX_NACKParse(const char* data, uint16_t dataLen);
 
 public:
     GnssHwTTY(void);
