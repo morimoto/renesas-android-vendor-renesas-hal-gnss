@@ -240,6 +240,7 @@ protected:
     void UBX_CriticalProtocolError(const char* errormsg);
 
     void UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg);
+    void UBX_SetMessageRateCurrentPort(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg);
 
     void SetYearOfHardware();
     void UBX_ACKParse(const char* data, uint16_t dataLen);

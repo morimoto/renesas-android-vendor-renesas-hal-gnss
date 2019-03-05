@@ -37,10 +37,23 @@
 #include <android/hardware/gnss/1.0/IGnss.h>
 
 #include "GnssHw.h"
+#include "GnssRxmMeasxParser.h"
+#include "GnssNavClockParser.h"
+#include "GnssNavTimeUTCParser.h"
+#include "GnssMeasQueue.h"
 #include "UsbHandler.h"
 
 static const uint16_t ublox7 = 0x01a7;
 static const uint16_t ublox8 = 0x01a8;
+
+static const uint8_t classUbxNav = 0x01;
+static const uint8_t classUbxRxm = 0x02;
+
+static const uint8_t idClock = 0x22;
+static const uint8_t idMeasx = 0x14;
+static const uint8_t idTimeUtc = 0x21;
+
+static const uint8_t rate = 0x02;
 
 // According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.14 RMC, p. 124
 // NMEA protocol version 4.1 and above has 14 fields.
@@ -147,7 +160,6 @@ bool GnssHwTTY::stop(void)
 
     return true;
 }
-
 
 bool GnssHwTTY::OpenDevice(const char* ttyDevDefault)
 {
@@ -267,7 +279,6 @@ void GnssHwTTY::GnssHwUbxInitThread(void)
         prop_sbas[i] = toupper(prop_sbas[i]);
     }
 
-
     // Reset parser
     UBX_Reset();
 
@@ -362,6 +373,10 @@ void GnssHwTTY::GnssHwUbxInitThread(void)
     UBX_Send(ublox_cfg_gnss, sizeof(ublox_cfg_gnss));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
 
+    UBX_SetMessageRateCurrentPort(classUbxNav, idClock, rate, "UBX-NAV-CLOCK config failed");
+    UBX_SetMessageRateCurrentPort(classUbxRxm, idMeasx, rate, "UBX-RXM-MEASX config failed");
+    UBX_SetMessageRateCurrentPort(classUbxNav, idTimeUtc, rate, "UBX-NAV-UTC config failed");
+
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
@@ -369,8 +384,7 @@ void GnssHwTTY::GnssHwHandleThread(void)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    while (!mThreadExit)
-    {
+    while (!mThreadExit) {
         if (mFd == -1) {
             std::unique_lock<std::mutex> lock(mHandleThreadLock);
             mHandleThreadCv.wait(lock);
@@ -606,7 +620,6 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
 }
 
 void GnssHwTTY::SetYearOfHardware()
-
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     switch (mUbxGeneration) {
@@ -1289,6 +1302,13 @@ void GnssHwTTY::UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t ra
     UBX_Wait(UbxRxState::WAITING_ACK, msg, mUbxTimeoutMs);
 }
 
+void GnssHwTTY::UBX_SetMessageRateCurrentPort(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg)
+{
+    uint8_t ublox_buf[] = {0x06, 0x01, 0x03, 0x00, msg_class, msg_id, rate};
+    UBX_Send(ublox_buf, sizeof(ublox_buf));
+    UBX_Wait(UbxRxState::WAITING_ACK, msg, mUbxTimeoutMs);
+}
+
 bool GnssHwTTY::CheckHwPropertyKf()
 {
     char prop_hardware[PROPERTY_VALUE_MAX] = {};
@@ -1321,7 +1341,18 @@ void GnssHwTTY::selectParser(uint8_t cl, uint8_t id, const char* data, uint16_t 
         return;
     }
 
-    if (mAckClass == cl && mAckAckId == id) {
+    GnssMeasQueue& instance = GnssMeasQueue::getInstance();
+
+    if (cl == classUbxRxm && id == idMeasx) {
+        auto sp = std::make_shared<GnssRxmMeasxParser>(data, dataLen);
+        instance.push(sp);
+    } else if (cl == classUbxNav && id == idClock) {
+        auto sp = std::make_shared<GnssNavClockParser>(data, dataLen);
+        instance.push(sp);
+    } else if (cl == classUbxNav && id == idTimeUtc) {
+        auto sp = std::make_shared<GnssNavTimeUTCParser>(data, dataLen);
+        instance.push(sp);
+    } else if (mAckClass == cl && mAckAckId == id) {
         UBX_ACKParse(data, dataLen);
     } else if (mAckClass == cl && mAckNakId == id) {
         UBX_NACKParse(data, dataLen);
