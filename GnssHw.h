@@ -35,12 +35,16 @@ using namespace android::hardware::gnss::V1_0;
 
 class GnssHwIface : public android::RefBase
 {
-public:
-    GnssHwIface(void) :
-        mThreadExit(false),
-        mThread { &GnssHwIface::GnssHwHandleThread, this }
-    { }
+protected:
+    GnssHwIface() {}
+    int requestedUpdateIntervalUs;
 
+public:
+    void SetUpHandleThread()
+    {
+        mThreadExit = false;
+        mThread = std::thread(&GnssHwIface::GnssHwHandleThread, this);
+    }
     virtual ~GnssHwIface(void)
     {
         mThreadExit = true;
@@ -63,8 +67,7 @@ public:
     GnssLocation                    mGnssLocation;
     IGnssCallback::GnssSvStatus     mSvStatus;
 
-protected:
-    int requestedUpdateIntervalUs;
+    bool                            mResetReceiverOnStart = false;
 
 private:
     std::thread         mThread;
@@ -144,6 +147,7 @@ class GnssHwTTY : public GnssHwIface
 
     bool CheckUsbDeviceVendorUbx();
     bool CheckHwPropertyKf();
+    void resetOnStart();
 
     void ReaderPushChar(unsigned char ch);
 
@@ -226,17 +230,18 @@ protected:
     bool StartSalvatorProcedure();
     void StopSalvatorProcedure();
 
-    void selectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen);
+    void SelectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen);
 
+    void RunWorkerThreads();
     void GnssHwUbxInitThread(void);
     void UBX_Thread(void);
     void UBX_Reset();
     void UBX_ChecksumReset();
     void UBX_ChecksumAdd(uint8_t ch);
-    void UBX_ReaderParse(UbxBufferElement *ubx);
-    void UBX_Send(uint8_t *msg, size_t len);
-    void UBX_Expect(UbxRxState, const char*); // Expect state (non blocking)
-    bool UBX_Wait(UbxRxState, const char*, uint64_t timeoutMs);   // Wait state (blocking)
+    void UBX_ReaderParse(UbxBufferElement* ubx);
+    void UBX_Send(const uint8_t* msg, size_t len);
+    void UBX_Expect(UbxRxState astate, const char* errormsg); // Expect state (non blocking)
+    bool UBX_Wait(UbxRxState astate, const char* errormsg, uint64_t timeoutMs);   // Wait state (blocking)
     void UBX_CriticalProtocolError(const char* errormsg);
 
     void UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg);
@@ -245,9 +250,10 @@ protected:
     void SetYearOfHardware();
     void UBX_ACKParse(const char* data, uint16_t dataLen);
     void UBX_NACKParse(const char* data, uint16_t dataLen);
+    GnssHwTTY();
 
 public:
-    GnssHwTTY(void);
+    GnssHwTTY(int fd);
     virtual ~GnssHwTTY(void);
 
     bool start(void);
@@ -255,7 +261,7 @@ public:
     bool setUpdatePeriod(int);
 
     uint16_t GetYearOfHardware();
-    void GnssHwHandleThread(void);
+    void GnssHwHandleThread(void) final;
 };
 
 class GnssHwFAKE : public GnssHwIface

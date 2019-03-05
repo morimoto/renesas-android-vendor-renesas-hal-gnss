@@ -141,29 +141,31 @@ void GnssHwFAKE::GnssHwHandleThread(void)
         location.longitudeDegrees = pt_from.longitude;
 
         // Calculating distance in meters between points
-        float dlon = (pt_to.longitude - pt_from.longitude) * PI/180;
-        float dlat = (pt_to.latitude - pt_from.latitude) * PI/180;
-        float a = pow((sin(dlat/2)),2) + cos(pt_from.latitude * PI/180) * cos(pt_to.latitude * PI/180) * pow((sin(dlon/2)),2);
-        float c = 2 * atan2( sqrt(a), sqrt(1-a) );
+        float dlon = (pt_to.longitude - pt_from.longitude) * PI / 180;
+        float dlat = (pt_to.latitude - pt_from.latitude) * PI / 180;
+        float a = pow((sin(dlat / 2)), 2) + cos(pt_from.latitude * PI / 180) * cos(pt_to.latitude * PI / 180) * pow((sin(dlon / 2)), 2);
+        float c = 2 * atan2(sqrt(a), sqrt(1 - a));
         float d = EARTH_RADIUS * c; // Distance
         float t = d / location.speedMetersPerSec; // Time in seconds to reach last point
         float latStep = (pt_to.latitude - pt_from.latitude) / t;
         float lonStep = (pt_to.longitude - pt_from.longitude) / t; // lat lon step for next reporting point
 
         // Calculating bearing between points
-        float X = cos(pt_to.latitude * PI/180) * sin(dlon);
-        float Y = cos(pt_from.latitude * PI/180) * sin(pt_to.latitude * PI/180) - sin(pt_from.latitude * PI/180)*cos(pt_to.latitude * PI/180)*cos(dlon);
+        float X = cos(pt_to.latitude * PI / 180) * sin(dlon);
+        float Y = cos(pt_from.latitude * PI / 180) * sin(pt_to.latitude * PI / 180) -
+                sin(pt_from.latitude * PI / 180) * cos(pt_to.latitude * PI / 180) * cos(dlon);
         float bearing = atan2(X, Y) * 180 / PI;
 
         location.bearingDegrees = bearing;
 
         time_t tm;
-        for(int i = (int) t; i >= 0; i--) {
-            if(i == 0) {
+        (void)tm;
+        for (int i = (int)t; i >= 0; i--) {
+            if (i == 0) {
                 location.latitudeDegrees = pt_to.latitude;
                 location.longitudeDegrees = pt_to.longitude;
-                location.speedMetersPerSec = d - ((int) t) * pt_from.speed;
-                if(location.speedMetersPerSec < pt_from.speed / 5) {
+                location.speedMetersPerSec = d - ((int)t) * pt_from.speed;
+                if (location.speedMetersPerSec < pt_from.speed / 5) {
                     break;
                 }
             } else {

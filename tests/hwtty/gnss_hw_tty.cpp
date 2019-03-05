@@ -42,8 +42,7 @@ const char rxmMeasxMsg[] = {
     0xa7, 0x01, 0xb9, 0x00, 0xc3, 0x3c, 0x0d, 0x00, 0x00, 0x2e, 0x00, 0x00, 0x00, 0x13, 0x16, 0x01,
     0x77, 0xfc, 0xff, 0xff, 0x49, 0xfc, 0xff, 0xff, 0x35, 0x01, 0xba, 0x00, 0xe1, 0xab, 0x09, 0x00,
     0x00, 0x31, 0x00, 0x00, 0x00, 0x18, 0x1d, 0x01, 0x4b, 0x0c, 0x00, 0x00, 0xeb, 0x0c, 0x00, 0x00,
-    0x7a, 0x01, 0x4a, 0x02, 0x8b, 0xd7, 0x0b, 0x00, 0x00, 0x17, 0x00, 0x00
-    };
+    0x7a, 0x01, 0x4a, 0x02, 0x8b, 0xd7, 0x0b, 0x00, 0x00, 0x17, 0x00, 0x00};
 
 class GnssHwTTYTest : public GnssHwTTY, public ::testing::Test {
 protected:
@@ -69,7 +68,7 @@ TEST_F(GnssHwTTYTest, selectParserRxmMeasxDumpNormalInput)
     instance.setState(true);
 
     uint16_t payloadLen = (uint16_t)sizeof(rxmMeasxMsg);
-    selectParser(cl, id, rxmMeasxMsg, payloadLen);
+    SelectParser(cl, id, rxmMeasxMsg, payloadLen);
 
     EXPECT_FALSE(instance.empty());
 
@@ -89,8 +88,7 @@ TEST_F(GnssHwTTYTest, selectParserRxmMeasxDumpNormalInput)
     const double prrScaling = 0.04;
     double expectedPseudoRangeRate[] = {16572.0, 21966.0, 18455.0, -6048.0, -905.0, 3147.0};
 
-    for(uint32_t i = 0; i < data.measurementCount; ++i)
-    {
+    for (uint32_t i = 0; i < data.measurementCount; ++i) {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
         EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
         EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED, data.measurements[i].state);
@@ -107,7 +105,7 @@ TEST_F(GnssHwTTYTest, DISABLED_selectParserRxmGnssMeasurementsCallbackThreadNorm
     instance.setState(true);
 
     uint16_t payloadLen = (uint16_t)sizeof(rxmMeasxMsg);
-    selectParser(cl, id, rxmMeasxMsg, payloadLen);
+    SelectParser(cl, id, rxmMeasxMsg, payloadLen);
 
     EXPECT_FALSE(instance.empty());
 
@@ -126,8 +124,7 @@ TEST_F(GnssHwTTYTest, DISABLED_selectParserRxmGnssMeasurementsCallbackThreadNorm
     double expectedCN0DbHz[] = {19.0, 17.0, 24.0, 15.0, 22.0, 29.0};
     double expectedPseudoRangeRate[] = {16572.0, 21966.0, 18455.0, -6048.0, -905.0, 3147.0};
 
-    for(uint32_t i = 0; i < data.measurementCount; ++i)
-    {
+    for (uint32_t i = 0; i < data.measurementCount; ++i) {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
         EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
         EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED, data.measurements[i].state);
@@ -136,11 +133,10 @@ TEST_F(GnssHwTTYTest, DISABLED_selectParserRxmGnssMeasurementsCallbackThreadNorm
         EXPECT_EQ(expectedPseudoRangeRate[i], data.measurements[i].pseudorangeRateMps);
     }
 
-    selectParser(cl, id, rxmMeasxMsg, payloadLen);
-    selectParser(cl, id, rxmMeasxMsg, payloadLen);
-    selectParser(cl, id, rxmMeasxMsg, payloadLen);
-    selectParser(cl, id, rxmMeasxMsg, payloadLen);
-    selectParser(cl, id, rxmMeasxMsg, payloadLen);
+    const size_t five = 5;
+    for (size_t i = 0; i < five; ++i) {
+        SelectParser(cl, id, rxmMeasxMsg, payloadLen);
+    }
 
     GnssMeasurement gnssMeas;
     gnssMeas.callbackThread();
@@ -153,7 +149,7 @@ TEST_F(GnssHwTTYTest, DISABLED_checkCallbackThreadWithOneMsgInQueue)
     instance.setState(true);
 
     uint16_t payloadLen = (uint16_t)sizeof(rxmMeasxMsg);
-    selectParser(cl, id, rxmMeasxMsg, payloadLen);
+    SelectParser(cl, id, rxmMeasxMsg, payloadLen);
 
     ASSERT_EQ((size_t)1, instance.getSize());
 
@@ -170,8 +166,8 @@ TEST_F(GnssHwTTYTest, DISABLED_checkCallbackThreadWithFiveMsgInQueue)
 
     uint16_t payloadLen = (uint16_t)sizeof(rxmMeasxMsg);
     const size_t five = 5;
-    for(size_t i = 0; i < five; ++i) {
-        selectParser(cl, id, rxmMeasxMsg, payloadLen);
+    for (size_t i = 0; i < five; ++i) {
+        SelectParser(cl, id, rxmMeasxMsg, payloadLen);
     }
 
     ASSERT_EQ(five, instance.getSize());
@@ -188,8 +184,8 @@ TEST_F(GnssHwTTYTest, DISABLED_checkCallbackThreadWithTenMsgInQueue)
 
     uint16_t payloadLen = (uint16_t)sizeof(rxmMeasxMsg);
     const size_t ten = 10;
-    for(size_t i = 0; i < ten; ++i) {
-        selectParser(cl, id, rxmMeasxMsg, payloadLen);
+    for (size_t i = 0; i < ten; ++i) {
+        SelectParser(cl, id, rxmMeasxMsg, payloadLen);
     }
 
     ASSERT_EQ(ten, instance.getSize());

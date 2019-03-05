@@ -79,8 +79,13 @@ static inline void CheckNotNull(mPtr val, const char* msg)
     }
 }
 
-GnssHwTTY::GnssHwTTY(void) :
-    mFd(-1),
+GnssHwTTY::GnssHwTTY()
+{
+    ALOGV("GnssHwTTY default constructor");
+}
+
+GnssHwTTY::GnssHwTTY(int fd) :
+    mFd(fd),
     mEnabled(false),
     mRmcFieldsNumber(rmcFieldsNumberNMEAv41),
     mHelpThreadExit(false),
@@ -101,9 +106,19 @@ GnssHwTTY::GnssHwTTY(void) :
         CHECK_EQ(1, OpenDevice(ttyDefaultKf.c_str())) << "Failed to open device";
 
         mIsUbloxDevice = true;
+        RunWorkerThreads();
+    }
+}
 
+void GnssHwTTY::RunWorkerThreads()
+{
+    if (!mHwInitThread.joinable()) {
         mHwInitThread = std::thread(&GnssHwTTY::GnssHwUbxInitThread, this);
+    }
+    if (!mUbxThread.joinable()) {
         mUbxThread  = std::thread(&GnssHwTTY::UBX_Thread, this);
+    }
+    if (!mNmeaThread.joinable()) {
         mNmeaThread = std::thread(&GnssHwTTY::NMEA_Thread, this);
     }
 }
@@ -136,10 +151,24 @@ GnssHwTTY::~GnssHwTTY(void)
     delete mUbxStateBuffer;
 }
 
+void GnssHwTTY::resetOnStart()
+{
+        ALOGV("[%s, line %d] Reset HW", __func__, __LINE__);
+
+        uint8_t ublox_cfg_reset[] = {0x06, 0x04, 0x04, 0x00, 0xFF, 0xFF, 0x02, 0x00};
+        UBX_Send(ublox_cfg_reset, sizeof(ublox_cfg_reset));
+
+        mResetReceiverOnStart = false;
+}
+
 bool GnssHwTTY::start(void)
 {
+    if (mResetReceiverOnStart) {
+        resetOnStart();
+    }
+
     ALOGD("Start HW");
-    if (mIsKingfisher){
+    if (mIsKingfisher) {
         mEnabled = true;
     } else {
         mEnabled = StartSalvatorProcedure();
@@ -238,9 +267,7 @@ bool GnssHwTTY::StartSalvatorProcedure()
         mIsUbloxDevice = retStatus;
         SetYearOfHardware();
 
-        mHwInitThread  = std::thread(&GnssHwTTY::GnssHwUbxInitThread, this);
-        mNmeaThread = std::thread(&GnssHwTTY::NMEA_Thread, this);
-        mUbxThread  = std::thread(&GnssHwTTY::UBX_Thread, this);
+        RunWorkerThreads();
     }
 
     return retStatus;
@@ -283,26 +310,26 @@ void GnssHwTTY::GnssHwUbxInitThread(void)
     UBX_Reset();
 
     // Clear current config
-    uint8_t ublox_cfg_clear[] = {0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
-                                 0x17} ;
+    const uint8_t ublox_cfg_clear[] = {0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+                                       0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+                                       0x17};
     ALOGV("[%s, line %d] ubx send config clear", __func__, __LINE__);
     UBX_Send(ublox_cfg_clear, sizeof(ublox_cfg_clear));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to clear UBX config", mUbxTimeoutMs);
 
     // Enabling NMEA 4.1 Extended satellite numbering, set flag freeze bearing
-    uint8_t ublox_enable_nmea41[] = {0x06, 0x17, 0x0F, 0x00, 0x20, 0x41,
-                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                     0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
+    const uint8_t ublox_enable_nmea41[] = {0x06, 0x17, 0x0F, 0x00, 0x20, 0x41,
+                                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                           0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
     UBX_Send(ublox_enable_nmea41, sizeof(ublox_enable_nmea41));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NMEA version to 4.1", mUbxTimeoutMs);
 
     // Set Nagivation Engine to automotive mode, 3D Fix only
-    uint8_t ublox_nav5[] = {0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x04, 0x02,
-                            0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
-                            0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00,
-                            0x5E, 0x01, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x00,
-                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    const uint8_t ublox_nav5[] = {0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x04, 0x02,
+                                  0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
+                                  0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00,
+                                  0x5E, 0x01, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     UBX_Send(ublox_nav5, sizeof(ublox_nav5));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NAV5 to automotive", mUbxTimeoutMs);
 
@@ -1193,7 +1220,7 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
             ALOGV("[%s, line %d] UBX parser checksum ok", __func__, __LINE__);
         }
 
-        selectParser(mUM.rx_class, mUM.rx_id, mUM.msg_payload, mUM.rx_payload_len);
+        SelectParser(mUM.rx_class, mUM.rx_id, mUM.msg_payload, mUM.rx_payload_len);
 
     } else {
         ALOGI("[%s, line %d] UBX message incomplete, dropping (state: %d, buf: %zu/%zu, buf[ptr]: %02X",__func__, __LINE__, static_cast<int>(mUM.state),
@@ -1206,7 +1233,7 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
     UBX_Reset();
 }
 
-void GnssHwTTY::UBX_Send(uint8_t *msg, size_t len)
+void GnssHwTTY::UBX_Send(const uint8_t* msg, size_t len)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     if (len >= mUbxBufferSize) {
@@ -1254,7 +1281,7 @@ void GnssHwTTY::UBX_Send(uint8_t *msg, size_t len)
     }
 }
 
-void GnssHwTTY::UBX_Expect(UbxRxState astate, const char *errormsg)
+void GnssHwTTY::UBX_Expect(UbxRxState astate, const char* errormsg)
 {
     UbxStateQueueElement element;
     element.state    = astate;
@@ -1268,7 +1295,7 @@ void GnssHwTTY::UBX_Expect(UbxRxState astate, const char *errormsg)
     mUbxStateBuffer->put(&element);
 }
 
-bool GnssHwTTY::UBX_Wait(UbxRxState astate, const char *errormsg, uint64_t timeoutMs)
+bool GnssHwTTY::UBX_Wait(UbxRxState astate, const char* errormsg, uint64_t timeoutMs)
 {
     UBX_Expect(astate, errormsg);
 
@@ -1333,7 +1360,7 @@ bool GnssHwTTY::CheckUsbDeviceVendorUbx()
     return usbHandler.ScanUsbDevices(mUbxGeneration);
 }
 
-void GnssHwTTY::selectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen)
+void GnssHwTTY::SelectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     if (nullptr == data) {

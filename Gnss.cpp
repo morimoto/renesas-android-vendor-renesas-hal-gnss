@@ -40,11 +40,14 @@ Gnss::Gnss(void) :
         if (strcmp(mode, "fake") == 0) {
             ALOGI("Using FAKE backend");
             mGnssHwIface = new GnssHwFAKE();
+            mGnssHwIface->SetUpHandleThread();
         }
     }
 
     if (mGnssHwIface == nullptr) {
-        mGnssHwIface = new GnssHwTTY();
+        mGnssHwIface = new GnssHwTTY(-1);
+        mGnssHwIface->SetUpHandleThread();
+        mGnssMeasurement = new GnssMeasurement();
         ALOGI("Using TTY HW backend");
     }
 }
