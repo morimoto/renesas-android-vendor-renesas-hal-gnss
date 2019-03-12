@@ -15,7 +15,7 @@
  */
 
 #define LOG_TAG "GnssRenesasHAL"
-#define LOG_NDEBUG  1
+#define LOG_NDEBUG 1
 
 #include <termios.h>
 #include <unistd.h>
@@ -58,8 +58,12 @@ static const uint8_t rate = 0x02;
 // According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.14 RMC, p. 124
 // NMEA protocol version 4.1 and above has 14 fields.
 static const size_t rmcFieldsNumberNMEAv41 = 14;
+static const size_t rmcFieldsNumberNMEAv23 = 13;
+
 static const size_t ggaFieldsNumber = 15; // According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.4 GGA, p. 114
-static const size_t gsaFieldsNumber = 19;
+static const size_t gsaFieldsNumberNMEAv41 = 19;
+static const size_t gsaFieldsNumberNMEAv23 = 18;
+
 static const size_t pubxFieldsNumber = 21;
 static const size_t gsvFieldsNumber = 4;
 
@@ -69,6 +73,26 @@ static const size_t ackNackIdOffset = 1;
 
 static const std::string ttyUsbDefault("/dev/ttyACM0");
 static const std::string ttyDefaultKf("/dev/ttySC3");
+
+static const uint8_t ublox_cfg_clear[] = {0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+                                          0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+                                          0x17};
+
+static const uint8_t ublox_nav5[] = {0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x04, 0x02,
+                                     0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
+                                     0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00,
+                                     0x5E, 0x01, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+static const uint8_t ublox_enable_nmea41[] = {0x06, 0x17, 0x0F, 0x00, 0x20, 0x41,
+                                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                              0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
+
+static const uint8_t ublox_enable_nmea23[] = {0x06, 0x17, 0x0C, 0x00, 0x20, 0x23,
+                                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                              0x01, 0x00, 0x00, 0x01};
+
+static void GetProp(char* secmajor, char* sbas);
 
 template <typename mPtr>
 static inline void CheckNotNull(mPtr val, const char* msg)
@@ -285,57 +309,152 @@ void GnssHwTTY::StopSalvatorProcedure()
     }
 }
 
-void GnssHwTTY::GnssHwUbxInitThread(void)
+void GnssHwTTY::ClearConfig()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-
-    char prop_secmajor[PROPERTY_VALUE_MAX] = {};
-    char prop_sbas[PROPERTY_VALUE_MAX] = {};
-
-    property_get("ro.boot.gps.secmajor", prop_secmajor, "glonass");
-    property_get("ro.boot.gps.sbas", prop_sbas, "enable");
-
-    auto prop_secmajor_len = strnlen(prop_secmajor, PROPERTY_VALUE_MAX);
-    auto prop_sbas_len = strnlen(prop_sbas, PROPERTY_VALUE_MAX);
-
-    for (size_t i = 0; i < prop_secmajor_len; i++) {
-        prop_secmajor[i] = toupper(prop_secmajor[i]);
-    }
-
-    for (size_t i = 0; i < prop_sbas_len; i++) {
-        prop_sbas[i] = toupper(prop_sbas[i]);
-    }
-
-    // Reset parser
-    UBX_Reset();
-
-    // Clear current config
-    const uint8_t ublox_cfg_clear[] = {0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00,
-                                       0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
-                                       0x17};
-    ALOGV("[%s, line %d] ubx send config clear", __func__, __LINE__);
     UBX_Send(ublox_cfg_clear, sizeof(ublox_cfg_clear));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to clear UBX config", mUbxTimeoutMs);
+}
 
+void GnssHwTTY::SetNMEA41()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     // Enabling NMEA 4.1 Extended satellite numbering, set flag freeze bearing
-    const uint8_t ublox_enable_nmea41[] = {0x06, 0x17, 0x0F, 0x00, 0x20, 0x41,
-                                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                           0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
     UBX_Send(ublox_enable_nmea41, sizeof(ublox_enable_nmea41));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NMEA version to 4.1", mUbxTimeoutMs);
 
-    // Set Nagivation Engine to automotive mode, 3D Fix only
-    const uint8_t ublox_nav5[] = {0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x04, 0x02,
-                                  0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
-                                  0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00,
-                                  0x5E, 0x01, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x00,
-                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    UBX_Send(ublox_nav5, sizeof(ublox_nav5));
-    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NAV5 to automotive", mUbxTimeoutMs);
+    //SetUp length of messages according to protocol version
+    mRmcFieldsNumber = rmcFieldsNumberNMEAv41;
+    mGsaFieldsNumber = gsaFieldsNumberNMEAv41;
+}
 
-    UBX_SetMessageRate(0xF1, 0x00, 1, "Failed to enable PUBX,00 message"); // enable PUBX,00
-    UBX_SetMessageRate(0xF0, 0x01, 0, NULL); // disable GLL
-    UBX_SetMessageRate(0xF0, 0x05, 0, NULL); // disable VTG
+void GnssHwTTY::SetNMEA23()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    // Enabling NMEA 2.3 Extended satellite numbering, set flag freeze bearing
+    UBX_Send(ublox_enable_nmea23, sizeof(ublox_enable_nmea23));
+    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NMEA version to 2.3", mUbxTimeoutMs);
+
+    //SetUp length of messages according to protocol version
+    mRmcFieldsNumber = rmcFieldsNumberNMEAv23;
+    mGsaFieldsNumber = gsaFieldsNumberNMEAv23;
+}
+
+static void GetProp(char* secmajor, char* sbas)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    if (nullptr == secmajor || nullptr == sbas) {
+        ALOGV("[%s, line %d] Bad input", __func__, __LINE__);
+        return;
+    }
+    property_get("ro.boot.gps.secmajor", secmajor, "glonass");
+    property_get("ro.boot.gps.sbas", sbas, "enable");
+
+    auto prop_secmajor_len = strnlen(secmajor, PROPERTY_VALUE_MAX);
+    auto prop_sbas_len = strnlen(sbas, PROPERTY_VALUE_MAX);
+
+    for (size_t i = 0; i < prop_secmajor_len; i++) {
+        secmajor[i] = toupper(secmajor[i]);
+    }
+
+    for (size_t i = 0; i < prop_sbas_len; i++) {
+        sbas[i] = toupper(sbas[i]);
+    }
+}
+
+void GnssHwTTY::ConfigGnssUblox7()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    char prop_secmajor[PROPERTY_VALUE_MAX] = {};
+    char prop_sbas[PROPERTY_VALUE_MAX] = {};
+
+    GetProp(prop_secmajor, prop_sbas);
+
+    //    CFG-GNSS example
+    //    ID    - GNSS ID
+    //    MN    - minimum (reserved) tracking channels for this GNSS
+    //    MX    - maximum tracking channels
+    //    XX    - reserved (always zero)
+    //    F1-F4 - bitfield flags
+
+    //              ID MN MX XX F1 F2 F3 F4
+    //             ________________________
+    //    GPS     | 00 08 10 00 01 00 00 00
+    //    SBAS    | 01 01 03 00 01 00 00 00
+    //    QZSS    | 06 00 03 00 01 00 00 00
+    //    GLONASS | 06 08 0E 00 00 00 00 00
+
+    const size_t disableSBASOffset = 20;
+    const size_t mnSBASOffset = 17;
+
+    uint8_t ublox_cfg_gnss[] = {0x06, 0x3E, 0x24, 0x00, 0x00, 0x16, 0x16, 0x04,
+                                0x00, 0x04, 0xff, 0x00, 0x01, 0x00, 0x00, 0x00,  // GPS
+                                0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00,  // SBAS
+                                0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00,  // QZSS
+                                0x06, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00}; //GLONASS
+
+    bool sbas_enabled = true;
+    if (strncmp(prop_sbas, "DISABLE", PROPERTY_VALUE_MAX) == 0) {
+        sbas_enabled = false;
+        ublox_cfg_gnss[mnSBASOffset] = 0x00; // set minimum tracking channels for SBAS to zero
+        ublox_cfg_gnss[disableSBASOffset] = 0x00; // disable SBAS
+    }
+
+    ALOGI("No second major GNSS is being used");
+    mMajorGnssStatus = MajorGnssStatus::GPS_ONLY;
+
+    UBX_Send(ublox_cfg_gnss, sizeof(ublox_cfg_gnss));
+    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
+}
+
+void GnssHwTTY::PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t ubxCfgGnss[64])
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    if (nullptr == propSecmajor || nullptr == propSbas || nullptr == ubxCfgGnss) {
+        ALOGV("[%s, line %d] Wrong input", __func__, __LINE__);
+        return;
+    }
+
+    const int CFG_GNSS_ENTRY_SIZE = 8;
+    const int CFG_GNSS_SBAS    = 2;
+    const int CFG_GNSS_BEIDOU  = 4;
+    const int CFG_GNSS_GLONASS = 7;
+
+    const int CFG_GNSS_MIN = 1;
+    const int CFG_GNSS_ENB = 4;
+
+    bool sbasEnabled = true;
+    if (strncmp(propSbas, "DISABLE", PROPERTY_VALUE_MAX) == 0) {
+        sbasEnabled = false;
+        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_SBAS + CFG_GNSS_MIN] = 0x00; // set minimum tracking channels for SBAS to zero
+        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_SBAS + CFG_GNSS_ENB] = 0x00; // disable SBAS
+    }
+
+    ALOGI("Using GPS (major GNSS) and minor ones: GALILEO, QZSS%s", (sbasEnabled) ? ", SBAS" : "");
+    if (strncmp(propSecmajor, "GLONASS", PROPERTY_VALUE_MAX) == 0) {
+        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_GLONASS + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for GLONASS to eight
+        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_GLONASS + CFG_GNSS_ENB] = 0x01; // enable GLONASS
+        ALOGI("Using GLONASS as second major GNSS");
+        mMajorGnssStatus = MajorGnssStatus::GPS_GLONASS;
+    } else if (strncmp(propSecmajor, "BEIDOU", PROPERTY_VALUE_MAX) == 0) {
+        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_BEIDOU + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for BEIDOU to eight
+        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_BEIDOU + CFG_GNSS_ENB] = 0x01; // enable BEIDOU
+        ALOGI("Using BEIDOU as second major GNSS");
+        mMajorGnssStatus = MajorGnssStatus::GPS_BEIDOU;
+    } else {
+        // No need to change anything, by default the CFG GNSS message contains disabled GLONASS/BEIDOU part
+        ALOGI("No second major GNSS is being used");
+        mMajorGnssStatus = MajorGnssStatus::GPS_ONLY;
+    }
+}
+
+void GnssHwTTY::ConfigGnssUblox8()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    char propSecmajor[PROPERTY_VALUE_MAX] = {};
+    char propSbas[PROPERTY_VALUE_MAX] = {};
+
+    GetProp(propSecmajor, propSbas);
 
     //    CFG-GNSS example
     //    ID    - GNSS ID
@@ -354,56 +473,76 @@ void GnssHwTTY::GnssHwUbxInitThread(void)
     //    QZSS    | 05 00 03 00 01 00 01 05
     //    GLONASS | 06 08 0E 00 01 00 01 01
 
-    const int CFG_GNSS_ENTRY_SIZE = 8;
+    uint8_t ubloxCfgGnss[] = {0x06, 0x3E, 0x3C, 0x00, 0x00, 0x20, 0x20, 0x07,
+                              0x00, 0x08, 0x10, 0x00, 0x01, 0x00, 0x01, 0x01,  // GPS
+                              0x01, 0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x01,  // SBAS
+                              0x02, 0x04, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01,  // GALILEO
+                              0x03, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x01,  // BEIDOU
+                              0x04, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x03,  // IMES
+                              0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x05,  // QZSS
+                              0x06, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x01, 0x01}; // GLONASS
 
-    const int CFG_GNSS_SBAS    = 2;
-    const int CFG_GNSS_BEIDOU  = 4;
-    const int CFG_GNSS_GLONASS = 7;
+    PrepareGnssConfig(propSecmajor, propSbas, ubloxCfgGnss);
 
-    const int CFG_GNSS_MIN = 1;
-    const int CFG_GNSS_ENB = 4;
-
-    uint8_t ublox_cfg_gnss[] =
-    {0x06, 0x3E, 0x3C, 0x00, 0x00, 0x20, 0x20, 0x07,
-     0x00, 0x08, 0x10, 0x00, 0x01, 0x00, 0x01, 0x01,  // GPS
-     0x01, 0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x01,  // SBAS
-     0x02, 0x04, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01,  // GALILEO
-     0x03, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x01,  // BEIDOU
-     0x04, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x03,  // IMES
-     0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x05,  // QZSS
-     0x06, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x01, 0x01}; // GLONASS
-
-    bool sbas_enabled = true;
-    if (strncmp(prop_sbas, "DISABLE", PROPERTY_VALUE_MAX) == 0) {
-        sbas_enabled = false;
-        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_SBAS + CFG_GNSS_MIN] = 0x00; // set minimum tracking channels for SBAS to zero
-        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_SBAS + CFG_GNSS_ENB] = 0x00; // disable SBAS
-    }
-
-    ALOGI("Using GPS (major GNSS) and minor ones: GALILEO, QZSS%s", (sbas_enabled) ? ", SBAS" : "");
-    if (strncmp(prop_secmajor, "GLONASS", PROPERTY_VALUE_MAX) == 0) {
-        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_GLONASS + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for GLONASS to eight
-        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_GLONASS + CFG_GNSS_ENB] = 0x01; // enable GLONASS
-        ALOGI("Using GLONASS as second major GNSS");
-        mMajorGnssStatus = MajorGnssStatus::GPS_GLONASS;
-    } else if (strncmp(prop_secmajor, "BEIDOU", PROPERTY_VALUE_MAX) == 0) {
-        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_BEIDOU + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for BEIDOU to eight
-        ublox_cfg_gnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_BEIDOU + CFG_GNSS_ENB] = 0x01; // enable BEIDOU
-        ALOGI("Using BEIDOU as second major GNSS");
-        mMajorGnssStatus = MajorGnssStatus::GPS_BEIDOU;
-    } else {
-        // No need to change anything, by default the CFG GNSS message contains disabled GLONASS/BEIDOU part
-        ALOGI("No second major GNSS is being used");
-        mMajorGnssStatus = MajorGnssStatus::GPS_ONLY;
-    }
-
-    UBX_Send(ublox_cfg_gnss, sizeof(ublox_cfg_gnss));
+    UBX_Send(ubloxCfgGnss, sizeof(ubloxCfgGnss));
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
+}
+
+void GnssHwTTY::PollCommonMessages()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
+    UBX_Send(ublox_nav5, sizeof(ublox_nav5));
+    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NAV5 to automotive", mUbxTimeoutMs);
+
+    UBX_SetMessageRate(0xF1, 0x00, 1, "Failed to enable PUBX,00 message"); // enable PUBX,00
+    UBX_SetMessageRate(0xF0, 0x01, 0, NULL); // disable GLL
+    UBX_SetMessageRate(0xF0, 0x05, 0, NULL); // disable VTG
 
     UBX_SetMessageRateCurrentPort(classUbxNav, idClock, rate, "UBX-NAV-CLOCK config failed");
-    UBX_SetMessageRateCurrentPort(classUbxRxm, idMeasx, rate, "UBX-RXM-MEASX config failed");
     UBX_SetMessageRateCurrentPort(classUbxNav, idTimeUtc, rate, "UBX-NAV-UTC config failed");
 
+    ALOGV("[%s, line %d] Exit", __func__, __LINE__);
+}
+
+void GnssHwTTY::InitUblox7Gen()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    ClearConfig();
+    SetNMEA23();
+    ConfigGnssUblox7();
+    PollCommonMessages();
+}
+
+void GnssHwTTY::InitUblox8Gen()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    ClearConfig();
+    SetNMEA41();
+    ConfigGnssUblox8();
+    PollCommonMessages();
+}
+
+void GnssHwTTY::GnssHwUbxInitThread(void)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
+    UBX_Reset();
+    switch (mUbxGeneration) {
+    case ublox7: {
+        InitUblox7Gen();
+        break;
+    }
+    case ublox8: {
+        InitUblox8Gen();
+        break;
+    }
+    default: {
+        ALOGE("Unexpected Ublox receiver generation");
+        UBX_CriticalProtocolError("UBX protocol failure, unknown ublox generation");
+    }
+
+    }
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
@@ -498,12 +637,12 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
                 mReaderBufPos >= (ubx_payload_len + mUbxPacketSizeNoPayload)) {
 
             /* Parse UBX */
-            ALOGV("UBX rx putting buffer len: %ld", mReaderBufPos);
+            ALOGV("UBX rx putting buffer len: %zu", mReaderBufPos);
 
             UbxBufferElement elem;
             elem.len = mReaderBufPos;
             if (elem.len < (sizeof(UbxBufferElement) - sizeof(size_t))) {
-                ALOGD("[%s, line %d] add, notify all", __func__, __LINE__);
+                ALOGV("[%s, line %d] add, notify all", __func__, __LINE__);
                 memcpy(&elem.data, mReaderBuf, elem.len);
                 mUbxBuffer->put(&elem);
                 mUbxThreadCv.notify_all();
@@ -615,7 +754,7 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
             auto ret = mGnssCb->gnssNmeaCb(time(NULL), nmeaString);
             if (!ret.isOk()) {
                 ALOGE("Unable to invoke gnssNmeaCb");
-                ALOGD("[%s, line %d] Unable to invoke gnssNmeaCb", __func__, __LINE__);
+                ALOGV("[%s, line %d] Unable to invoke gnssNmeaCb", __func__, __LINE__);
             }
         }
     }
@@ -818,7 +957,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 
     SatelliteType currentSatelliteType = SatelliteType::UNKNOWN;
     if (strncmp(msg, "$GP", 3) == 0) {
-        currentSatelliteType = SatelliteType::GPS_SBAS_GZSS;
+        currentSatelliteType = SatelliteType::GPS_SBAS_QZSS;
     }
     else if (strncmp(msg, "$GL", 3) == 0) {
         currentSatelliteType = SatelliteType::GLONASS;
@@ -941,7 +1080,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
                 }
             }
 
-            if ((sv.svid >= 1 && sv.svid <= 32) && (currentSatelliteType == SatelliteType::GPS_SBAS_GZSS)) {
+            if ((sv.svid >= 1 && sv.svid <= 32) && (currentSatelliteType == SatelliteType::GPS_SBAS_QZSS)) {
                 sv.constellation = GnssConstellationType::GPS;
             }
             else if ((sv.svid >= 1 && sv.svid <= 36) && (currentSatelliteType == SatelliteType::GALILEO)) {
@@ -987,7 +1126,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 
             satelliteList->push_back(sv);
 
-            ALOGD("GPGSV: [%zu] svid=%d, elevation=%f, azimuth=%f, c_n0_dbhz=%f", offset + p,
+            ALOGV("GPGSV: [%zu] svid=%d, elevation=%f, azimuth=%f, c_n0_dbhz=%f", offset + p,
                   sv.svid, sv.elevationDegrees, sv.azimuthDegrees, sv.cN0Dbhz);
         }
     }
@@ -1006,7 +1145,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
         }
         mSvStatus.numSvs = svCount;
 
-        ALOGV("GPS SV: GPS/SBAS/GZSS: %lu | GLONASS: %lu | GALILEO: %lu | BEIDOU: %lu | UNKNOWN: %lu | total: %u",
+        ALOGV("GPS SV: GPS/SBAS/QZSS: %lu | GLONASS: %lu | GALILEO: %lu | BEIDOU: %lu | UNKNOWN: %lu | total: %u",
               mSatellites[0].size(), mSatellites[1].size(), mSatellites[2].size(), mSatellites[3].size(),
               mSatellites[4].size(), svCount);
 
@@ -1029,8 +1168,8 @@ void GnssHwTTY::NMEA_ReaderParse_GNGSA(char *msg)
     NMEA_ReaderSplitMessage(std::string(msg), gsa);
 
     /* GSA is expected to have 19 parts */
-    if (gsa.size() != gsaFieldsNumber) {
-        ALOGD("Dropping GSA due to invalid size (%lu)", gsa.size());
+    if (gsa.size() != mGsaFieldsNumber) {
+        ALOGD("Dropping GSA due to invalid size (%zu)", (size_t)gsa.size());
         return;
     }
 
@@ -1126,7 +1265,7 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
     for (mUM.buffer_ptr = 0; mUM.buffer_ptr < ubx->len; mUM.buffer_ptr++) {
-        ALOGD("UBX parser state: %d (buffer ptr: %lu)", mUM.state, mUM.buffer_ptr);
+        ALOGV("UBX parser state: %d (buffer ptr: %lu)", mUM.state, mUM.buffer_ptr);
         switch (mUM.state) {
         case UbxState::SYNC1:
             ALOGV("[%s, line %d] Sync1", __func__, __LINE__);

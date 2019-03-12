@@ -96,6 +96,8 @@ class GnssHwTTY : public GnssHwIface
     uint16_t mUbxGeneration = 0;
 
     size_t mRmcFieldsNumber;
+    size_t mGsaFieldsNumber;
+
     uint16_t mYearOfHardware = 0; // for under 2016 year zero is legal value.
 
     struct NmeaBufferElement {
@@ -125,7 +127,7 @@ class GnssHwTTY : public GnssHwIface
     std::mutex mHandleThreadLock;
 
     enum class SatelliteType {
-        GPS_SBAS_GZSS = 0,
+        GPS_SBAS_QZSS = 0,
         GLONASS       = 1,
         GALILEO       = 2,
         BEIDOU        = 3,
@@ -231,8 +233,19 @@ protected:
     void StopSalvatorProcedure();
 
     void SelectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen);
-
     void RunWorkerThreads();
+
+    void ClearConfig();
+    void ConfigGnssUblox7();
+    void ConfigGnssUblox8();
+    void SetNMEA23();
+    void SetNMEA41();
+    void PollCommonMessages();
+    void PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t ubxCfgGnss[]);
+
+    void InitUblox7Gen();
+    void InitUblox8Gen();
+
     void GnssHwUbxInitThread(void);
     void UBX_Thread(void);
     void UBX_Reset();

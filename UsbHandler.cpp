@@ -54,8 +54,6 @@ void UsbHandler::ScanSubdir(const char * subDir, std::vector<std::string> &listD
     std::string curPath(devBusUsbPath + "/" + subDir);
 
     DIR* devDir = opendir(curPath.c_str());
-    ALOGV("[%s, line %d] opendir errno %d, %s", __func__, __LINE__, errno, strerror(errno));
-
     if (devDir) {
         struct dirent *dev;
         while ((dev = readdir(devDir)) != nullptr) {
@@ -72,8 +70,6 @@ void UsbHandler::PrepareUsbDeviceList()
     std::vector<std::string> listDeviceNames;
 
     DIR* pDir = opendir(devBusUsbPath.c_str());
-    ALOGV("[%s, line %d] opendir errno %d, %s", __func__, __LINE__, errno, strerror(errno));
-
     if (pDir != nullptr) {
         struct dirent* entry;
         while ((entry = readdir(pDir)) != nullptr) {
