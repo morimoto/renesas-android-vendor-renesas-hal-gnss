@@ -74,6 +74,6 @@ protected:
      * \param ptr - a pointer to data to be dumped
      * \param buflen - length in bytes of data to be dumped
      */
-    void hexdump(const char *file, void* ptr, size_t buflen);
+    void hexdump(const char* file, void* ptr, size_t buflen);
 };
 #endif // __GNSSPARSERCOMMONIMPL_H__

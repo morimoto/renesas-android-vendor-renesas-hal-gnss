@@ -25,7 +25,7 @@ static bool isBigEndian()
 {
     union
     {
-        uint32_t  dec;
+        uint32_t dec;
         char literal[4];
     } checker = {0x01020304};
     return 0x01 == checker.literal[0] ? true : false;
@@ -33,8 +33,11 @@ static bool isBigEndian()
 
 uint16_t GnssParserCommonImpl::getUint16(const uint8_t* ptr)
 {
-    if(isBigEndian())
-    {
+    if (nullptr == ptr) {
+        return 0;
+    }
+
+    if (isBigEndian()) {
         uint16_t result = ptr[0] << 8;
         result |= ptr[1];
         return result;
@@ -43,10 +46,13 @@ uint16_t GnssParserCommonImpl::getUint16(const uint8_t* ptr)
     return *(uint16_t*)ptr;
 }
 
-uint32_t GnssParserCommonImpl::getUint32(const uint8_t *ptr)
+uint32_t GnssParserCommonImpl::getUint32(const uint8_t* ptr)
 {
-    if(isBigEndian())
-    {
+    if (nullptr == ptr) {
+        return 0;
+    }
+
+    if (isBigEndian()) {
         uint32_t result = ptr[0] << 24;
         result |= (ptr[1] << 16);
         result |= (ptr[2] << 8);
@@ -64,26 +70,31 @@ void GnssParserCommonImpl::dumpDebug()
 void GnssParserCommonImpl::hexdump(const char* file, void* ptr, size_t buflen)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    FILE *pfile = fopen(file, "a");
+    if (nullptr == file || nullptr == ptr) {
+        return;
+    }
+
+    FILE* pfile = fopen(file, "a");
     if (nullptr == pfile) {
         return;
     }
+
     fprintf(pfile, "_______________________________________\n");
-    unsigned char *buf = (unsigned char*)ptr;
+    unsigned char* buf = (unsigned char*)ptr;
     size_t i, j;
-    for (i=0; i<buflen; i+=16) {
+    for (i = 0; i < buflen; i += 16) {
         fprintf(pfile, "%06zx: ", i);
-        for (j=0; j<16; j++){
-            if (i+j < buflen) {
-                fprintf(pfile, "%02x ", buf[i+j]);
-            }else{
+        for (j = 0; j < 16; j++){
+            if (i + j < buflen) {
+                fprintf(pfile, "%02x ", buf[i + j]);
+            } else {
                 fprintf(pfile,"   ");
             }
         }
         fprintf(pfile," ");
-        for (j=0; j<16; j++) {
-            if (i+j < buflen) {
-                fprintf(pfile, "%c", isprint(buf[i+j]) ? buf[i+j] : '.');
+        for (j = 0; j < 16; j++) {
+            if (i + j < buflen) {
+                fprintf(pfile, "%c", isprint(buf[i + j]) ? buf[i + j] : '.');
             }
         }
         fprintf(pfile, "\n");
