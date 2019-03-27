@@ -141,6 +141,8 @@ uint8_t GnssNavTimeUTCParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData 
     if (mValid) {
         gnssData.clock.timeNs = timeNano;
         gnssData.clock.timeUncertaintyNs = static_cast<double>(data.timeAccuracy);
+        gnssData.clock.gnssClockFlags =
+                static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_TIME_UNCERTAINTY);
         ALOGV("[%s, line %d] Exit", __func__, __LINE__);
         return UTCDone;
     }
