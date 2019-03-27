@@ -41,6 +41,7 @@ using ::android::hardware::gnss::V1_0::GnssMax;
 typedef IGnssMeasurementCallback::GnssMeasurementState GnssMS;
 typedef IGnssMeasurementCallback::GnssMultipathIndicator GnssMI;
 typedef IGnssMeasurementCallback::GnssAccumulatedDeltaRangeState GnssADRS;
+typedef IGnssMeasurementCallback::GnssMeasurementFlags GnssMF;
 
 class GnssRxmMeasxParser : public GnssParserCommonImpl {
 public:
@@ -172,6 +173,14 @@ protected:
      *         or frequency channel number for GLONASS
      */
     uint8_t getValidSvidForGnssId(const uint8_t gnssId, const uint8_t svid);
+
+    /*!
+     * \brief GnssRxmMeasxParser::getCarrierFrequencyFromGnssId - provide carrier frequency
+     * \brief carrier frequncy depends on setup of flags in ubx-cfg-gnss
+     * \param gnssId - index of constellation in means of UbxGnssId
+     * \return carrier frequency in Hz, 0 if unknown gnssId
+     */
+    float getCarrierFrequencyFromGnssId(const uint8_t gnssId);
 
     /*!
      * \brief getGnssMeasurement - provide collected data for each Satellite Vehicle

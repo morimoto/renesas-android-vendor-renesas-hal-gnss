@@ -262,11 +262,39 @@ uint8_t GnssRxmMeasxParser::getValidSvidForGnssId(const uint8_t gnssId, const ui
     return resultSvid;
 }
 
+float GnssRxmMeasxParser::getCarrierFrequencyFromGnssId(const uint8_t gnssId)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
+    const float L1BandFrequency = 1575.42;
+    const float B1BandFrequency = 1561.098;
+    const float L1GlonassBandFrequency = 1602.562;
+    const float scale = 1000000.0;
+
+    switch (gnssId) {
+    case UbxGnssId::GPS:
+    case UbxGnssId::SBAS:
+    case UbxGnssId::GALILEO:
+    case UbxGnssId::QZSS:
+        return scaleUp(L1BandFrequency, scale);
+    case UbxGnssId::BEIDOU:
+        return scaleUp(B1BandFrequency, scale);
+    case UbxGnssId::GLONASS:
+        return scaleUp(L1GlonassBandFrequency, scale);
+    default:
+        return 0;
+    }
+}
+
 void GnssRxmMeasxParser::getGnssMeasurement(IGnssMeasurementCallback::GnssMeasurement &instance, repeatedBlock_t &block)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
+    instance.carrierFrequencyHz = getCarrierFrequencyFromGnssId(block.gnssId);
     instance.flags = 0;
+    if (instance.carrierFrequencyHz > 0.0) {
+        instance.flags = static_cast<uint32_t>(GnssMF::HAS_CARRIER_FREQUENCY);
+    }
 
     instance.svid = getValidSvidForGnssId(block.gnssId, block.svId);
     instance.constellation = getConstellationFromGnssId(block.gnssId);
