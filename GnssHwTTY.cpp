@@ -934,6 +934,11 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 {
     ALOGV("[%s, line %d] Entry", __func__ ,__LINE__);
 
+    const float L1BandFrequency = 1575.42;
+    const float B1BandFrequency = 1561.098;
+    const float L1GlonassBandFrequency = 1602.562;
+    const float scale = 1000000.0;
+
     std::vector<std::string> gsv;
     NMEA_ReaderSplitMessage(std::string(msg), gsv);
 
@@ -1082,9 +1087,13 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 
             if ((sv.svid >= 1 && sv.svid <= 32) && (currentSatelliteType == SatelliteType::GPS_SBAS_QZSS)) {
                 sv.constellation = GnssConstellationType::GPS;
+                sv.carrierFrequencyHz = (L1BandFrequency * scale);
+                sv.svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_CARRIER_FREQUENCY);
             }
             else if ((sv.svid >= 1 && sv.svid <= 36) && (currentSatelliteType == SatelliteType::GALILEO)) {
                 sv.constellation = GnssConstellationType::GALILEO;
+                sv.carrierFrequencyHz = (L1BandFrequency * scale);
+                sv.svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_CARRIER_FREQUENCY);
             }
             else if (currentSatelliteType == SatelliteType::GLONASS) {
                 sv.constellation = GnssConstellationType::GLONASS;
@@ -1098,20 +1107,30 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
                         glonass_fcn = 0;
                     }
                 }
+                sv.carrierFrequencyHz = (L1GlonassBandFrequency * scale);
+                sv.svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_CARRIER_FREQUENCY);
             }
             else if (currentSatelliteType == SatelliteType::BEIDOU) {
                 sv.constellation = GnssConstellationType::BEIDOU;
+                sv.carrierFrequencyHz = (B1BandFrequency * scale);
+                sv.svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_CARRIER_FREQUENCY);
             }
             else if ((sv.svid >=  33) && (sv.svid <=  64)) {
                 sv.constellation = GnssConstellationType::SBAS;
                 sv.svid += 87;
+                sv.carrierFrequencyHz = (L1BandFrequency * scale);
+                sv.svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_CARRIER_FREQUENCY);
             }
             else if ((sv.svid >= 152) && (sv.svid <= 158)) {
                 sv.constellation = GnssConstellationType::SBAS;
                 sv.svid += 31;
+                sv.carrierFrequencyHz = (L1BandFrequency * scale);
+                sv.svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_CARRIER_FREQUENCY);
             }
             else if ((sv.svid >= 193) && (sv.svid <= 197)) {
                 sv.constellation = GnssConstellationType::QZSS;
+                sv.carrierFrequencyHz = (L1BandFrequency * scale);
+                sv.svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_CARRIER_FREQUENCY);
             }
             else {
                 if (currentSatelliteType != SatelliteType::ANY) {
