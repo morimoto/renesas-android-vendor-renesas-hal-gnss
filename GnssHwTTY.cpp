@@ -53,7 +53,7 @@ static const uint8_t idClock = 0x22;
 static const uint8_t idMeasx = 0x14;
 static const uint8_t idTimeUtc = 0x21;
 
-static const uint8_t rate = 0x02;
+static const uint8_t rate = 0x01;
 
 // According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.14 RMC, p. 124
 // NMEA protocol version 4.1 and above has 14 fields.
@@ -116,7 +116,6 @@ GnssHwTTY::GnssHwTTY()
 GnssHwTTY::GnssHwTTY(int fd) :
     mFd(fd),
     mEnabled(false),
-    mRmcFieldsNumber(rmcFieldsNumberNMEAv41),
     mHelpThreadExit(false),
     mUbxAckReceived(0)
 {
@@ -548,6 +547,8 @@ void GnssHwTTY::InitUblox8Gen()
     SetNMEA41();
     ConfigGnssUblox8();
     PollCommonMessages();
+
+    UBX_SetMessageRateCurrentPort(classUbxRxm, idMeasx, rate, "UBX-RXM-MEASX config failed");
 }
 
 void GnssHwTTY::GnssHwUbxInitThread(void)
@@ -825,6 +826,8 @@ void GnssHwTTY::SetYearOfHardware()
     default:
         mYearOfHardware = 0;
     }
+
+    mGnssCb->gnssSetSystemInfoCb({mYearOfHardware});
 }
 
 uint16_t GnssHwTTY::GetYearOfHardware()

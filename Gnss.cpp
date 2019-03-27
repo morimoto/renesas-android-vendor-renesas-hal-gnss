@@ -202,7 +202,7 @@ Return<sp<IGnssNi>> Gnss::getExtensionGnssNi()  {
 }
 
 Return<sp<IGnssMeasurement>> Gnss::getExtensionGnssMeasurement() {
-    if (mGnssIface == nullptr) {
+    if (mGnssHwIface == nullptr) {
         ALOGE("%s: Gnss interface is unavailable", __func__);
         return nullptr;
     }
@@ -325,10 +325,11 @@ Return<bool> Gnss::setCallback(const sp<IGnssCallback>& callback)
     }
 
     mGnssCbIface = callback;
-    mGnssCbIface->gnssSetCapabilitesCb(IGnssCallback::Capabilities::GEOFENCING | IGnssCallback::Capabilities::NAV_MESSAGES);
+    mGnssCbIface->gnssSetCapabilitesCb(IGnssCallback::Capabilities::GEOFENCING |
+                                       IGnssCallback::Capabilities::NAV_MESSAGES |
+                                       IGnssCallback::Capabilities::MEASUREMENTS);
 
     mGnssCbIface->gnssSetSystemInfoCb({mGnssHwIface->GetYearOfHardware()});
-
     mGnssHwIface->setCallback(callback);
 
     callback->linkToDeath(mDeathRecipient, 0 /*cookie*/);
