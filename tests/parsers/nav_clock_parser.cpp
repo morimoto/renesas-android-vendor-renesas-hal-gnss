@@ -124,7 +124,7 @@ TEST_F(GnssNavClockParserTest, checkRetrievedDataFromDumpInput)
     IGnssMeasurementCallback::GnssData data;
     EXPECT_EQ(ClockDone, obj.retrieveSvInfo(data));
     IGnssMeasurementCallback::GnssClock &clock = data.clock;
-    EXPECT_EQ(navClockSample.clockBias, clock.biasNs);
+    EXPECT_EQ(navClockSample.clockBias, clock.fullBiasNs);
     EXPECT_EQ(navClockSample.clockDrift, clock.driftNsps);
     EXPECT_EQ((uint32_t)0, clock.hwClockDiscontinuityCount);
 }

@@ -71,10 +71,18 @@ void GnssNavClockParser::parseNavClockMsg()
 void GnssNavClockParser::getGnssClock(IGnssMeasurementCallback::GnssClock &instance)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    const double psToNsScale = 1000.0;
 
-    instance.biasNs = static_cast<double>(data.clockBias);
+    instance.fullBiasNs = static_cast<int64_t>(data.clockBias);
     instance.driftNsps = static_cast<double>(data.clockDrift);
+    instance.biasUncertaintyNs = static_cast<double>(data.timeAccuracy);
+    instance.driftUncertaintyNsps = scaleDown(data.freqAccuracyEstimate, psToNsScale);
     instance.hwClockDiscontinuityCount = 0;
+
+    instance.gnssClockFlags |= static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_FULL_BIAS);
+    instance.gnssClockFlags |= static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_BIAS_UNCERTAINTY);
+    instance.gnssClockFlags |= static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_DRIFT);
+    instance.gnssClockFlags |= static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_DRIFT_UNCERTAINTY);
 }
 
 uint8_t GnssNavClockParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData)
