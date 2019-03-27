@@ -71,6 +71,11 @@ static const size_t ackNackMsgLen = 2;
 static const size_t ackNackClassOffset = 0;
 static const size_t ackNackIdOffset = 1;
 
+static const float speedAccUblox7 = 0.1; // m/s according to NEO-7 datasheet
+static const float bearingAccUblox7 = 0.5; // degrees according to NEO-7 datasheet
+static const float speedAccUblox8 = 0.05; // m/s according to NEO-8 datasheet
+static const float bearingAccUblox8 = 0.3; // degrees according to NEO-8 datasheet
+
 static const std::string ttyUsbDefault("/dev/ttyACM0");
 static const std::string ttyDefaultKf("/dev/ttySC3");
 
@@ -505,9 +510,30 @@ void GnssHwTTY::PollCommonMessages()
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
+void GnssHwTTY::SetConstValuesOfHardware(uint16_t gen)
+{
+    switch (gen) {
+    case ublox7: {
+        mSpeedAcc = speedAccUblox7;
+        mBearingAcc = bearingAccUblox7;
+        break;
+    }
+    case ublox8: {
+        mSpeedAcc = speedAccUblox8;
+        mBearingAcc = bearingAccUblox8;
+        break;
+    }
+    default: {
+        mSpeedAcc = 0;
+        mBearingAcc = 0;
+    }
+    }
+}
+
 void GnssHwTTY::InitUblox7Gen()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    SetConstValuesOfHardware(ublox7);
     ClearConfig();
     SetNMEA23();
     ConfigGnssUblox7();
@@ -517,6 +543,7 @@ void GnssHwTTY::InitUblox7Gen()
 void GnssHwTTY::InitUblox8Gen()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    SetConstValuesOfHardware(ublox8);
     ClearConfig();
     SetNMEA41();
     ConfigGnssUblox8();
@@ -875,18 +902,26 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
     if (rmc[7].length() > 0) {
         mGnssLocation.speedMetersPerSec = (atof(rmc[7].c_str()) * 1.852) / 3.6; // knots -> m/s
         mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_SPEED);
+        mGnssLocation.speedAccuracyMetersPerSecond = mSpeedAcc;
+        mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_SPEED_ACCURACY);
     } else {
         mGnssLocation.speedMetersPerSec = 0.f;
         mGnssLocation.gnssLocationFlags &= ~static_cast<uint16_t>(GnssLocationFlags::HAS_SPEED);
+        mGnssLocation.speedAccuracyMetersPerSecond = 0.f;
+        mGnssLocation.gnssLocationFlags &= ~static_cast<uint16_t>(GnssLocationFlags::HAS_SPEED_ACCURACY);
     }
 
     // Track angle in degrees True
     if (rmc[8].length() > 0) {
         mGnssLocation.bearingDegrees = atof(rmc[8].c_str());
         mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_BEARING);
+        mGnssLocation.bearingAccuracyDegrees = mBearingAcc;
+        mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_BEARING_ACCURACY);
     } else {
         mGnssLocation.bearingDegrees = 0.f;
         mGnssLocation.gnssLocationFlags &= ~static_cast<uint16_t>(GnssLocationFlags::HAS_BEARING);
+        mGnssLocation.bearingAccuracyDegrees = 0.f;
+        mGnssLocation.gnssLocationFlags &= ~static_cast<uint16_t>(GnssLocationFlags::HAS_BEARING_ACCURACY);
     }
 
     // For ublox devices location callback depends on speed, bearing and altitude existence
@@ -896,6 +931,9 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
     bool hasBearing = (mGnssLocation.gnssLocationFlags & GnssLocationFlags::HAS_BEARING);
     bool hasAltitude = (mGnssLocation.gnssLocationFlags & GnssLocationFlags::HAS_ALTITUDE);
     bool provideLocation = ((!hasSpeed || (hasSpeed && hasBearing)) && hasAltitude);
+
+    mGnssLocation.speedAccuracyMetersPerSecond = mSpeedAcc;
+    mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_SPEED_ACCURACY);
 
     if (mEnabled && provideLocation) {
         ALOGD("[%s, line %d] Provide location callback", __func__, __LINE__);

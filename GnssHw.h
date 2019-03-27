@@ -98,6 +98,9 @@ class GnssHwTTY : public GnssHwIface
     size_t mRmcFieldsNumber;
     size_t mGsaFieldsNumber;
 
+    float mBearingAcc;
+    float mSpeedAcc;
+
     uint16_t mYearOfHardware = 0; // for under 2016 year zero is legal value.
 
     struct NmeaBufferElement {
@@ -242,6 +245,7 @@ protected:
     void SetNMEA41();
     void PollCommonMessages();
     void PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t ubxCfgGnss[]);
+    void SetConstValuesOfHardware(uint16_t gen);
 
     void InitUblox7Gen();
     void InitUblox8Gen();
