@@ -202,6 +202,7 @@ bool GnssHwTTY::start(void)
         mEnabled = StartSalvatorProcedure();
     }
 
+    mGnssCb->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_BEGIN);
     return mEnabled;
 }
 
@@ -215,6 +216,7 @@ bool GnssHwTTY::stop(void)
        StopSalvatorProcedure();
     }
 
+    mGnssCb->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_END);
     return true;
 }
 

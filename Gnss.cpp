@@ -330,6 +330,8 @@ Return<bool> Gnss::setCallback(const sp<IGnssCallback>& callback)
                                        IGnssCallback::Capabilities::MEASUREMENTS);
 
     mGnssCbIface->gnssSetSystemInfoCb({mGnssHwIface->GetYearOfHardware()});
+    mGnssCbIface->gnssStatusCb(IGnssCallback::GnssStatusValue::NONE);
+
     mGnssHwIface->setCallback(callback);
 
     callback->linkToDeath(mDeathRecipient, 0 /*cookie*/);
