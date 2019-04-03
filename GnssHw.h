@@ -164,7 +164,7 @@ class GnssHwTTY : public GnssHwIface
     void NMEA_ReaderParse_GxRMC(char* msg);
     void NMEA_ReaderParse_GxGGA(char* msg);
     void NMEA_ReaderParse_xxGSV(char* msg);
-    void NMEA_ReaderParse_GNGSA(char* msg);
+    void NMEA_ReaderParse_GxGSA(char* msg);
     void NMEA_ReaderParse_PUBX00(char* msg);
 
     enum class UbxState {

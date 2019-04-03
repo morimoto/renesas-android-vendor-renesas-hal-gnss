@@ -787,22 +787,22 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
     }
 
     ALOGV("[%s, line %d] GPSRAW: %s", __func__, __LINE__, msg);
+    const size_t prefixOffset = 3;
+    const size_t pubxPrefixOffset = 6;
+    const size_t lenToCmp = 3;
+    const size_t pubxLenToCmp = 2;
 
     /* Parse message */
-    if (strncmp(msg, "$GPRMC", 6) == 0) {
+    if (strncmp(msg + prefixOffset, "RMC", lenToCmp) == 0) {
         NMEA_ReaderParse_GxRMC(msg);
-    } else if (strncmp(msg, "$GNRMC", 6) == 0)  {
-        NMEA_ReaderParse_GxRMC(msg);
-    } else if (strncmp(msg, "$GPGGA", 6) == 0) {
+    } else if (strncmp(msg + prefixOffset, "GGA", lenToCmp) == 0) {
         NMEA_ReaderParse_GxGGA(msg);
-    } else if (strncmp(msg, "$GNGGA", 6) == 0) {
-        NMEA_ReaderParse_GxGGA(msg);
-    } else if (strncmp(msg, "$GNGSA", 6) == 0) {
-        NMEA_ReaderParse_GNGSA(msg);
-    } else if (strncmp(msg+3, "GSV", 3) == 0) {
+    } else if (strncmp(msg + prefixOffset, "GSA", lenToCmp) == 0) {
+        NMEA_ReaderParse_GxGSA(msg);
+    } else if (strncmp(msg + prefixOffset, "GSV", lenToCmp) == 0) {
         NMEA_ReaderParse_xxGSV(msg);
     } else if (isNMEA == false) {
-        if (strncmp(msg+6, "00", 2) == 0) {
+        if (strncmp(msg + pubxPrefixOffset, "00", pubxLenToCmp) == 0) {
             NMEA_ReaderParse_PUBX00(msg);
         } else {
             ALOGD("Unhandled PUBX message");
@@ -1217,7 +1217,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
     }
 }
 
-void GnssHwTTY::NMEA_ReaderParse_GNGSA(char *msg)
+void GnssHwTTY::NMEA_ReaderParse_GxGSA(char* msg)
 {
     ALOGV("[%s, line %d] Entry", __func__ ,__LINE__);
 
