@@ -20,7 +20,10 @@ cc_binary {
     name: "android.hardware.gnss@1.0-service.renesas",
     init_rc: ["android.hardware.gnss@1.0-service.renesas.rc"],
 
-    cflags: ["-Werror"],
+    cflags: [
+        "-Werror",
+        "-Wall",
+    ],
 
     srcs: [
         "GnssHwTTY.cpp",
@@ -38,6 +41,11 @@ cc_binary {
         "GnssNi.cpp",
         "GnssXtra.cpp",
         "UsbHandler.cpp",
+        "GnssRxmMeasxParser.cpp",
+        "GnssNavClockParser.cpp",
+        "GnssNavTimeUTCParser.cpp",
+        "GnssParserCommonImpl.cpp",
+        "GnssMeasQueue.cpp",
         "ThreadCreationWrapper.cpp",
     ],
 
@@ -54,4 +62,62 @@ cc_binary {
         "libhidltransport",
         "android.hardware.gnss@1.0",
     ],
+}
+
+cc_test {
+    proprietary: true,
+
+    name: "gnss_hal_unit_test_parsers",
+
+    cflags: [
+        "-Werror",
+        "-Wall",
+        "-Wno-format",
+        "-O0"
+    ],
+
+    srcs: [
+        "tests/parsers/nav_clock_parser.cpp",
+        "tests/parsers/common_impl_parser.cpp",
+        "tests/parsers/nav_time_utc_parser.cpp",
+        "tests/parsers/rxm_measx_parser.cpp",
+        "tests/hwtty/gnss_hw_tty.cpp",
+        "tests/queue/gnss_meas_queue.cpp",
+        "GnssHwTTY.cpp",
+        "GnssHwFAKE.cpp",
+        "Gnss.cpp",
+        "AGnss.cpp",
+        "AGnssRil.cpp",
+        "GnssBatching.cpp",
+        "GnssConfiguration.cpp",
+        "GnssDebug.cpp",
+        "GnssGeofencing.cpp",
+        "GnssMeasurement.cpp",
+        "GnssNavigationMessage.cpp",
+        "GnssNi.cpp",
+        "GnssXtra.cpp",
+        "UsbHandler.cpp",
+        "GnssRxmMeasxParser.cpp",
+        "GnssNavClockParser.cpp",
+        "GnssNavTimeUTCParser.cpp",
+        "GnssParserCommonImpl.cpp",
+        "GnssMeasQueue.cpp",
+        "ThreadCreationWrapper.cpp",
+    ],
+
+    shared_libs: [
+        "liblog",
+        "libcutils",
+        "libdl",
+        "libbase",
+        "libutils",
+        "libhardware",
+        "libbinder",
+        "libhidlbase",
+        "libusbhost",
+        "libhidltransport",
+        "android.hardware.gnss@1.0",
+    ],
+
+    host_supported: false,
 }
