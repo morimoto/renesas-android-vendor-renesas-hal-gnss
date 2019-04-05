@@ -199,3 +199,80 @@ TEST_F(GnssParserCommonImplTest, hexdumpZeroLength)
     //expected result is no segfault
     GnssParserCommonImpl::hexdump("/data/app/testHexdump", (void*)sample, 0);
 }
+
+TEST_F(GnssParserCommonImplTest, testInRangePositive)
+{
+    const int reference_value = 10;
+    int value = 10;
+
+    inRange(0, 20, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRange(10, 30, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRange(0, 10, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRange(10, 10, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRange(0, 10000, value);
+    EXPECT_EQ(reference_value, value);
+}
+
+TEST_F(GnssParserCommonImplTest, testInRangeNegative)
+{
+    const int reference_value = 10;
+    const int beginRange = 10;
+
+    int value = 0;
+    inRange(beginRange, 40, value);
+    EXPECT_EQ(reference_value, value);
+
+    value = 50;
+    inRange(beginRange, 40, value);
+    EXPECT_EQ(reference_value, value);
+}
+
+TEST_F(GnssParserCommonImplTest, testInRangesPositive)
+{
+    const int reference_value = 10;
+    int value = 10;
+
+    inRanges(0, 20, 30, 40, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRanges(0, 10, 30, 40, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRanges(10, 20, 30, 40, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRanges(30, 42, 0, 20, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRanges(30, 42, 0, 10, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRanges(30, 42, 10, 10, value);
+    EXPECT_EQ(reference_value, value);
+
+    inRanges(30, 42, 10, 11, value);
+    EXPECT_EQ(reference_value, value);
+}
+
+TEST_F(GnssParserCommonImplTest, testInRangesNegative)
+{
+    int value = 10;
+    inRanges(1, 9, 11, 40, value);
+    EXPECT_EQ(11, value);
+
+    value = 41;
+    inRanges(1, 9, 11, 40, value);
+    EXPECT_EQ(11, value);
+
+    value = 0;
+    inRanges(1, 9, 11, 40, value);
+    EXPECT_EQ(11, value);
+}

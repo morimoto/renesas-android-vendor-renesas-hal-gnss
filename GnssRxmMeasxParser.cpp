@@ -26,6 +26,24 @@ static const uint16_t singleBlockSize = 44;
 static const int64_t towAccScaleDown = 16;
 static const double pseudorangeRateScaleUp = 0.04;
 
+// Satellite vehicle numbering according to documentation
+static const uint8_t gpsFirst = 1;
+static const uint8_t gpsLast = 32;
+static const uint8_t sbasOneFirst = 120;
+static const uint8_t sbasOneLast = 151;
+static const uint8_t sbasTwoFirst = 183;
+static const uint8_t sbasTwoLast = 192;
+static const uint8_t galileoFirst = 1;
+static const uint8_t galileoLast = 36;
+static const uint8_t qzssFirst = 193;
+static const uint8_t qzssLast = 200;
+static const uint8_t bdFirst = 1;
+static const uint8_t bdLast = 37;
+static const uint8_t glonassFcnFirst = 93;
+static const uint8_t glonassFcnLast = 106;
+static const uint8_t glonassFirst = 1;
+static const uint8_t glonassLast = 24;
+
 // Using offsets according to the protocol description of UBX-RXM-MEASX
 enum RxmMeasxOffsets : uint8_t {
     //first block offsets
@@ -214,13 +232,43 @@ uint16_t GnssRxmMeasxParser::getTOWaccForGnssId(const uint8_t gnssId)
     }
 }
 
+uint8_t GnssRxmMeasxParser::getValidSvidForGnssId(const uint8_t gnssId, const uint8_t svid)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
+    uint8_t resultSvid = svid;
+    switch (gnssId) {
+    case UbxGnssId::GPS:
+        inRange(gpsFirst, gpsLast, resultSvid);
+        break;
+    case UbxGnssId::SBAS:
+        inRanges(sbasOneFirst, sbasOneLast, sbasTwoFirst, sbasTwoLast, resultSvid);
+        break;
+    case UbxGnssId::GALILEO:
+        inRange(galileoFirst, galileoLast, resultSvid);
+        break;
+    case UbxGnssId::QZSS:
+        inRange(qzssFirst, qzssLast, resultSvid);
+        break;
+    case UbxGnssId::BEIDOU:
+        inRange(bdFirst, bdLast, resultSvid);
+        break;
+    case UbxGnssId::GLONASS:
+        inRanges(glonassFirst, glonassLast, glonassFcnFirst, glonassFcnLast, resultSvid);
+        break;
+    }
+
+    ALOGV("[%s, line %d] svid = %u", __func__, __LINE__, resultSvid);
+    return resultSvid;
+}
+
 void GnssRxmMeasxParser::getGnssMeasurement(IGnssMeasurementCallback::GnssMeasurement &instance, repeatedBlock_t &block)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
     instance.flags = 0;
 
-    instance.svid = block.svId;
+    instance.svid = getValidSvidForGnssId(block.gnssId, block.svId);
     instance.constellation = getConstellationFromGnssId(block.gnssId);
 
     instance.receivedSvTimeInNs = setNsFromMs(getTOWforGnssId(block.gnssId));
@@ -232,6 +280,8 @@ void GnssRxmMeasxParser::getGnssMeasurement(IGnssMeasurementCallback::GnssMeasur
 
     instance.pseudorangeRateMps = scaleUp(block.pseudoRangeRate, pseudorangeRateScaleUp);
     instance.pseudorangeRateUncertaintyMps = 1.0; // TODO: set real value, at moment it is pure magic.
+
+    instance.accumulatedDeltaRangeState = static_cast<uint16_t>(GnssADRS::ADR_STATE_UNKNOWN);
 
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }

@@ -69,6 +69,34 @@ protected:
     }
 
     /*!
+     * \brief inRange - check if value is in range
+     * \brief if value is not in range, set it to the begin value of the range
+     */
+    template <typename T1>
+    void inRange(T1 begin, T1 end, T1 &value)
+    {
+        if (value < begin || value > end) {
+            value = begin;
+        }
+    }
+
+    /*!
+     * \brief inRanges - check if value is in range
+     * \brief if value is not in range, set it to the begin value of the second range
+     */
+    template <typename T1>
+    void inRanges(T1 beginFirst, T1 endFirst, T1 beginSecond, T1 endSecond, T1 &value)
+    {
+        if (value >= beginFirst && value <= endFirst) {
+            return;
+        } else if (value >= beginSecond && value <= endSecond) {
+            return;
+        } else {
+            value = beginSecond;
+        }
+    }
+
+    /*!
      * \brief hexdump - amend write to specified file
      * \param file - a pointer to the file name (absolute path)
      * \param ptr - a pointer to data to be dumped

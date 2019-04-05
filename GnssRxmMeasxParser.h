@@ -40,6 +40,7 @@ using ::android::hardware::gnss::V1_0::GnssMax;
 
 typedef IGnssMeasurementCallback::GnssMeasurementState GnssMS;
 typedef IGnssMeasurementCallback::GnssMultipathIndicator GnssMI;
+typedef IGnssMeasurementCallback::GnssAccumulatedDeltaRangeState GnssADRS;
 
 class GnssRxmMeasxParser : public GnssParserCommonImpl {
 public:
@@ -61,15 +62,6 @@ public:
 
 
 private:
-    enum UbxGnssId : uint8_t {
-        GPS = 0,
-        SBAS = 1,
-        GALILEO = 2,
-        BEIDOU = 3,
-        QZSS = 5,
-        GLONASS = 6,
-    };
-
     typedef struct SingleBlock {
         uint8_t version;
         uint8_t numSvs;
@@ -106,6 +98,15 @@ private:
     GnssMS mTOWstate = GnssMS::STATE_TOW_DECODED;
 
 protected:
+    enum UbxGnssId : uint8_t {
+        GPS = 0,
+        SBAS = 1,
+        GALILEO = 2,
+        BEIDOU = 3,
+        QZSS = 5,
+        GLONASS = 6,
+    };
+
     GnssRxmMeasxParser(){}
 
     /*!
@@ -162,6 +163,15 @@ protected:
      * \return constellation in means of GnssConstellationType
      */
     GnssConstellationType getConstellationFromGnssId(const uint8_t gnssId);
+
+    /*!
+     * \brief getValidSvidForGnssId - validate svid
+     * \param gnssId - correspoing index of constelleation in means of UbxGnssId
+     * \param svid - satellite vehicle id provided by receiver
+     * \return valid svid, in case of incorrectness provide any known svid for current constellation
+     *         or frequency channel number for GLONASS
+     */
+    uint8_t getValidSvidForGnssId(const uint8_t gnssId, const uint8_t svid);
 
     /*!
      * \brief getGnssMeasurement - provide collected data for each Satellite Vehicle

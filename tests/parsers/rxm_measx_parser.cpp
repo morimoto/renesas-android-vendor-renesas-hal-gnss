@@ -332,3 +332,104 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforAllGnssIdTruncatedInput)
         }
     }
 }
+
+TEST_F(GnssRxmMeasxParserTest, testGetValidSvidForGnssIdPositive) {
+    // Rnages of possible satellite vehicle id for each constellation
+    const uint8_t gpsFirst = 1;
+    const uint8_t gpsLast = 32;
+
+    const uint8_t sbasOneFirst = 120;
+    const uint8_t sbasOneLast = 151;
+    const uint8_t sbasTwoFirst = 183;
+    const uint8_t sbasTwoLast = 192;
+
+    const uint8_t galileoFirst = 1;
+    const uint8_t galileoLast = 36;
+
+    const uint8_t qzssFirst = 193;
+    const uint8_t qzssLast = 200;
+
+    const uint8_t bdFirst = 1;
+    const uint8_t bdLast = 37;
+
+    const uint8_t glonassFcnFirst = 93;
+    const uint8_t glonassFcnLast = 106;
+    const uint8_t glonassFirst = 1;
+    const uint8_t glonassLast = 24;
+
+    EXPECT_EQ(gpsFirst, getValidSvidForGnssId(UbxGnssId::GPS, gpsFirst));
+    EXPECT_EQ(gpsLast, getValidSvidForGnssId(UbxGnssId::GPS, gpsLast));
+    EXPECT_EQ((gpsFirst + 1), getValidSvidForGnssId(UbxGnssId::GPS, gpsFirst + 1));
+
+    EXPECT_EQ(sbasOneFirst, getValidSvidForGnssId(UbxGnssId::SBAS, sbasOneFirst));
+    EXPECT_EQ(sbasOneLast, getValidSvidForGnssId(UbxGnssId::SBAS, sbasOneLast));
+    EXPECT_EQ((sbasOneFirst + 1), getValidSvidForGnssId(UbxGnssId::SBAS, sbasOneFirst + 1));
+    EXPECT_EQ(sbasTwoFirst, getValidSvidForGnssId(UbxGnssId::SBAS, sbasTwoFirst));
+    EXPECT_EQ(sbasTwoLast, getValidSvidForGnssId(UbxGnssId::SBAS, sbasTwoLast));
+    EXPECT_EQ((sbasTwoFirst + 1), getValidSvidForGnssId(UbxGnssId::SBAS, sbasTwoFirst + 1));
+
+    EXPECT_EQ(galileoFirst, getValidSvidForGnssId(UbxGnssId::GALILEO, galileoFirst));
+    EXPECT_EQ(galileoLast, getValidSvidForGnssId(UbxGnssId::GALILEO, galileoLast));
+    EXPECT_EQ(galileoFirst + 1, getValidSvidForGnssId(UbxGnssId::GALILEO, galileoFirst + 1));
+
+    EXPECT_EQ(qzssFirst, getValidSvidForGnssId(UbxGnssId::QZSS, qzssFirst));
+    EXPECT_EQ(qzssLast, getValidSvidForGnssId(UbxGnssId::QZSS, qzssLast));
+    EXPECT_EQ(qzssFirst + 1, getValidSvidForGnssId(UbxGnssId::QZSS, qzssFirst + 1));
+
+    EXPECT_EQ(bdFirst, getValidSvidForGnssId(UbxGnssId::BEIDOU, bdFirst));
+    EXPECT_EQ(bdLast, getValidSvidForGnssId(UbxGnssId::BEIDOU, bdLast));
+    EXPECT_EQ(bdFirst + 1, getValidSvidForGnssId(UbxGnssId::BEIDOU, bdFirst + 1));
+
+    EXPECT_EQ(glonassFirst, getValidSvidForGnssId(UbxGnssId::GLONASS, glonassFirst));
+    EXPECT_EQ(glonassLast, getValidSvidForGnssId(UbxGnssId::GLONASS, glonassLast));
+    EXPECT_EQ(glonassFirst + 1, getValidSvidForGnssId(UbxGnssId::GLONASS, glonassFirst + 1));
+    EXPECT_EQ(glonassFcnFirst, getValidSvidForGnssId(UbxGnssId::GLONASS, glonassFcnFirst));
+    EXPECT_EQ(glonassFcnLast, getValidSvidForGnssId(UbxGnssId::GLONASS, glonassFcnLast));
+    EXPECT_EQ(glonassFcnFirst + 1, getValidSvidForGnssId(UbxGnssId::GLONASS, glonassFcnFirst + 1));
+}
+
+TEST_F(GnssRxmMeasxParserTest, testGetValidSvidForGnssIdNegative) {
+    // Ranges of possible satellite vehicle id for each constellation
+    const uint8_t gpsFirst = 1;
+    const uint8_t gpsLast = 32;
+
+    const uint8_t sbasOneFirst = 120;
+    const uint8_t sbasOneLast = 151;
+    const uint8_t sbasTwoFirst = 183;
+    const uint8_t sbasTwoLast = 192;
+
+    const uint8_t galileoFirst = 1;
+    const uint8_t galileoLast = 36;
+
+    const uint8_t qzssFirst = 193;
+    const uint8_t qzssLast = 200;
+
+    const uint8_t bdFirst = 1;
+    const uint8_t bdLast = 37;
+
+    const uint8_t glonassFcnFirst = 93;
+    const uint8_t glonassFirst = 1;
+    const uint8_t glonassLast = 24;
+
+    EXPECT_EQ(gpsFirst, getValidSvidForGnssId(UbxGnssId::GPS, gpsFirst - 1));
+    EXPECT_EQ(gpsFirst, getValidSvidForGnssId(UbxGnssId::GPS, gpsLast + 1));
+
+    EXPECT_EQ(sbasTwoFirst, getValidSvidForGnssId(UbxGnssId::SBAS, sbasOneFirst - 1));
+    EXPECT_EQ(sbasTwoFirst, getValidSvidForGnssId(UbxGnssId::SBAS, sbasOneLast + 1));
+
+    EXPECT_EQ(sbasTwoFirst, getValidSvidForGnssId(UbxGnssId::SBAS, sbasTwoFirst - 1));
+    EXPECT_EQ(sbasTwoFirst, getValidSvidForGnssId(UbxGnssId::SBAS, sbasTwoLast + 1));
+
+    EXPECT_EQ(galileoFirst, getValidSvidForGnssId(UbxGnssId::GALILEO, galileoFirst - 1));
+    EXPECT_EQ(galileoFirst, getValidSvidForGnssId(UbxGnssId::GALILEO, galileoLast + 1));
+
+    EXPECT_EQ(qzssFirst, getValidSvidForGnssId(UbxGnssId::QZSS, qzssFirst - 1));
+    EXPECT_EQ(qzssFirst, getValidSvidForGnssId(UbxGnssId::QZSS, qzssLast + 1));
+
+    EXPECT_EQ(bdFirst, getValidSvidForGnssId(UbxGnssId::BEIDOU, bdFirst - 1));
+    EXPECT_EQ(bdFirst, getValidSvidForGnssId(UbxGnssId::BEIDOU, bdLast + 1));
+
+    EXPECT_EQ(glonassFcnFirst, getValidSvidForGnssId(UbxGnssId::GLONASS, glonassFirst - 1));
+    EXPECT_EQ(glonassFcnFirst, getValidSvidForGnssId(UbxGnssId::GLONASS, glonassLast + 1));
+    EXPECT_EQ(glonassFcnFirst, getValidSvidForGnssId(UbxGnssId::GLONASS, 0xff));
+}
