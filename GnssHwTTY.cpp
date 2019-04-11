@@ -202,7 +202,10 @@ bool GnssHwTTY::start(void)
         mEnabled = StartSalvatorProcedure();
     }
 
-    mGnssCb->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_BEGIN);
+    if (mGnssCb != nullptr) {
+        mGnssCb->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_BEGIN);
+    }
+
     return mEnabled;
 }
 
@@ -216,7 +219,9 @@ bool GnssHwTTY::stop(void)
        StopSalvatorProcedure();
     }
 
-    mGnssCb->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_END);
+    if (mGnssCb != nullptr) {
+        mGnssCb->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_END);
+    }
     return true;
 }
 
@@ -296,6 +301,9 @@ bool GnssHwTTY::StartSalvatorProcedure()
         ALOGV("[%s, line %d] u-blox device", __func__, __LINE__);
         mIsUbloxDevice = retStatus;
         SetYearOfHardware();
+        if (mGnssCb != nullptr) {
+            mGnssCb->gnssSetSystemInfoCb({mYearOfHardware});
+        }
 
         RunWorkerThreads();
     }
@@ -781,10 +789,12 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
         nmeaString.setToExternal(msg, strlen(msg));
 
         if (mEnabled) {
-            auto ret = mGnssCb->gnssNmeaCb(time(NULL), nmeaString);
-            if (!ret.isOk()) {
-                ALOGE("Unable to invoke gnssNmeaCb");
-                ALOGV("[%s, line %d] Unable to invoke gnssNmeaCb", __func__, __LINE__);
+            if (mGnssCb != nullptr) {
+                auto ret = mGnssCb->gnssNmeaCb(time(NULL), nmeaString);
+                if (!ret.isOk()) {
+                    ALOGE("Unable to invoke gnssNmeaCb");
+                    ALOGV("[%s, line %d] Unable to invoke gnssNmeaCb", __func__, __LINE__);
+                }
             }
         }
     }
@@ -828,8 +838,6 @@ void GnssHwTTY::SetYearOfHardware()
     default:
         mYearOfHardware = 0;
     }
-
-    mGnssCb->gnssSetSystemInfoCb({mYearOfHardware});
 }
 
 uint16_t GnssHwTTY::GetYearOfHardware()
@@ -942,9 +950,11 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
 
     if (mEnabled && provideLocation) {
         ALOGD("[%s, line %d] Provide location callback", __func__, __LINE__);
-        auto ret = mGnssCb->gnssLocationCb(mGnssLocation);
-        if (!ret.isOk()) {
-            ALOGE("[%s, line %d]: Unable to invoke gnssLocationCb", __func__, __LINE__);
+        if (mGnssCb != nullptr) {
+            auto ret = mGnssCb->gnssLocationCb(mGnssLocation);
+            if (!ret.isOk()) {
+                ALOGE("[%s, line %d]: Unable to invoke gnssLocationCb", __func__, __LINE__);
+            }
         }
     }
 }
@@ -1213,9 +1223,11 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 
         if (sentences == sentence_idx) { /* Last SVS received and parsed */
             if (mEnabled) {
-                auto ret = mGnssCb->gnssSvStatusCb(mSvStatus);
-                if (!ret.isOk()) {
-                    ALOGE("[%s, line %d]: Unable to invoke gnssSvStatusCb", __func__, __LINE__);
+                if (mGnssCb != nullptr) {
+                    auto ret = mGnssCb->gnssSvStatusCb(mSvStatus);
+                    if (!ret.isOk()) {
+                        ALOGE("[%s, line %d]: Unable to invoke gnssSvStatusCb", __func__, __LINE__);
+                    }
                 }
             }
         }
