@@ -233,10 +233,10 @@ class GnssHwTTY : public GnssHwIface
 protected:
     bool OpenDevice(const char* ttyDevDefault);
     bool StartSalvatorProcedure();
-    void StopSalvatorProcedure();
 
     void SelectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen);
     void RunWorkerThreads();
+    void JoinWorkerThreads();
 
     void ClearConfig();
     void ConfigGnssUblox7();

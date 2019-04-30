@@ -157,24 +157,8 @@ void GnssHwTTY::RunWorkerThreads()
 GnssHwTTY::~GnssHwTTY(void)
 {
     mHelpThreadExit.store(true);
-
     if (mIsUbloxDevice) {
-        mNmeaThreadCv.notify_all();
-        if (mNmeaThread.joinable()) {
-            mNmeaThread.join();
-            ALOGV("[%s, line %d] Nmea thread joined", __func__, __LINE__);
-        }
-
-        mUbxThreadCv.notify_all();
-        if (mUbxThread.joinable()) {
-            mUbxThread.join();
-            ALOGV("[%s, line %d] Ubx thread joined", __func__, __LINE__);
-        }
-
-        if (mHwInitThread.joinable()) {
-            mHwInitThread.join();
-            ALOGV("[%s, line %d] Init thread joined", __func__, __LINE__);
-        }
+        JoinWorkerThreads();
     }
 
     delete mNmeaBuffer;
@@ -215,16 +199,11 @@ bool GnssHwTTY::start(void)
 bool GnssHwTTY::stop(void)
 {
     ALOGD("Stop HW");
-    if (mIsKingfisher) {
-        mEnabled = false;
-    } else {
-       ALOGV("[%s, line %d] Stop salvator proc", __func__, __LINE__);
-       StopSalvatorProcedure();
-    }
-
+    mEnabled = false;
     if (mGnssCb != nullptr) {
         mGnssCb->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_END);
     }
+
     return true;
 }
 
@@ -285,16 +264,17 @@ bool GnssHwTTY::OpenDevice(const char* ttyDevDefault)
 bool GnssHwTTY::StartSalvatorProcedure()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    bool retStatus = false;
+    bool retStatus = true;
     mHelpThreadExit.store(false);
 
-    retStatus = OpenDevice(ttyUsbDefault.c_str());
-    if (!retStatus) {
-        ALOGE("Failed to open device");
-        return retStatus;
-    }
 
     if (!mIsUbloxDevice) {
+        retStatus = OpenDevice(ttyUsbDefault.c_str());
+        if (!retStatus) {
+            ALOGE("Failed to open device");
+            return retStatus;
+        }
+
         retStatus = CheckUsbDeviceVendorUbx();
         if (!retStatus) {
             ALOGE("No u-blox device connected");
@@ -314,16 +294,23 @@ bool GnssHwTTY::StartSalvatorProcedure()
     return retStatus;
 }
 
-void GnssHwTTY::StopSalvatorProcedure()
+void GnssHwTTY::JoinWorkerThreads()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    mEnabled = false;
 
-    if (mFd != -1) {
-        ALOGV("[%s, line %d] closing mFd = %d\n", __func__, __LINE__, mFd);
-        ::close(mFd);
-        mFd = -1;
+    if (mHwInitThread.joinable()) {
+        mHwInitThread.join();
     }
+    if (mUbxThread.joinable()) {
+        mUbxThreadCv.notify_all();
+        mUbxThread.join();
+    }
+    if (mNmeaThread.joinable()) {
+        mNmeaThreadCv.notify_all();
+        mNmeaThread.join();
+    }
+
+    ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
 void GnssHwTTY::ClearConfig()
@@ -673,6 +660,7 @@ void GnssHwTTY::ReaderPushChar(unsigned char ch)
         }
     }
 
+    ALOGV("[%s, line %d] waiting", __func__, __LINE__);
     if (mReaderState != ReaderState::WAITING) {
         mReaderBuf[mReaderBufPos++] = ch;
 
@@ -954,8 +942,9 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
     mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_SPEED_ACCURACY);
 
     if (mEnabled && provideLocation) {
-        ALOGD("[%s, line %d] Provide location callback", __func__, __LINE__);
+        ALOGV("[%s, line %d] Provide location callback", __func__, __LINE__);
         if (mGnssCb != nullptr) {
+            ALOGD("Provide location callback");
             auto ret = mGnssCb->gnssLocationCb(mGnssLocation);
             if (!ret.isOk()) {
                 ALOGE("[%s, line %d]: Unable to invoke gnssLocationCb", __func__, __LINE__);
@@ -1494,7 +1483,7 @@ void GnssHwTTY::UBX_Send(const uint8_t* msg, size_t len)
         ALOGE("[%s, line %d] UBX send msg: failed to write message, write error: %s\n",
               __func__, __LINE__, strerror(errno));
     } else {
-        ALOGD("[%s, line %d] UBX sent msg: CLASS: %02X ID: %02X CHECKSUM: %02X%02X", __func__, __LINE__,
+        ALOGV("[%s, line %d] UBX sent msg: CLASS: %02X ID: %02X CHECKSUM: %02X%02X", __func__, __LINE__,
               tx_buffer[2], tx_buffer[3], tx_buffer[checksum_offset_a], tx_buffer[checksum_offset_b]);
     }
 }
