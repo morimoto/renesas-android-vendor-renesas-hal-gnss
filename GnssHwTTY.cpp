@@ -48,12 +48,15 @@ static const uint16_t ublox8 = 0x01a8;
 
 static const uint8_t classUbxNav = 0x01;
 static const uint8_t classUbxRxm = 0x02;
+static const uint8_t classNmeaCfg = 0xF0;
 
 static const uint8_t idClock = 0x22;
 static const uint8_t idMeasx = 0x14;
 static const uint8_t idTimeUtc = 0x21;
+static const uint8_t idRMC = 0x04;
 
 static const uint8_t rate = 0x01;
+static const uint8_t rateRMC = 0x08;
 
 // According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.14 RMC, p. 124
 // NMEA protocol version 4.1 and above has 14 fields.
@@ -515,6 +518,8 @@ void GnssHwTTY::PollCommonMessages()
 
     UBX_SetMessageRateCurrentPort(classUbxNav, idClock, rate, "UBX-NAV-CLOCK config failed");
     UBX_SetMessageRateCurrentPort(classUbxNav, idTimeUtc, rate, "UBX-NAV-UTC config failed");
+
+    UBX_SetMessageRate(classNmeaCfg, idRMC, rateRMC, NULL); // reduce RMC rate
 
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }

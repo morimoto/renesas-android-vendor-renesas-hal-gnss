@@ -39,7 +39,8 @@ GnssMeasurement::GnssMeasurement():
 
 // Methods from ::android::hardware::gnss::V1_0::IGnssMeasurement follow.
 Return<GnssMeasurement::GnssMeasurementStatus> GnssMeasurement::setCallback(
-        const sp<IGnssMeasurementCallback>& callback)  {
+        const sp<IGnssMeasurementCallback>& callback)
+{
 
     if (sGnssMeasurementsCbIface != nullptr) {
         ALOGE("%s: GnssMeasurements already init", __func__);
@@ -57,7 +58,8 @@ Return<GnssMeasurement::GnssMeasurementStatus> GnssMeasurement::setCallback(
     return GnssMeasurementStatus::SUCCESS;
 }
 
-Return<void> GnssMeasurement::close()  {
+Return<void> GnssMeasurement::close()
+{
     if (sGnssMeasurementsCbIface == nullptr) {
         ALOGD("%s: called before setCallback", __func__);
         return Void();
@@ -65,7 +67,10 @@ Return<void> GnssMeasurement::close()  {
 
     sGnssMeasurementsCbIface = nullptr;
     mThreadExit = true;
-    mGnssMeasurementsCallbackThread.detach();
+    mCallbackCond.notify_one();
+    if (mGnssMeasurementsCallbackThread.joinable()) {
+        mGnssMeasurementsCallbackThread.join();
+    }
     ALOGD("%s: GnssMeasurements closed", __func__);
 
     return Void();
@@ -80,7 +85,6 @@ void GnssMeasurement::callbackThread(void)
     while (!mThreadExit) {
         uint8_t flagReady = 0;
         auto data = std::make_unique<IGnssMeasurementCallback::GnssData> ();
-
         while (!instance.empty()) {
             auto parser = instance.pop();
             if (nullptr == parser) {
@@ -95,8 +99,9 @@ void GnssMeasurement::callbackThread(void)
                 break;
             }
         }
-
-        usleep(1000 * 1000);
+        std::unique_lock<std::mutex> lock(mCallbackMutex);
+        mCallbackCond.wait_for(lock,
+                      std::chrono::seconds(1));
     }
 
     instance.setState(off);

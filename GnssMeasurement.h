@@ -58,6 +58,8 @@ private:
     std::atomic<bool> mThreadExit;
     static sp<IGnssMeasurementCallback> sGnssMeasurementsCbIface;
     std::thread mGnssMeasurementsCallbackThread;
+    std::mutex mCallbackMutex;
+    std::condition_variable mCallbackCond;
 };
 
 }  // namespace renesas
