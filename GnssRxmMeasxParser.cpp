@@ -65,8 +65,6 @@ enum RxmMeasxOffsets : uint8_t {
     cn0 = 2,
     multipath = 3,
     pseudorangeRate = 4,
-    flags = 8,
-    psRanRateCorr = 19,
 };
 
 GnssRxmMeasxParser::GnssRxmMeasxParser(const char *payload, uint16_t payloadLen) :
@@ -111,7 +109,7 @@ void GnssRxmMeasxParser::parseRepeatedBlock(const uint8_t* msg)
         block.svId = msg[RxmMeasxOffsets::svId];
         block.cn0 = msg[RxmMeasxOffsets::cn0];
         block.multipath = msg[RxmMeasxOffsets::multipath];
-        block.pseudoRangeRate = getUint32(&msg[RxmMeasxOffsets::pseudorangeRate]);
+        block.pseudoRangeRate = getInt32(&msg[RxmMeasxOffsets::pseudorangeRate]);
 
         data.push_back(block);
         ALOGV("[%s, line %d] Exit", __func__, __LINE__);
@@ -186,25 +184,36 @@ uint32_t GnssRxmMeasxParser::getTOWforGnssId(const uint8_t gnssId)
         return 0;
     }
 
+    uint32_t result = 0;
     mTOWstate = GnssMS::STATE_TOW_DECODED;
 
     switch (gnssId) {
     case UbxGnssId::GPS:
-        return meta.gpsTOW;
+        result = meta.gpsTOW;
+        break;
     case UbxGnssId::GLONASS:
-        return meta.glonassTOW;
+        result = meta.glonassTOW;
+        break;
     case UbxGnssId::QZSS:
-        return meta.qzssTOW;
+        result = meta.qzssTOW;
+        break;
     case UbxGnssId::BEIDOU:
-        return meta.bdsTOW;
+        result = meta.bdsTOW;
+        break;
     case UbxGnssId::SBAS:
     case UbxGnssId::GALILEO:
         mTOWstate = GnssMS::STATE_TOW_KNOWN;
-        return meta.gpsTOW; //TODO: find better solution
-    default:
-        mTOWstate = GnssMS::STATE_UNKNOWN;
-        return 0;
+        result = meta.gpsTOW; //TODO: find better solution
+        break;
     }
+
+    if (0 == result) {
+        mTOWstate = GnssMS::STATE_UNKNOWN;
+    } else {
+        mTOWstate = static_cast<GnssMS>(mTOWstate | GnssMS::STATE_BIT_SYNC | GnssMS::STATE_SUBFRAME_SYNC);
+    }
+
+    return result;
 }
 
 uint16_t GnssRxmMeasxParser::getTOWaccForGnssId(const uint8_t gnssId)
@@ -215,21 +224,31 @@ uint16_t GnssRxmMeasxParser::getTOWaccForGnssId(const uint8_t gnssId)
         return 0;
     }
 
+    uint16_t result  = 1;
+
     switch (gnssId) {
     case UbxGnssId::GPS:
-        return meta.gpsTOWacc;
+        result = meta.gpsTOWacc;
+        break;
     case UbxGnssId::GLONASS:
-        return meta.glonassTOWacc;
+        result = meta.glonassTOWacc;
+        break;
     case UbxGnssId::QZSS:
-        return meta.qzssTOWacc;
+        result = meta.qzssTOWacc;
+        break;
     case UbxGnssId::BEIDOU:
-        return meta.bdsTOWacc;
+        result = meta.bdsTOWacc;
+        break;
     case UbxGnssId::SBAS:
     case UbxGnssId::GALILEO:
-        return meta.gpsTOWacc; //TODO: find better solution
+        result = meta.gpsTOWacc; //TODO: find better solution
+        break;
     default:
+        mTOWstate = GnssMS::STATE_UNKNOWN;
         return 0;
     }
+
+    return result > 0 ? result : 1;
 }
 
 uint8_t GnssRxmMeasxParser::getValidSvidForGnssId(const uint8_t gnssId, const uint8_t svid)
@@ -307,7 +326,7 @@ void GnssRxmMeasxParser::getGnssMeasurement(IGnssMeasurementCallback::GnssMeasur
     instance.multipathIndicator = (block.multipath == 0) ? GnssMI::INDICATIOR_NOT_PRESENT : GnssMI::INDICATOR_PRESENT;
 
     instance.pseudorangeRateMps = scaleUp(block.pseudoRangeRate, pseudorangeRateScaleUp);
-    instance.pseudorangeRateUncertaintyMps = 1.0; // TODO: set real value, at moment it is pure magic.
+    instance.pseudorangeRateUncertaintyMps = 0.075; // TODO: set real value, at moment it is pure magic.
 
     instance.accumulatedDeltaRangeState = static_cast<uint16_t>(GnssADRS::ADR_STATE_UNKNOWN);
 
@@ -337,8 +356,8 @@ uint8_t GnssRxmMeasxParser::retrieveSvInfo(android::hardware::gnss::V1_0::IGnssM
 int64_t GnssRxmMeasxParser::setNsFromMs(uint32_t ms)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    const uint32_t msToNsMultiplier = 1000000;
-    return static_cast<int64_t>(ms * msToNsMultiplier);
+    const int64_t msToNsMultiplier = 1000000;
+    return static_cast<int64_t>(ms) * msToNsMultiplier;
 
 }
 

@@ -39,7 +39,7 @@
 #include "GnssHw.h"
 #include "GnssRxmMeasxParser.h"
 #include "GnssNavClockParser.h"
-#include "GnssNavTimeUTCParser.h"
+#include "GnssNavTimeGPSParser.h"
 #include "GnssMeasQueue.h"
 #include "UsbHandler.h"
 
@@ -52,7 +52,7 @@ static const uint8_t classNmeaCfg = 0xF0;
 
 static const uint8_t idClock = 0x22;
 static const uint8_t idMeasx = 0x14;
-static const uint8_t idTimeUtc = 0x21;
+static const uint8_t idTimeGps = 0x20;
 static const uint8_t idRMC = 0x04;
 
 static const uint8_t rate = 0x01;
@@ -504,7 +504,7 @@ void GnssHwTTY::PollCommonMessages()
     UBX_SetMessageRate(0xF0, 0x05, 0, NULL); // disable VTG
 
     UBX_SetMessageRateCurrentPort(classUbxNav, idClock, rate, "UBX-NAV-CLOCK config failed");
-    UBX_SetMessageRateCurrentPort(classUbxNav, idTimeUtc, rate, "UBX-NAV-UTC config failed");
+    UBX_SetMessageRateCurrentPort(classUbxNav, idTimeGps, rate, "UBX-NAV-GPS-TIME config failed");
 
     UBX_SetMessageRate(classNmeaCfg, idRMC, rateRMC, NULL); // reduce RMC rate
 
@@ -1583,8 +1583,8 @@ void GnssHwTTY::SelectParser(uint8_t cl, uint8_t id, const char* data, uint16_t 
     } else if (cl == classUbxNav && id == idClock) {
         auto sp = std::make_shared<GnssNavClockParser>(data, dataLen);
         instance.push(sp);
-    } else if (cl == classUbxNav && id == idTimeUtc) {
-        auto sp = std::make_shared<GnssNavTimeUTCParser>(data, dataLen);
+    } else if (cl == classUbxNav && id == idTimeGps) {
+        auto sp = std::make_shared<GnssNavTimeGPSParser>(data, dataLen);
         instance.push(sp);
     } else if (mAckClass == cl && mAckAckId == id) {
         UBX_ACKParse(data, dataLen);

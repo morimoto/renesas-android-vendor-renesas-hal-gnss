@@ -43,7 +43,7 @@ cc_binary {
         "UsbHandler.cpp",
         "GnssRxmMeasxParser.cpp",
         "GnssNavClockParser.cpp",
-        "GnssNavTimeUTCParser.cpp",
+        "GnssNavTimeGPSParser.cpp",
         "GnssParserCommonImpl.cpp",
         "GnssMeasQueue.cpp",
         "ThreadCreationWrapper.cpp",
@@ -67,7 +67,7 @@ cc_binary {
 cc_test {
     proprietary: true,
 
-    name: "gnss_hal_unit_test_parsers",
+    name: "gnss_tests",
 
     cflags: [
         "-Werror",
@@ -100,10 +100,16 @@ cc_test {
         "GnssRxmMeasxParser.cpp",
         "GnssNavClockParser.cpp",
         "GnssNavTimeUTCParser.cpp",
+        "GnssNavTimeGPSParser.cpp",
         "GnssParserCommonImpl.cpp",
         "GnssMeasQueue.cpp",
         "ThreadCreationWrapper.cpp",
     ],
+
+    sanitize: {
+        address: true,
+        integer_overflow: true,
+    },
 
     shared_libs: [
         "liblog",

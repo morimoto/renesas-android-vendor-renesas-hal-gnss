@@ -234,15 +234,15 @@ TEST_F(GnssRxmMeasxParserTest, checkConstellationConvertion)
 
 TEST_F(GnssRxmMeasxParserTest, checkNsConvertion)
 {
-    const uint32_t maxMs = (uint32_t)-1;
+    const uint32_t maxMs = UINT32_MAX;
     const uint32_t zeroMs = 0;
     const uint32_t oneMs = 1;
-    const uint32_t  msToNsMult = 1000000;
-    uint64_t expectedMaxNs = static_cast<uint64_t>(maxMs * msToNsMult);
+    const int64_t  msToNsMult = 1000000;
+    int64_t expectedMaxNs = static_cast<int64_t>(maxMs) * msToNsMult;
 
     EXPECT_EQ((int64_t)0, setNsFromMs(zeroMs));
-    EXPECT_EQ(static_cast<int64_t>(msToNsMult), setNsFromMs(oneMs));
-    EXPECT_EQ(expectedMaxNs, static_cast<uint64_t>(setNsFromMs(maxMs)));
+    EXPECT_EQ(msToNsMult, setNsFromMs(oneMs));
+    EXPECT_EQ(expectedMaxNs, setNsFromMs(maxMs));
     EXPECT_TRUE((int64_t)0 < setNsFromMs(maxMs));
 }
 

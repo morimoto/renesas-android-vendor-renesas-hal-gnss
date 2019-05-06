@@ -55,7 +55,7 @@ void GnssNavTimeUTCParser::parseSingleBlock()
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     data.iTow = getUint32(&mPayload[NavTimeUTCOffsets::iTow]);
     data.timeAccuracy = getUint32(&mPayload[NavTimeUTCOffsets::timeAccuracy]);
-    data.nanoSecondFraction = getUint32(&mPayload[NavTimeUTCOffsets::nanoSecondFraction]);
+    data.nanoSecondFraction = getInt32(&mPayload[NavTimeUTCOffsets::nanoSecondFraction]);
     data.year = getUint16(&mPayload[NavTimeUTCOffsets::year]);
     data.month = mPayload[NavTimeUTCOffsets::month];
     data.day = mPayload[NavTimeUTCOffsets::day];
@@ -135,15 +135,10 @@ bool GnssNavTimeUTCParser::setTimeNano()
     return true;
 }
 
-uint8_t GnssNavTimeUTCParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData)
+uint8_t GnssNavTimeUTCParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData __unused)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     if (mValid) {
-        gnssData.clock.timeNs = timeNano;
-        gnssData.clock.timeUncertaintyNs = static_cast<double>(data.timeAccuracy);
-        gnssData.clock.gnssClockFlags =
-                static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_TIME_UNCERTAINTY);
-        ALOGV("[%s, line %d] Exit", __func__, __LINE__);
         return UTCDone;
     }
 

@@ -62,6 +62,60 @@ uint32_t GnssParserCommonImpl::getUint32(const uint8_t* ptr)
     return *(uint32_t*)ptr;
 }
 
+float GnssParserCommonImpl::getFloat(const uint8_t* ptr)
+{
+    if (nullptr == ptr) {
+        return 0;
+    }
+
+    if (isBigEndian()) {
+        union
+        {
+            uint32_t d;
+            float f;
+        } value;
+
+        value.d = ptr[0] << 24;
+        value.d |= (ptr[1] << 16);
+        value.d |= (ptr[2] << 8);
+        value.d |= ptr[3];
+
+        return value.f;
+    }
+    return *(float*)ptr;
+}
+
+int16_t GnssParserCommonImpl::getInt16(const uint8_t* ptr)
+{
+    if (nullptr == ptr) {
+        return 0;
+    }
+
+    if (isBigEndian()) {
+        int16_t result = ptr[0] << 8;
+        result |= ptr[1];
+        return result;
+    }
+
+    return *(int16_t*)ptr;
+}
+
+int32_t GnssParserCommonImpl::getInt32(const uint8_t* ptr)
+{
+    if (nullptr == ptr) {
+        return 0;
+    }
+
+    if (isBigEndian()) {
+        int32_t result = ptr[0] << 24;
+        result |= (ptr[1] << 16);
+        result |= (ptr[2] << 8);
+        result |= ptr[3];
+        return result;
+    }
+    return *(int32_t*)ptr;
+}
+
 void GnssParserCommonImpl::dumpDebug()
 {
     ALOGV("[%s, line %d]", __func__, __LINE__);

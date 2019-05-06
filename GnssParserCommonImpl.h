@@ -37,18 +37,39 @@ public:
 
 protected:
     /*!
-     * \brief getUint16 - get two byte integer represented in little endian
+     * \brief getUint16 - get two byte integer
      * \param ptr - a pointer to a byte array
-     * \return integer in little endian
+     * \return unsigned short integer value
      */
     uint16_t getUint16(const uint8_t* ptr);
 
     /*!
-     * \brief getUint32 - get four byte integer represented in little endian
+     * \brief getUint32 - get four byte integer
      * \param ptr - a pointer to a byte array
-     * \return integer in little endian
+     * \return unsigned integer value
      */
     uint32_t getUint32(const uint8_t* ptr);
+
+    /*!
+     * \brief getFloat - get four byte float value
+     * \param ptr - a pointer to a byte array
+     * \return float value
+     */
+    float getFloat(const uint8_t* ptr);
+
+    /*!
+     * \brief getInt16 - get two byte integer
+     * \param ptr - a pointer to a byte array
+     * \return signed short integer value
+     */
+    int16_t getInt16(const uint8_t* ptr);
+
+    /*!
+     * \brief getInt32 - get four byte integer
+     * \param ptr - a pointer to a byte array
+     * \return signed integer value
+     */
+    int32_t getInt32(const uint8_t* ptr);
 
     /*!
      * \brief scaleDown - scaling usin division
@@ -56,7 +77,7 @@ protected:
     template <typename T1, typename T2>
     T2 scaleDown(T1 val, T2 scale)
     {
-        return static_cast<T2>(val/scale);
+        return static_cast<T2>(val) / scale;
     }
 
     /*!
@@ -65,7 +86,7 @@ protected:
     template <typename T1, typename T2>
     T2 scaleUp(T1 val, T2 scale)
     {
-        return static_cast<T2>(val*scale);
+        return static_cast<T2>(val) * scale;
     }
 
     /*!

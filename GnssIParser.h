@@ -28,9 +28,10 @@ public:
     enum GnssIParserReturn : uint8_t {
         NotReady = 0,
         RxmDone = 1,
-        UTCDone = 1 << 1,
+        GPSTimeDone = 1 << 1,
         ClockDone = 1 << 2,
-        Ready = (1 | (1 << 1) | (1 << 2)),
+        Ready = (RxmDone | GPSTimeDone | ClockDone),
+        UTCDone, // move up when needed
     };
 
     /*!
