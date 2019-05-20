@@ -17,6 +17,8 @@
 #define LOG_TAG "GnssRenesasHAL_GnssMeasurementInterface"
 
 #include <memory>
+
+#include "GnssMeasToLocSync.h"
 #include "GnssMeasurement.h"
 #include "GnssMeasQueue.h"
 #include "GnssIParser.h"
@@ -29,6 +31,7 @@ namespace renesas {
 
 static const bool on = true;
 static const bool off = false;
+static const int8_t measBeforeLocationEventsNum = 2; // value depends on CTS testGnssMeasurementWhenNoLocation
 
 sp<IGnssMeasurementCallback> GnssMeasurement::sGnssMeasurementsCbIface = nullptr;
 
@@ -45,6 +48,9 @@ Return<GnssMeasurement::GnssMeasurementStatus> GnssMeasurement::setCallback(
         ALOGE("%s: GnssMeasurements already init", __func__);
         return GnssMeasurementStatus::ERROR_ALREADY_INIT;
     }
+
+    GnssMeasToLocSync& syncInstance = GnssMeasToLocSync::getInstance();
+    syncInstance.SetEventsToWait(measBeforeLocationEventsNum);
 
     sGnssMeasurementsCbIface = callback;
     ALOGD("%s: GnssMeasurements initialized", __func__);
@@ -64,6 +70,9 @@ Return<void> GnssMeasurement::close()
         return Void();
     }
 
+    GnssMeasToLocSync& syncInstance = GnssMeasToLocSync::getInstance();
+    syncInstance.SetEventsToWait(0);
+
     sGnssMeasurementsCbIface = nullptr;
     mThreadExit = true;
     mCallbackCond.notify_one();
@@ -79,7 +88,8 @@ void GnssMeasurement::callbackThread(void)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    GnssMeasQueue &instance = GnssMeasQueue::getInstance();
+    GnssMeasToLocSync& syncInstance = GnssMeasToLocSync::getInstance();
+    GnssMeasQueue& instance = GnssMeasQueue::getInstance();
     instance.setState(on);
     while (!mThreadExit) {
         uint8_t flagReady = 0;
@@ -95,6 +105,7 @@ void GnssMeasurement::callbackThread(void)
             if (sGnssMeasurementsCbIface != nullptr && GnssIParser::Ready == flagReady) {
                 sGnssMeasurementsCbIface->GnssMeasurementCb(*data);
                 ALOGD("GNSS Measurements sent");
+                syncInstance.UpdateStatus((int8_t)-1);
                 break;
             }
         }

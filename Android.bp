@@ -47,6 +47,7 @@ cc_binary {
         "GnssNavTimeGPSParser.cpp",
         "GnssParserCommonImpl.cpp",
         "GnssMeasQueue.cpp",
+        "GnssMeasToLocSync.cpp",
         "ThreadCreationWrapper.cpp",
     ],
 
@@ -104,6 +105,7 @@ cc_test {
         "GnssNavTimeGPSParser.cpp",
         "GnssParserCommonImpl.cpp",
         "GnssMeasQueue.cpp",
+        "GnssMeasToLocSync.cpp",
         "ThreadCreationWrapper.cpp",
     ],
 

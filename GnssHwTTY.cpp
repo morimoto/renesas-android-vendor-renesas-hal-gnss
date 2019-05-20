@@ -37,6 +37,7 @@
 #include <android/hardware/gnss/1.0/IGnss.h>
 
 #include "GnssHw.h"
+#include "GnssMeasToLocSync.h"
 #include "GnssRxmMeasxParser.h"
 #include "GnssNavClockParser.h"
 #include "GnssNavTimeGPSParser.h"
@@ -56,7 +57,7 @@ static const uint8_t idTimeGps = 0x20;
 static const uint8_t idRMC = 0x04;
 
 static const uint8_t rate = 0x01;
-static const uint8_t rateRMC = 0x08;
+static const uint8_t rateRMC = 0x01;
 
 // According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.14 RMC, p. 124
 // NMEA protocol version 4.1 and above has 14 fields.
@@ -941,7 +942,8 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
     mGnssLocation.speedAccuracyMetersPerSecond = mSpeedAcc;
     mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_SPEED_ACCURACY);
 
-    if (mEnabled && provideLocation) {
+    GnssMeasToLocSync& syncInstance = GnssMeasToLocSync::getInstance();
+    if (mEnabled && provideLocation && syncInstance.WaitToSend()) {
         ALOGV("[%s, line %d] Provide location callback", __func__, __LINE__);
         if (mGnssCb != nullptr) {
             ALOGD("Provide location callback");
