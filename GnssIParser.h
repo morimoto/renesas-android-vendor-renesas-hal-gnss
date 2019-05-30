@@ -30,7 +30,8 @@ public:
         RxmDone = 1,
         GPSTimeDone = 1 << 1,
         ClockDone = 1 << 2,
-        Ready = (RxmDone | GPSTimeDone | ClockDone),
+        StatusDone = 1 << 3,
+        Ready = (RxmDone | GPSTimeDone | ClockDone | StatusDone),
         UTCDone, // move up when needed
     };
 

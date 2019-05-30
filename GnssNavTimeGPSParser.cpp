@@ -95,8 +95,10 @@ uint8_t GnssNavTimeGPSParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData 
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     if (mValid) {
-        gnssData.clock.timeNs = defaultRtcTime;
-        gnssData.clock.fullBiasNs = defaultRtcTime - timeNano;
+        int64_t updateTimeNs = std::max(gnssData.clock.timeNs, defaultRtcTime);
+
+        gnssData.clock.timeNs = updateTimeNs;
+        gnssData.clock.fullBiasNs = updateTimeNs - timeNano;
         gnssData.clock.timeUncertaintyNs = static_cast<double>(data.tAcc);
 
         gnssData.clock.gnssClockFlags =
