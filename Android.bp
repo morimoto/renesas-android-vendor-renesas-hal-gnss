@@ -19,6 +19,7 @@ cc_binary {
 
     name: "android.hardware.gnss@1.0-service.renesas",
     init_rc: ["android.hardware.gnss@1.0-service.renesas.rc"],
+    vintf_fragments: ["android.hardware.gnss@1.0-service.renesas.xml"],
 
     cflags: [
         "-Werror",
