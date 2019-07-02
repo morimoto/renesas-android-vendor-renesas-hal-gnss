@@ -41,7 +41,7 @@ public:
      * \param payload - a pointer to the payload of incoming message
      * \param payloadLen - length in bytes of payload
      */
-    GnssNavStatusParser(const char* payload, uint16_t payloadLen);
+    GnssNavStatusParser(const uint8_t* payload, uint16_t payloadLen);
     ~GnssNavStatusParser(){}
 
     /*!
@@ -62,7 +62,7 @@ private:
         uint32_t msss;
     } singleBlock_t;
 
-    uint8_t* mPayload = nullptr;
+    const uint8_t* mPayload;
     uint16_t mPayloadLen = 0;
 
     singleBlock_t data;

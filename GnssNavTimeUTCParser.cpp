@@ -41,8 +41,8 @@ enum NavTimeUTCOffsets : uint8_t {
     flags = 19,
 };
 
-GnssNavTimeUTCParser::GnssNavTimeUTCParser(const char *payload, uint16_t payloadLen) :
-    mPayload((uint8_t*)payload),
+GnssNavTimeUTCParser::GnssNavTimeUTCParser(const uint8_t* payload, uint16_t payloadLen) :
+    mPayload(payload),
     mPayloadLen(payloadLen)
 {
     parseNavTimeUTCMsg();
@@ -53,10 +53,10 @@ GnssNavTimeUTCParser::GnssNavTimeUTCParser(const char *payload, uint16_t payload
 void GnssNavTimeUTCParser::parseSingleBlock()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    data.iTow = getUint32(&mPayload[NavTimeUTCOffsets::iTow]);
-    data.timeAccuracy = getUint32(&mPayload[NavTimeUTCOffsets::timeAccuracy]);
-    data.nanoSecondFraction = getInt32(&mPayload[NavTimeUTCOffsets::nanoSecondFraction]);
-    data.year = getUint16(&mPayload[NavTimeUTCOffsets::year]);
+    data.iTow = getValue<uint32_t>(&mPayload[NavTimeUTCOffsets::iTow]);
+    data.timeAccuracy = getValue<uint32_t>(&mPayload[NavTimeUTCOffsets::timeAccuracy]);
+    data.nanoSecondFraction = getValue<int32_t>(&mPayload[NavTimeUTCOffsets::nanoSecondFraction]);
+    data.year = getValue<uint16_t>(&mPayload[NavTimeUTCOffsets::year]);
     data.month = mPayload[NavTimeUTCOffsets::month];
     data.day = mPayload[NavTimeUTCOffsets::day];
     data.hour = mPayload[NavTimeUTCOffsets::hour];
@@ -138,10 +138,6 @@ bool GnssNavTimeUTCParser::setTimeNano()
 uint8_t GnssNavTimeUTCParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData __unused)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    if (mValid) {
-        return UTCDone;
-    }
-
     return NotReady;
 }
 

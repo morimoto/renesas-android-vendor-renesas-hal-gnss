@@ -23,7 +23,7 @@
 #include <android/hardware/gnss/1.0/IGnss.h>
 
 
-static const char rxmMeasxMsg[] = {
+static const uint8_t rxmMeasxMsg[] = {
     0x01, 0x00, 0x00, 0x00, 0xc0, 0x9c, 0x03, 0x1d, 0xf0, 0x21, 0xa8, 0x1d, 0x10, 0x66, 0x03, 0x1d,
     0xc0, 0x9c, 0x03, 0x1d, 0xf4, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x13, 0x01,
@@ -44,12 +44,21 @@ protected:
 
     uint16_t repeatedBlockSize;
     uint16_t singleBlockSize;
+    uint32_t mStateFlags;
+    uint32_t mStateKnownFlags;
 };
 
 void GnssRxmMeasxParserTest::SetUp()
 {
     repeatedBlockSize = 24;
     singleBlockSize = 44;
+    mStateFlags = IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED |
+            IGnssMeasurementCallback::GnssMeasurementState::STATE_BIT_SYNC |
+            IGnssMeasurementCallback::GnssMeasurementState::STATE_SUBFRAME_SYNC;
+
+    mStateKnownFlags = IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_KNOWN |
+            IGnssMeasurementCallback::GnssMeasurementState::STATE_BIT_SYNC |
+            IGnssMeasurementCallback::GnssMeasurementState::STATE_SUBFRAME_SYNC;
 }
 
 TEST_F(GnssRxmMeasxParserTest, objectWithNullPtrPayload)
@@ -80,7 +89,7 @@ TEST_F(GnssRxmMeasxParserTest, objectWithZeroLenUbnormalPayload)
 {
     //Test object creation without crashes with bad input paramete1rs
     const uint16_t len = 0;
-    char payload[] = "This is my ubnormal payload";
+    uint8_t payload[] = "This is my ubnormal payload";
     GnssRxmMeasxParser obj(payload, len);
     (void)obj;
 }
@@ -88,7 +97,7 @@ TEST_F(GnssRxmMeasxParserTest, objectWithZeroLenUbnormalPayload)
 TEST_F(GnssRxmMeasxParserTest, objectWithUbnormalPayload)
 {
     //Test object creation without crashes with bad input parameters
-    char payload[] = "This is my ubnormal payload";
+    uint8_t payload[] = "This is my ubnormal payload";
     uint16_t len = (uint16_t)sizeof(payload);
     GnssRxmMeasxParser obj(payload, len);
     (void)obj;
@@ -98,7 +107,7 @@ TEST_F(GnssRxmMeasxParserTest, objectWithMaxLenUbnormalPayload)
 {
     //Test object creation without crashes with bad input parameters
     const uint16_t len = (uint16_t)-1;
-    char payload[] = "This is my ubnormal payload";
+    uint8_t payload[] = "This is my ubnormal payload";
     GnssRxmMeasxParser obj(payload, len);
     (void)obj;
 }
@@ -107,7 +116,7 @@ TEST_F(GnssRxmMeasxParserTest, objectWithMaxLenMaxPayload)
 {
     //Test object creation without crashes with bad input parameters
     const uint16_t len = (uint16_t)-1;
-    char payload[len] = {};
+    uint8_t payload[len] = {};
     GnssRxmMeasxParser obj(payload, len);
     (void)obj;
 }
@@ -177,7 +186,7 @@ TEST_F(GnssRxmMeasxParserTest, retrieveDataNormalInput)
     {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
         EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
-        EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED, data.measurements[i].state);
+        EXPECT_EQ(mStateFlags, data.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
         EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
         EXPECT_EQ((expectedPseudoRangeRate[i]*prrScaling), data.measurements[i].pseudorangeRateMps);
@@ -205,7 +214,7 @@ TEST_F(GnssRxmMeasxParserTest, retrieveDataIncompleteInput)
     {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
         EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
-        EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED, data.measurements[i].state);
+        EXPECT_EQ(mStateFlags, data.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
         EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
         EXPECT_EQ((expectedPseudoRangeRate[i]*prrScaling), data.measurements[i].pseudorangeRateMps);
@@ -240,10 +249,10 @@ TEST_F(GnssRxmMeasxParserTest, checkNsConvertion)
     const int64_t  msToNsMult = 1000000;
     int64_t expectedMaxNs = static_cast<int64_t>(maxMs) * msToNsMult;
 
-    EXPECT_EQ((int64_t)0, setNsFromMs(zeroMs));
-    EXPECT_EQ(msToNsMult, setNsFromMs(oneMs));
-    EXPECT_EQ(expectedMaxNs, setNsFromMs(maxMs));
-    EXPECT_TRUE((int64_t)0 < setNsFromMs(maxMs));
+    EXPECT_EQ((int64_t)0, scaleUp(zeroMs, msToNsMult));
+    EXPECT_EQ(msToNsMult, scaleUp(oneMs, msToNsMult));
+    EXPECT_EQ(expectedMaxNs, scaleUp(maxMs, msToNsMult));
+    EXPECT_TRUE((int64_t)0 < scaleUp(maxMs, msToNsMult));
 }
 
 TEST_F(GnssRxmMeasxParserTest, checkTOWforGnssId)
@@ -251,14 +260,13 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforGnssId)
     GnssRxmMeasxParser parser(rxmMeasxMsg, sizeof(rxmMeasxMsg));
     IGnssMeasurementCallback::GnssData data;
     ASSERT_EQ(GnssIParser::RxmDone, parser.retrieveSvInfo(data));
-    EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED,
-              data.measurements[0].state);
+    EXPECT_EQ(mStateFlags, data.measurements[0].state);
     EXPECT_TRUE(data.measurements[0].receivedSvTimeInNs > 0);
-    EXPECT_EQ(data.measurements[0].receivedSvTimeUncertaintyInNs, (int64_t)0);
+    EXPECT_EQ(data.measurements[0].receivedSvTimeUncertaintyInNs, (int64_t)1);
 }
 
 TEST_F(GnssRxmMeasxParserTest, checkTOWforGnssIdTruncatedInput) {
-    const char sampleInput[] = {
+    const uint8_t sampleInput[] = {
         0x01, 0x00, 0x00, 0x00, 0xc0, 0x9c, 0x03, 0x1d, 0xf0, 0x21, 0xa8, 0x1d, 0x10, 0x66, 0x03, 0x1d,
         0xc0, 0x9c, 0x03, 0x1d, 0xf4, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x13, 0x01,
@@ -269,10 +277,9 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforGnssIdTruncatedInput) {
     GnssRxmMeasxParser parser(sampleInput, sizeof(sampleInput));
     IGnssMeasurementCallback::GnssData data;
     ASSERT_EQ(GnssIParser::RxmDone, parser.retrieveSvInfo(data));
-    EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED,
-              data.measurements[0].state);
+    EXPECT_EQ(mStateFlags, data.measurements[0].state);
     EXPECT_TRUE(data.measurements[0].receivedSvTimeInNs > 0);
-    EXPECT_EQ(data.measurements[0].receivedSvTimeUncertaintyInNs, (int64_t)0);
+    EXPECT_EQ(data.measurements[0].receivedSvTimeUncertaintyInNs, (int64_t)1);
 }
 
 TEST_F(GnssRxmMeasxParserTest, checkTOWforAllGnssIdTruncatedInput)
@@ -286,7 +293,7 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforAllGnssIdTruncatedInput)
 //    GLONASS = 6;
     const uint8_t gnssIdArr [] = {0,1,2,3,4,5,6,7,8};
 
-    char sampleInput[] = {
+    uint8_t sampleInput[] = {
         0x01, 0x00, 0x00, 0x00, 0xc0, 0x9c, 0x03, 0x1d, 0xf0, 0x21, 0xa8, 0x1d, 0x10, 0x66, 0x03, 0x1d,
         0xc0, 0x9c, 0x03, 0x1d, 0xf4, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
         0x00, 0x01, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x13, 0x01,
@@ -303,8 +310,7 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforAllGnssIdTruncatedInput)
         switch(i) {
         case 1:
         case 2:
-            EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_KNOWN,
-                      data.measurements[0].state);
+            EXPECT_EQ(mStateKnownFlags, data.measurements[0].state);
             EXPECT_TRUE(data.measurements[0].receivedSvTimeInNs > 0);
             EXPECT_TRUE(data.measurements[0].receivedSvTimeUncertaintyInNs > (int64_t)0);
             break;
@@ -319,8 +325,7 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforAllGnssIdTruncatedInput)
         case 3:
         case 5:
         case 6:
-            EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED,
-                      data.measurements[0].state);
+            EXPECT_EQ(mStateFlags, data.measurements[0].state);
             EXPECT_TRUE(data.measurements[0].receivedSvTimeInNs > 0);
             EXPECT_TRUE(data.measurements[0].receivedSvTimeUncertaintyInNs > (int64_t)0);
             break;

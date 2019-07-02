@@ -30,7 +30,7 @@
 
 using namespace android::hardware::gnss::V1_0::renesas;
 
-const char rxmMeasxMsg[] = {
+const uint8_t rxmMeasxMsg[] = {
     0x01, 0x00, 0x00, 0x00, 0xc0, 0x9c, 0x03, 0x1d, 0xf0, 0x21, 0xa8, 0x1d, 0x10, 0x66, 0x03, 0x1d,
     0xc0, 0x9c, 0x03, 0x1d, 0xf4, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x13, 0x01,
@@ -52,6 +52,7 @@ protected:
     uint16_t singleBlockSize;
     uint8_t cl;
     uint8_t id;
+    uint32_t mStateFlags;
 };
 
 void GnssHwTTYTest::SetUp()
@@ -60,6 +61,9 @@ void GnssHwTTYTest::SetUp()
     singleBlockSize = 44;
     cl = 0x02;
     id = 0x14;
+    mStateFlags = IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED |
+            IGnssMeasurementCallback::GnssMeasurementState::STATE_BIT_SYNC |
+            IGnssMeasurementCallback::GnssMeasurementState::STATE_SUBFRAME_SYNC;
 }
 
 TEST_F(GnssHwTTYTest, selectParserRxmMeasxDumpNormalInput)
@@ -91,7 +95,7 @@ TEST_F(GnssHwTTYTest, selectParserRxmMeasxDumpNormalInput)
     for (uint32_t i = 0; i < data.measurementCount; ++i) {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
         EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
-        EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED, data.measurements[i].state);
+        EXPECT_EQ(mStateFlags, data.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
         EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
         EXPECT_EQ((expectedPseudoRangeRate[i]*prrScaling), data.measurements[i].pseudorangeRateMps);

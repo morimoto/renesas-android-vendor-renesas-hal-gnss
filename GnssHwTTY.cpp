@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (C) 2017 GlobalLogic
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <sys/param.h> /* for MIN(x,y) */
 #include <cstdlib>
+#include <algorithm>
 #include <memory>
 
 #include <utils/SystemClock.h>
@@ -33,8 +34,6 @@
 #include <android-base/logging.h>
 #include <log/log.h>
 #include <cutils/properties.h>
-
-#include <android/hardware/gnss/1.0/IGnss.h>
 
 #include "GnssHw.h"
 #include "GnssMeasToLocSync.h"
@@ -77,10 +76,10 @@ static const size_t ackNackMsgLen = 2;
 static const size_t ackNackClassOffset = 0;
 static const size_t ackNackIdOffset = 1;
 
-static const float speedAccUblox7 = 0.1; // m/s according to NEO-7 datasheet
-static const float bearingAccUblox7 = 0.5; // degrees according to NEO-7 datasheet
-static const float speedAccUblox8 = 0.05; // m/s according to NEO-8 datasheet
-static const float bearingAccUblox8 = 0.3; // degrees according to NEO-8 datasheet
+static const float speedAccUblox7 = 0.1f; // m/s according to NEO-7 datasheet
+static const float bearingAccUblox7 = 0.5f; // degrees according to NEO-7 datasheet
+static const float speedAccUblox8 = 0.05f; // m/s according to NEO-8 datasheet
+static const float bearingAccUblox8 = 0.3f; // degrees according to NEO-8 datasheet
 
 static const std::string ttyUsbDefault("/dev/ttyACM0");
 static const std::string ttyDefaultKf("/dev/ttySC3");
@@ -111,6 +110,15 @@ static inline void CheckNotNull(mPtr val, const char* msg)
     if (nullptr == val) {
         ALOGE("%s", msg);
         std::abort();
+    }
+}
+
+GnssHwIface::~GnssHwIface(void)
+{
+    mThreadExit = true;
+
+    if (mThread.joinable()) {
+        mThread.join();
     }
 }
 
@@ -220,7 +228,7 @@ bool GnssHwTTY::OpenDevice(const char* ttyDevDefault)
     property_get("ro.boot.gps.tty_dev", prop_tty_dev, ttyDevDefault);
     property_get("ro.boot.gps.tty_baudrate", prop_tty_baudrate, "9600");
 
-    uint32_t baudrate = atoi(prop_tty_baudrate);
+    int32_t baudrate = std::atoi(prop_tty_baudrate);
 
     /* Open the serial tty device */
     do {
@@ -361,11 +369,11 @@ static void GetProp(char* secmajor, char* sbas)
     auto prop_sbas_len = strnlen(sbas, PROPERTY_VALUE_MAX);
 
     for (size_t i = 0; i < prop_secmajor_len; i++) {
-        secmajor[i] = toupper(secmajor[i]);
+        secmajor[i] = static_cast<char>(toupper(secmajor[i]));
     }
 
     for (size_t i = 0; i < prop_sbas_len; i++) {
-        sbas[i] = toupper(sbas[i]);
+        sbas[i] = static_cast<char>(toupper(sbas[i]));
     }
 }
 
@@ -503,14 +511,14 @@ void GnssHwTTY::PollCommonMessages()
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NAV5 to automotive", mUbxTimeoutMs);
 
     UBX_SetMessageRate(0xF1, 0x00, 1, "Failed to enable PUBX,00 message"); // enable PUBX,00
-    UBX_SetMessageRate(0xF0, 0x01, 0, NULL); // disable GLL
-    UBX_SetMessageRate(0xF0, 0x05, 0, NULL); // disable VTG
+    UBX_SetMessageRate(0xF0, 0x01, 0, nullptr); // disable GLL
+    UBX_SetMessageRate(0xF0, 0x05, 0, nullptr); // disable VTG
 
     UBX_SetMessageRateCurrentPort(classUbxNav, idClock, rate, "UBX-NAV-CLOCK config failed");
     UBX_SetMessageRateCurrentPort(classUbxNav, idTimeGps, rate, "UBX-NAV-GPS-TIME config failed");
     UBX_SetMessageRateCurrentPort(classUbxNav, idStatus, rate, "UBX-NAV-STATUS config failed");
 
-    UBX_SetMessageRate(classNmeaCfg, idRMC, rateRMC, NULL); // reduce RMC rate
+    UBX_SetMessageRate(classNmeaCfg, idRMC, rateRMC, nullptr); // reduce RMC rate
 
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
@@ -591,8 +599,8 @@ void GnssHwTTY::GnssHwHandleThread(void)
             continue;
         }
 
-        char ch;
-        int ret = read(mFd, &ch, sizeof(ch));
+        uint8_t ch;
+        ssize_t ret = read(mFd, &ch, sizeof(ch));
 
         if (ret < 0 && errno == EAGAIN) {
             continue;
@@ -699,7 +707,7 @@ void GnssHwTTY::NMEA_Thread(void)
 
     while (!mHelpThreadExit) {
         if (!mNmeaBuffer->empty()) {
-            NMEA_ReaderParse((char*)&mNmeaBuffer->get()->data);
+            NMEA_ReaderParse(&(mNmeaBuffer->get()->data[0]));
         } else {
             std::unique_lock<std::mutex> lock(mNmeaThreadLock);
             mNmeaThreadCv.wait(lock);
@@ -738,15 +746,15 @@ int GnssHwTTY::NMEA_Checksum(const char *s)
 
 void GnssHwTTY::NMEA_ReaderSplitMessage(std::string msg, std::vector<std::string> & out)
 {
-    int end = 0;
+    std::string::size_type end = 0;
     bool separator = true;
 
     out.clear();
 
     while (!msg.empty()) {
-        if ((end = msg.find(",")) < 0) {
+        if ((end = msg.find(",")) == std::string::npos) {
             separator = false;
-            end = (int)msg.length();
+            end = msg.length();
         }
         out.push_back(std::string(msg.c_str(), end));
         msg.erase(0, end + (separator ? 1 : 0));
@@ -759,14 +767,14 @@ void GnssHwTTY::NMEA_ReaderSplitMessage(std::string msg, std::vector<std::string
 
 void GnssHwTTY::NMEA_ReaderParse(char *msg)
 {
-    int crc = 0;
+    int64_t crc = 0;
     char * p = strstr(msg, "*");
 
-    if (p == NULL) {/* No CRC field found? Drop message. */
+    if (p == nullptr) {/* No CRC field found? Drop message. */
         return;
     }
 
-    crc = strtol(p + 1, NULL, 16);
+    crc = strtol(p + 1, nullptr, 16);
     *p = '\0';
 
     /* Checking for message integrity */
@@ -787,7 +795,7 @@ void GnssHwTTY::NMEA_ReaderParse(char *msg)
 
         if (mEnabled) {
             if (mGnssCb != nullptr) {
-                auto ret = mGnssCb->gnssNmeaCb(time(NULL), nmeaString);
+                auto ret = mGnssCb->gnssNmeaCb(time(nullptr), nmeaString);
                 if (!ret.isOk()) {
                     ALOGE("Unable to invoke gnssNmeaCb");
                     ALOGV("[%s, line %d] Unable to invoke gnssNmeaCb", __func__, __LINE__);
@@ -895,22 +903,22 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
     mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_LAT_LONG);
 
     raw = atof(rmc[3].c_str()); // Latitude
-    polarity = (rmc[4] == "S" ? -1.f : 1.f);
+    polarity = static_cast<double>(rmc[4] == "S" ? -1 : 1);
 
-    degree = (raw / 100.f);
+    degree = static_cast<int>(raw / 100);
     minutes = ((raw / 100) - degree) * 100;
     mGnssLocation.latitudeDegrees = ((minutes / 60) + degree) * polarity;
 
     raw = atof(rmc[5].c_str()); // Longitude
-    polarity = (rmc[6] == "W" ? -1.f : 1.f);
+    polarity = static_cast<double>(rmc[6] == "W" ? -1.f : 1.f);
 
-    degree = (raw / 100);
+    degree = static_cast<int>(raw / 100);
     minutes = ((raw / 100) - degree) * 100;
     mGnssLocation.longitudeDegrees = ((minutes / 60) + degree) * polarity;
 
     // Speed over the ground in knots
     if (rmc[7].length() > 0) {
-        mGnssLocation.speedMetersPerSec = (atof(rmc[7].c_str()) * 1.852) / 3.6; // knots -> m/s
+        mGnssLocation.speedMetersPerSec = (static_cast<float>(atof(rmc[7].c_str())) * 1.852f) / 3.6f; // knots -> m/s
         mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_SPEED);
         mGnssLocation.speedAccuracyMetersPerSecond = mSpeedAcc;
         mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_SPEED_ACCURACY);
@@ -923,7 +931,7 @@ void GnssHwTTY::NMEA_ReaderParse_GxRMC(char *msg)
 
     // Track angle in degrees True
     if (rmc[8].length() > 0) {
-        mGnssLocation.bearingDegrees = atof(rmc[8].c_str());
+        mGnssLocation.bearingDegrees = static_cast<float>(atof(rmc[8].c_str()));
         mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_BEARING);
         mGnssLocation.bearingAccuracyDegrees = mBearingAcc;
         mGnssLocation.gnssLocationFlags |= static_cast<uint16_t>(GnssLocationFlags::HAS_BEARING_ACCURACY);
@@ -986,9 +994,9 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 {
     ALOGV("[%s, line %d] Entry", __func__ ,__LINE__);
 
-    const float L1BandFrequency = 1575.42;
-    const float B1BandFrequency = 1561.098;
-    const float L1GlonassBandFrequency = 1602.562;
+    const float L1BandFrequency = 1575.42f;
+    const float B1BandFrequency = 1561.098f;
+    const float L1GlonassBandFrequency = 1602.562f;
     const float scale = 1000000.0;
 
     std::vector<std::string> gsv;
@@ -1039,9 +1047,9 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
         gsv.push_back(std::string("0")); /* Append with zero */
     }
 
-    int sentences = atoi(gsv[1].c_str());    // total amount of sentences
-    int sentence_idx = atoi(gsv[2].c_str()); // current sentence
-    int num_svs = atoi(gsv[3].c_str());      // number of satellites in sentences
+    int sentences = std::atoi(gsv[1].c_str());    // total amount of sentences
+    int sentence_idx = std::atoi(gsv[2].c_str()); // current sentence
+    int num_svs = std::atoi(gsv[3].c_str());      // number of satellites in sentences
     bool valid_msg = true;
     bool callback_ready = false;
     static int glonass_fcn; // GLONASS SVID can be equal to zero, which is not acceptable by Android
@@ -1094,11 +1102,11 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 
     if (valid_msg) {
         /* Per one GPGSV message max 4 sattelite records */
-        size_t offset = (sentence_idx - 1) * 4;
-        size_t parts = MIN((num_svs - offset), 4);
+        size_t offset = static_cast<size_t>((sentence_idx - 1) * 4);
+        size_t parts = static_cast<size_t>(std::min((num_svs - static_cast<int>(offset)), 4));
 
-        for (size_t p = 0; p < parts; p++) {
-            if ((offset + p) >= static_cast<int>(GnssMax::SVS_COUNT)) {
+        for (size_t part = 0; part < parts; part++) {
+            if ((offset + part) >= static_cast<int>(GnssMax::SVS_COUNT)) {
                 break; /* out of space */
             }
 
@@ -1106,7 +1114,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
 
             sv.svFlag = static_cast<uint8_t>(IGnssCallback::GnssSvFlags::HAS_ALMANAC_DATA);
 
-            int idx = 4 + (p * 4);
+            size_t idx = 4 + (part * 4);
 
             /**
          * Pseudo-random number for the SV, or FCN/OSN number for Glonass. The
@@ -1125,9 +1133,9 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
          * - Beidou:  1-37
          */
 
-            sv.svid = atoi(gsv[idx + 0].c_str());
+            sv.svid = static_cast<int16_t>(std::atoi(gsv[idx + 0].c_str()));
 
-            std::vector<int>* usedInFix = &mSatellitesUsedInFix[static_cast<int>(currentSatelliteType)];
+            std::vector<int64_t>* usedInFix = &mSatellitesUsedInFix[static_cast<int>(currentSatelliteType)];
             for (auto it = usedInFix->begin(); it != usedInFix->end();) {
                 if (*it == sv.svid) {
                     sv.svFlag |= static_cast<uint8_t>(IGnssCallback::GnssSvFlags::USED_IN_FIX);
@@ -1152,7 +1160,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
                 if (sv.svid != 0) {
                     sv.svid -= 64;
                 } else {
-                    sv.svid = glonass_fcn;
+                    sv.svid = static_cast<int16_t>(glonass_fcn);
                     glonass_fcn++;
                     if (glonass_fcn >= 106) {
                         ALOGW("Failed to generate a fake FCN for GLONASS satellite");
@@ -1191,26 +1199,26 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
                 sv.constellation = GnssConstellationType::UNKNOWN;
             }
 
-            sv.elevationDegrees    = atof(gsv[idx + 1].c_str());
-            sv.azimuthDegrees      = atof(gsv[idx + 2].c_str());
-            sv.cN0Dbhz             = atof(gsv[idx + 3].c_str());
+            sv.elevationDegrees = static_cast<float>(std::atof(gsv[idx + 1].c_str()));
+            sv.azimuthDegrees = static_cast<float>(std::atof(gsv[idx + 2].c_str()));
+            sv.cN0Dbhz = static_cast<float>(std::atof(gsv[idx + 3].c_str()));
 
             satelliteList->push_back(sv);
 
-            ALOGV("GPGSV: [%zu] svid=%d, elevation=%f, azimuth=%f, c_n0_dbhz=%f", offset + p,
+            ALOGV("GPGSV: [%zu] svid=%d, elevation=%f, azimuth=%f, c_n0_dbhz=%f", offset + part,
                   sv.svid, sv.elevationDegrees, sv.azimuthDegrees, sv.cN0Dbhz);
         }
     }
 
     if (callback_ready) {
         unsigned int svCount = 0;
-        for (unsigned int i = 0; i < static_cast<int>(SatelliteType::COUNT); i++) {
-            for (unsigned int j = 0; j < mSatellites[i].size(); j++) {
-                mSvStatus.gnssSvList[svCount++] = mSatellites[i].at(j);
+        for (unsigned int satType = 0; satType < static_cast<int>(SatelliteType::COUNT); satType++) {
+            for (std::vector<IGnssCallback::GnssSvInfo>::size_type satNum = 0; satNum < mSatellites[satType].size(); satNum++) {
+                mSvStatus.gnssSvList[svCount++] = mSatellites[satType].at(satNum);
 
                 if (svCount >= static_cast<unsigned int>(GnssMax::SVS_COUNT)) {
-                    i = static_cast<int>(SatelliteType::COUNT);
-                    j = mSatellites[i].size();
+                    satType = static_cast<int>(SatelliteType::COUNT);
+                    satNum = mSatellites[satType].size();
                 }
             }
         }
@@ -1242,11 +1250,11 @@ void GnssHwTTY::NMEA_ReaderParse_GxGSA(char* msg)
 
     /* GSA is expected to have 19 parts */
     if (gsa.size() != mGsaFieldsNumber) {
-        ALOGD("Dropping GSA due to invalid size (%zu)", (size_t)gsa.size());
+        ALOGD("Dropping GSA due to invalid size (%zu)", gsa.size());
         return;
     }
 
-    std::vector<int>* satelliteList = nullptr;
+    std::vector<int64_t>* satelliteList = nullptr;
     switch (gsa.back().c_str()[0]) {
     case '1':
     case '2':
@@ -1257,13 +1265,12 @@ void GnssHwTTY::NMEA_ReaderParse_GxGSA(char* msg)
     default:
         ALOGI("Unknown GSA GNSS System ID");
         return;
-        break;
     }
 
     satelliteList->clear();
-    for (int i = 3; i < 15; i++) {
-        if (gsa[i].length() > 0) {
-            satelliteList->push_back(strtol(gsa[i].c_str(), NULL, 10));
+    for (std::vector<std::string>::size_type gsaPart = 3; gsaPart < 15; gsaPart++) {
+        if (gsa[gsaPart].length() > 0) {
+            satelliteList->push_back(strtol(gsa[gsaPart].c_str(), nullptr, 10));
         } else {
             break;
         }
@@ -1283,7 +1290,7 @@ void GnssHwTTY::NMEA_ReaderParse_PUBX00(char *msg)
     }
 
     if (pubx[9].length() > 0) {
-        mGnssLocation.horizontalAccuracyMeters = strtof(pubx[9].c_str(), NULL);
+        mGnssLocation.horizontalAccuracyMeters = strtof(pubx[9].c_str(), nullptr);
         mGnssLocation.gnssLocationFlags       |= static_cast<uint16_t>(GnssLocationFlags::HAS_HORIZONTAL_ACCURACY);
     } else {
         mGnssLocation.horizontalAccuracyMeters = 0.f;
@@ -1291,7 +1298,7 @@ void GnssHwTTY::NMEA_ReaderParse_PUBX00(char *msg)
     }
 
     if (pubx[10].length() > 0) {
-        mGnssLocation.verticalAccuracyMeters = strtof(pubx[10].c_str(), NULL);
+        mGnssLocation.verticalAccuracyMeters = strtof(pubx[10].c_str(), nullptr);
         mGnssLocation.gnssLocationFlags     |= static_cast<uint16_t>(GnssLocationFlags::HAS_VERTICAL_ACCURACY);
     } else {
         mGnssLocation.verticalAccuracyMeters = 0.f;
@@ -1323,8 +1330,8 @@ void GnssHwTTY::UBX_Reset()
 
 void GnssHwTTY::UBX_ChecksumAdd(uint8_t ch)
 {
-    mUM.rx_checksum_a = mUM.rx_checksum_a + ch;
-    mUM.rx_checksum_b = mUM.rx_checksum_b + mUM.rx_checksum_a;
+    mUM.rx_checksum_a = static_cast<uint8_t>(mUM.rx_checksum_a + ch);
+    mUM.rx_checksum_b = static_cast<uint8_t>(mUM.rx_checksum_b + mUM.rx_checksum_a);
 }
 
 void GnssHwTTY::UBX_CriticalProtocolError(const char *errormsg)
@@ -1448,6 +1455,13 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
 void GnssHwTTY::UBX_Send(const uint8_t* msg, size_t len)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+
+    if (nullptr == msg) {
+        ALOGD("[%s, line %d] Null input msg", __func__, __LINE__);
+        ALOGE("Null msg to send");
+        return;
+    }
+
     if (len >= mUbxBufferSize) {
         len = mUbxBufferSize - 1;
     }
@@ -1469,8 +1483,8 @@ void GnssHwTTY::UBX_Send(const uint8_t* msg, size_t len)
     tx_buffer[checksum_offset_b] = 0;
 
     for (size_t i = 0; i < len; i++) {
-        tx_buffer[checksum_offset_a] = tx_buffer[checksum_offset_a] + msg[i];
-        tx_buffer[checksum_offset_b] = tx_buffer[checksum_offset_b] + tx_buffer[checksum_offset_a];
+        tx_buffer[checksum_offset_a] = static_cast<uint8_t>(tx_buffer[checksum_offset_a] + msg[i]);
+        tx_buffer[checksum_offset_b] = static_cast<uint8_t>(tx_buffer[checksum_offset_b] + tx_buffer[checksum_offset_a]);
     }
 
     // class, id
@@ -1478,15 +1492,13 @@ void GnssHwTTY::UBX_Send(const uint8_t* msg, size_t len)
     mUM.tx_id    = msg[1];
 
     ALOGV("UBX sending msg...");
-    int exp_len = len + 4;
+    size_t exp_len = len + 4;
 
-    int ret = write(mFd, tx_buffer, exp_len);
-    if (ret < exp_len) {
-        ALOGE("[%s, line %d] UBX send msg: failed to transmit fully (only %d of %d bytes trasmitted)\n",
-              __func__, __LINE__, ret, exp_len);
-    } else if (ret == -1) {
-        ALOGE("[%s, line %d] UBX send msg: failed to write message, write error: %s\n",
-              __func__, __LINE__, strerror(errno));
+    ssize_t ret = write(mFd, tx_buffer, exp_len);
+    if (ret < static_cast<ssize_t>(exp_len)) {
+        ALOGE("UBX send msg: failed to transmit fully (only %ld of %zu bytes trasmitted)\n", ret, exp_len);
+    } else if (ret == static_cast<ssize_t>(-1)) {
+        ALOGE("UBX send msg: failed to write message, write error: %s\n", strerror(errno));
     } else {
         ALOGV("[%s, line %d] UBX sent msg: CLASS: %02X ID: %02X CHECKSUM: %02X%02X", __func__, __LINE__,
               tx_buffer[2], tx_buffer[3], tx_buffer[checksum_offset_a], tx_buffer[checksum_offset_b]);
@@ -1507,15 +1519,15 @@ void GnssHwTTY::UBX_Expect(UbxRxState astate, const char* errormsg)
     mUbxStateBuffer->put(&element);
 }
 
-bool GnssHwTTY::UBX_Wait(UbxRxState astate, const char* errormsg, uint64_t timeoutMs)
+bool GnssHwTTY::UBX_Wait(UbxRxState astate, const char* errormsg, int64_t timeoutMs)
 {
     UBX_Expect(astate, errormsg);
 
     timeoutMs *= 1024 * 1024; // mili to micro to nano
-    uint64_t start = android::elapsedRealtimeNano();
+    int64_t start = android::elapsedRealtimeNano();
     while (mUbxAckReceived <= 0) {
         if ((android::elapsedRealtimeNano() - start) > timeoutMs) {
-            if (errormsg != NULL) {
+            if (errormsg != nullptr) {
                 UBX_CriticalProtocolError(errormsg);
             } else {
                 ALOGE("[%s, line %d] UBX protocol failure (no ACK received)", __func__, __LINE__);
@@ -1572,7 +1584,7 @@ bool GnssHwTTY::CheckUsbDeviceVendorUbx()
     return usbHandler.ScanUsbDevices(mUbxGeneration);
 }
 
-void GnssHwTTY::SelectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen)
+void GnssHwTTY::SelectParser(uint8_t cl, uint8_t id, const uint8_t* data, uint16_t dataLen)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     if (nullptr == data) {
@@ -1603,7 +1615,7 @@ void GnssHwTTY::SelectParser(uint8_t cl, uint8_t id, const char* data, uint16_t 
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
-void GnssHwTTY::UBX_ACKParse(const char* data, uint16_t dataLen)
+void GnssHwTTY::UBX_ACKParse(const uint8_t* data, uint16_t dataLen)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
@@ -1625,7 +1637,7 @@ void GnssHwTTY::UBX_ACKParse(const char* data, uint16_t dataLen)
     }
 }
 
-void GnssHwTTY::UBX_NACKParse(const char* data, uint16_t dataLen)
+void GnssHwTTY::UBX_NACKParse(const uint8_t* data, uint16_t dataLen)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 

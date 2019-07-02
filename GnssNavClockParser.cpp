@@ -32,8 +32,8 @@ enum NavClockOffsets : uint8_t {
 
 static const uint16_t blockSize = 20;
 
-GnssNavClockParser::GnssNavClockParser(const char *payload, uint16_t payloadLen) :
-    mPayload((uint8_t*)payload),
+GnssNavClockParser::GnssNavClockParser(const uint8_t* payload, uint16_t payloadLen) :
+    mPayload(payload),
     mPayloadLen(payloadLen)
 {
     parseNavClockMsg();
@@ -45,11 +45,11 @@ void GnssNavClockParser::parseSingleBlock()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    data.iTow = getUint32(&mPayload[NavClockOffsets::iTow]);
-    data.clockBias = getInt32(&mPayload[NavClockOffsets::clockBias]);
-    data.clockDrift = getInt32(&mPayload[NavClockOffsets::clockDrift]);
-    data.timeAccuracy = getUint32(&mPayload[NavClockOffsets::timeAccuracy]);
-    data.freqAccuracyEstimate = getUint32(&mPayload[NavClockOffsets::freqAccuracyEstimate]);
+    data.iTow = getValue<uint32_t>(&mPayload[NavClockOffsets::iTow]);
+    data.clockBias = getValue<int32_t>(&mPayload[NavClockOffsets::clockBias]);
+    data.clockDrift = getValue<int32_t>(&mPayload[NavClockOffsets::clockDrift]);
+    data.timeAccuracy = getValue<uint32_t>(&mPayload[NavClockOffsets::timeAccuracy]);
+    data.freqAccuracyEstimate = getValue<uint32_t>(&mPayload[NavClockOffsets::freqAccuracyEstimate]);
 
     mValid = true;
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);

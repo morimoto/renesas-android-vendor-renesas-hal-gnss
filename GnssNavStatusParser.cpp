@@ -30,8 +30,8 @@ enum NavStatusOffsets : uint8_t {
     msssOffset = 12,
 };
 
-GnssNavStatusParser::GnssNavStatusParser(const char *payload, uint16_t payloadLen) :
-    mPayload((uint8_t*)payload),
+GnssNavStatusParser::GnssNavStatusParser(const uint8_t* payload, uint16_t payloadLen) :
+    mPayload(payload),
     mPayloadLen(payloadLen)
 {
     parseNavStatusMsg();
@@ -43,8 +43,8 @@ void GnssNavStatusParser::parseSingleBlock()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    data.iTow = getUint32(&mPayload[NavStatusOffsets::iTowOffset]);
-    data.msss = getUint32(&mPayload[NavStatusOffsets::msssOffset]);
+    data.iTow = getValue<uint32_t>(&mPayload[NavStatusOffsets::iTowOffset]);
+    data.msss = getValue<uint32_t>(&mPayload[NavStatusOffsets::msssOffset]);
 
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }

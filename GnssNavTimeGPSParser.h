@@ -45,8 +45,8 @@ public:
      * \param payload - a pointer to the payload of incoming message
      * \param payloadLen - length in bytes of payload
      */
-    GnssNavTimeGPSParser(const char* payload, uint16_t payloadLen);
-    ~GnssNavTimeGPSParser(){}
+    GnssNavTimeGPSParser(const uint8_t* payload, uint16_t payloadLen);
+    ~GnssNavTimeGPSParser() override {}
 
     /*!
      * \brief retrieveSvInfo - fill the gnssData object with collected data
@@ -70,7 +70,7 @@ private:
         uint32_t tAcc;
     } singleBlock_t;
 
-    uint8_t* mPayload = nullptr;
+    const uint8_t* mPayload;
     uint16_t mPayloadLen = 0;
 
     singleBlock_t data;

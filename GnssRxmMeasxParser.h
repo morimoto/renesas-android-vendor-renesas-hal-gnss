@@ -45,8 +45,8 @@ typedef IGnssMeasurementCallback::GnssMeasurementFlags GnssMF;
 
 class GnssRxmMeasxParser : public GnssParserCommonImpl {
 public:
-    GnssRxmMeasxParser(const char *payload, uint16_t payloadLen);
-    ~GnssRxmMeasxParser(){}
+    GnssRxmMeasxParser(const uint8_t* payload, uint16_t payloadLen);
+    ~GnssRxmMeasxParser() override {}
 
     /*!
      * \brief retrieveSvInfo - fill the gnssData object with collected data
@@ -86,7 +86,7 @@ private:
     } repeatedBlock_t;
 
 
-    uint8_t* mPayload = nullptr;
+    const uint8_t* mPayload;
     uint16_t mPayloadLen = 0;
 
     std::vector<repeatedBlock_t> data;
@@ -147,16 +147,9 @@ protected:
     /*!
      * \brief getTOWforGnssId - provide corresponding value (TOWacc)to the concrete constellation from meta private member
      * \param gnssId - constellation id of UbxGnssId enum
-     * \return TOW accuracy in ms
+     * \return TOW accuracy in ns
      */
-    uint16_t getTOWaccForGnssId(const uint8_t gnssId);
-
-    /*!
-     * \brief setNsFromMs - convert ms to ns
-     * \param ms - milliseconds
-     * \return nanoseconds
-     */
-    int64_t setNsFromMs(uint32_t ms);
+    int64_t getTOWaccForGnssId(const uint8_t gnssId);
 
     /*!
      * \brief getConstellationFromGnssId - convert UbxGnssId to GnssConstellationType

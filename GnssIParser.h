@@ -46,7 +46,7 @@ public:
      * \brief dumpDebug - print some debug info or hexdump for concrete parser
      */
     virtual void dumpDebug() = 0;
-    virtual ~GnssIParser() {}
+    virtual ~GnssIParser();
 };
 
 #endif // __GNSSIPARSER_H__

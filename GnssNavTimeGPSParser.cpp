@@ -36,8 +36,8 @@ enum NavTimeGpsOffsets : uint8_t {
     tAccOffset = 12,
 };
 
-GnssNavTimeGPSParser::GnssNavTimeGPSParser(const char *payload, uint16_t payloadLen) :
-    mPayload((uint8_t*)payload),
+GnssNavTimeGPSParser::GnssNavTimeGPSParser(const uint8_t* payload, uint16_t payloadLen) :
+    mPayload(payload),
     mPayloadLen(payloadLen)
 {
     parseNavTimeGPSMsg();
@@ -49,12 +49,12 @@ void GnssNavTimeGPSParser::parseSingleBlock()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    data.iTow = getUint32(&mPayload[NavTimeGpsOffsets::iTowOffset]);
-    data.fTow = getInt32(&mPayload[NavTimeGpsOffsets::fTowOffset]);
-    data.week = getInt16(&mPayload[NavTimeGpsOffsets::weekOffset]);
+    data.iTow = getValue<uint32_t>(&mPayload[NavTimeGpsOffsets::iTowOffset]);
+    data.fTow = getValue<int32_t>(&mPayload[NavTimeGpsOffsets::fTowOffset]);
+    data.week = getValue<int16_t>(&mPayload[NavTimeGpsOffsets::weekOffset]);
     data.leapS = static_cast<int8_t>(mPayload[NavTimeGpsOffsets::leapSOffset]);
     data.valid = mPayload[NavTimeGpsOffsets::validOffset];
-    data.tAcc = getUint32(&mPayload[NavTimeGpsOffsets::tAccOffset]);
+    data.tAcc = getValue<uint32_t>(&mPayload[NavTimeGpsOffsets::tAccOffset]);
 
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }

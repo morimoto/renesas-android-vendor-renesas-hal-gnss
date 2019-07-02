@@ -25,6 +25,7 @@ static const uint16_t repeatedBlockSize = 24;
 static const uint16_t singleBlockSize = 44;
 static const int64_t towAccScaleDown = 16;
 static const double pseudorangeRateScaleUp = 0.04;
+static const int64_t msToNsMultiplier = 1000000;
 
 // Satellite vehicle numbering according to documentation
 static const uint8_t gpsFirst = 1;
@@ -67,8 +68,8 @@ enum RxmMeasxOffsets : uint8_t {
     pseudorangeRate = 4,
 };
 
-GnssRxmMeasxParser::GnssRxmMeasxParser(const char *payload, uint16_t payloadLen) :
-    mPayload((uint8_t*)payload),
+GnssRxmMeasxParser::GnssRxmMeasxParser(const uint8_t* payload, uint16_t payloadLen) :
+    mPayload(payload),
     mPayloadLen(payloadLen)
 {
     parseRxmMeasMsg();
@@ -84,15 +85,15 @@ void GnssRxmMeasxParser::parseSingleBlock(const uint8_t* msg)
         meta.version = msg[RxmMeasxOffsets::version];
         meta.numSvs = msg[RxmMeasxOffsets::numSvs];
 
-        meta.gpsTOW = getUint32(&msg[RxmMeasxOffsets::gpsTOW]);
-        meta.glonassTOW = getUint32(&msg[RxmMeasxOffsets::glonassTOW]);
-        meta.bdsTOW = getUint32(&msg[RxmMeasxOffsets::bdsTOW]);
-        meta.qzssTOW = getUint32(&msg[RxmMeasxOffsets::qzssTOW]);
+        meta.gpsTOW = getValue<uint32_t>(&msg[RxmMeasxOffsets::gpsTOW]);
+        meta.glonassTOW = getValue<uint32_t>(&msg[RxmMeasxOffsets::glonassTOW]);
+        meta.bdsTOW = getValue<uint32_t>(&msg[RxmMeasxOffsets::bdsTOW]);
+        meta.qzssTOW = getValue<uint32_t>(&msg[RxmMeasxOffsets::qzssTOW]);
 
-        meta.gpsTOWacc = getUint16(&msg[RxmMeasxOffsets::gpsTOWacc]);
-        meta.glonassTOWacc = getUint16(&msg[RxmMeasxOffsets::glonassTOWacc]);
-        meta.bdsTOWacc = getUint16(&msg[RxmMeasxOffsets::bdsTOWacc]);
-        meta.qzssTOWacc = getUint16(&msg[RxmMeasxOffsets::qzssTOWacc]);
+        meta.gpsTOWacc = getValue<uint16_t>(&msg[RxmMeasxOffsets::gpsTOWacc]);
+        meta.glonassTOWacc = getValue<uint16_t>(&msg[RxmMeasxOffsets::glonassTOWacc]);
+        meta.bdsTOWacc = getValue<uint16_t>(&msg[RxmMeasxOffsets::bdsTOWacc]);
+        meta.qzssTOWacc = getValue<uint16_t>(&msg[RxmMeasxOffsets::qzssTOWacc]);
 
         meta.TOWset = msg[RxmMeasxOffsets::TOWset];
         ALOGV("[%s, line %d] Exit", __func__, __LINE__);
@@ -109,7 +110,7 @@ void GnssRxmMeasxParser::parseRepeatedBlock(const uint8_t* msg)
         block.svId = msg[RxmMeasxOffsets::svId];
         block.cn0 = msg[RxmMeasxOffsets::cn0];
         block.multipath = msg[RxmMeasxOffsets::multipath];
-        block.pseudoRangeRate = getInt32(&msg[RxmMeasxOffsets::pseudorangeRate]);
+        block.pseudoRangeRate = getValue<int32_t>(&msg[RxmMeasxOffsets::pseudorangeRate]);
 
         data.push_back(block);
         ALOGV("[%s, line %d] Exit", __func__, __LINE__);
@@ -216,7 +217,7 @@ uint32_t GnssRxmMeasxParser::getTOWforGnssId(const uint8_t gnssId)
     return result;
 }
 
-uint16_t GnssRxmMeasxParser::getTOWaccForGnssId(const uint8_t gnssId)
+int64_t GnssRxmMeasxParser::getTOWaccForGnssId(const uint8_t gnssId)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     if (0 == meta.TOWset || GnssMS::STATE_UNKNOWN == mTOWstate) {
@@ -224,31 +225,33 @@ uint16_t GnssRxmMeasxParser::getTOWaccForGnssId(const uint8_t gnssId)
         return 0;
     }
 
-    uint16_t result  = 1;
+    uint16_t towAccMs  = 0;
 
     switch (gnssId) {
     case UbxGnssId::GPS:
-        result = meta.gpsTOWacc;
+        towAccMs = meta.gpsTOWacc;
         break;
     case UbxGnssId::GLONASS:
-        result = meta.glonassTOWacc;
+        towAccMs = meta.glonassTOWacc;
         break;
     case UbxGnssId::QZSS:
-        result = meta.qzssTOWacc;
+        towAccMs = meta.qzssTOWacc;
         break;
     case UbxGnssId::BEIDOU:
-        result = meta.bdsTOWacc;
+        towAccMs = meta.bdsTOWacc;
         break;
     case UbxGnssId::SBAS:
     case UbxGnssId::GALILEO:
-        result = meta.gpsTOWacc; //TODO: find better solution
+        towAccMs = meta.gpsTOWacc; //TODO: find better solution
         break;
     default:
         mTOWstate = GnssMS::STATE_UNKNOWN;
         return 0;
     }
 
-    return result > 0 ? result : 1;
+    int64_t result = scaleUp(scaleDown(towAccMs, towAccScaleDown), msToNsMultiplier);
+
+    return ((result > 0) ? result : 1);
 }
 
 uint8_t GnssRxmMeasxParser::getValidSvidForGnssId(const uint8_t gnssId, const uint8_t svid)
@@ -285,9 +288,9 @@ float GnssRxmMeasxParser::getCarrierFrequencyFromGnssId(const uint8_t gnssId)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    const float L1BandFrequency = 1575.42;
-    const float B1BandFrequency = 1561.098;
-    const float L1GlonassBandFrequency = 1602.562;
+    const float L1BandFrequency = 1575.42f;
+    const float B1BandFrequency = 1561.098f;
+    const float L1GlonassBandFrequency = 1602.562f;
     const float scale = 1000000.0;
 
     switch (gnssId) {
@@ -311,15 +314,15 @@ void GnssRxmMeasxParser::getGnssMeasurement(IGnssMeasurementCallback::GnssMeasur
 
     instance.carrierFrequencyHz = getCarrierFrequencyFromGnssId(block.gnssId);
     instance.flags = 0;
-    if (instance.carrierFrequencyHz > 0.0) {
+    if (instance.carrierFrequencyHz > 0.0f) {
         instance.flags = static_cast<uint32_t>(GnssMF::HAS_CARRIER_FREQUENCY);
     }
 
     instance.svid = getValidSvidForGnssId(block.gnssId, block.svId);
     instance.constellation = getConstellationFromGnssId(block.gnssId);
 
-    instance.receivedSvTimeInNs = setNsFromMs(getTOWforGnssId(block.gnssId));
-    instance.receivedSvTimeUncertaintyInNs = scaleDown(setNsFromMs(getTOWaccForGnssId(block.gnssId)), towAccScaleDown);
+    instance.receivedSvTimeInNs = scaleUp(getTOWforGnssId(block.gnssId), msToNsMultiplier);
+    instance.receivedSvTimeUncertaintyInNs = getTOWaccForGnssId(block.gnssId);
     instance.state = static_cast<uint32_t>(mTOWstate);
 
     instance.cN0DbHz = static_cast<double>(block.cn0);
@@ -351,14 +354,6 @@ uint8_t GnssRxmMeasxParser::retrieveSvInfo(android::hardware::gnss::V1_0::IGnssM
     }
 
     return NotReady;
-}
-
-int64_t GnssRxmMeasxParser::setNsFromMs(uint32_t ms)
-{
-    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    const int64_t msToNsMultiplier = 1000000;
-    return static_cast<int64_t>(ms) * msToNsMultiplier;
-
 }
 
 void GnssRxmMeasxParser::dumpDebug()

@@ -52,6 +52,21 @@ cc_binary {
         "ThreadCreationWrapper.cpp",
     ],
 
+/*
+    sanitize: {
+          misc_undefined: [
+              "alignment",
+              "bounds",
+              "null",
+              "unreachable",
+              "integer",
+          ],
+          diag: {
+              undefined : true
+          },
+     },
+*/
+
     shared_libs: [
         "liblog",
         "libcutils",
@@ -114,6 +129,16 @@ cc_test {
     sanitize: {
         address: true,
         integer_overflow: true,
+        misc_undefined: [
+            "alignment",
+            "bounds",
+            "null",
+            "unreachable",
+            "integer",
+        ],
+        diag: {
+            undefined : true
+        },
     },
 
     shared_libs: [

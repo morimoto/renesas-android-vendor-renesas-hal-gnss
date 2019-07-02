@@ -27,6 +27,7 @@
 #include <log/log.h>
 
 #include "circular_buffer.h"
+#include <android/hardware/gnss/1.0/IGnss.h>
 
 using namespace std::chrono_literals;
 
@@ -45,11 +46,8 @@ public:
         mThreadExit = false;
         mThread = std::thread(&GnssHwIface::GnssHwHandleThread, this);
     }
-    virtual ~GnssHwIface(void)
-    {
-        mThreadExit = true;
-        if (mThread.joinable()) mThread.join();
-    }
+
+    virtual ~GnssHwIface();
 
     virtual bool start(void) = 0;
     virtual bool stop(void) = 0;
@@ -87,7 +85,7 @@ class GnssHwTTY : public GnssHwIface
 
     int          mFd;
     bool         mEnabled;
-    char         mReaderBuf[mUbxBufferSize];
+    uint8_t      mReaderBuf[mUbxBufferSize];
     size_t       mReaderBufPos = 0;
     ReaderState  mReaderState  = ReaderState::WAITING;
 
@@ -108,8 +106,8 @@ class GnssHwTTY : public GnssHwIface
     };
 
     struct UbxBufferElement {
-        char   data[mUbxBufferSize];
-        size_t len;
+        uint8_t data[mUbxBufferSize];
+        size_t  len;
     };
 
     CircularBuffer<NmeaBufferElement> *mNmeaBuffer;
@@ -140,7 +138,7 @@ class GnssHwTTY : public GnssHwIface
     };
     std::vector<IGnssCallback::GnssSvInfo> mSatellites[static_cast<int>(SatelliteType::COUNT)];
 
-    std::vector<int> mSatellitesUsedInFix[static_cast<int>(SatelliteType::COUNT)];
+    std::vector<int64_t> mSatellitesUsedInFix[static_cast<int>(SatelliteType::COUNT)];
 
     enum class MajorGnssStatus {
         GPS_GLONASS,
@@ -191,7 +189,7 @@ class GnssHwTTY : public GnssHwIface
     const size_t  mUbxPacketSizeNoPayload = 8;
     const size_t  mUbxFirstPayloadOffset  = 6;
 
-    const uint64_t mUbxTimeoutMs = 5000;
+    const int64_t mUbxTimeoutMs = 5000;
 
     std::atomic<int> mUbxAckReceived;
 
@@ -218,7 +216,7 @@ class GnssHwTTY : public GnssHwIface
         size_t      buffer_ptr;
 
         bool        rx_timedout;
-        char*       msg_payload;
+        uint8_t*    msg_payload;
     } mUM;
 
     struct UbxStateQueueElement {
@@ -234,7 +232,7 @@ protected:
     bool OpenDevice(const char* ttyDevDefault);
     bool StartSalvatorProcedure();
 
-    void SelectParser(uint8_t cl, uint8_t id, const char* data, uint16_t dataLen);
+    void SelectParser(uint8_t cl, uint8_t id, const uint8_t* data, uint16_t dataLen);
     void RunWorkerThreads();
     void JoinWorkerThreads();
 
@@ -258,26 +256,26 @@ protected:
     void UBX_ReaderParse(UbxBufferElement* ubx);
     void UBX_Send(const uint8_t* msg, size_t len);
     void UBX_Expect(UbxRxState astate, const char* errormsg); // Expect state (non blocking)
-    bool UBX_Wait(UbxRxState astate, const char* errormsg, uint64_t timeoutMs);   // Wait state (blocking)
+    bool UBX_Wait(UbxRxState astate, const char* errormsg, int64_t timeoutMs);   // Wait state (blocking)
     void UBX_CriticalProtocolError(const char* errormsg);
 
     void UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg);
     void UBX_SetMessageRateCurrentPort(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg);
 
     void SetYearOfHardware();
-    void UBX_ACKParse(const char* data, uint16_t dataLen);
-    void UBX_NACKParse(const char* data, uint16_t dataLen);
+    void UBX_ACKParse(const uint8_t* data, uint16_t dataLen);
+    void UBX_NACKParse(const uint8_t* data, uint16_t dataLen);
     GnssHwTTY();
 
 public:
     GnssHwTTY(int fd);
-    virtual ~GnssHwTTY(void);
+    virtual ~GnssHwTTY(void) override;
 
-    bool start(void);
-    bool stop(void);
-    bool setUpdatePeriod(int);
+    bool start(void) override;
+    bool stop(void) override;
+    bool setUpdatePeriod(int) override;
 
-    uint16_t GetYearOfHardware();
+    uint16_t GetYearOfHardware() override;
     void GnssHwHandleThread(void) final;
 };
 
@@ -294,14 +292,14 @@ class GnssHwFAKE : public GnssHwIface
     void SplitLine(std::string line, std::vector<std::string> &out);
 public:
     GnssHwFAKE(void);
-    virtual ~GnssHwFAKE(void);
+    ~GnssHwFAKE(void) override;
 
-    bool start(void);
-    bool stop(void);
-    bool setUpdatePeriod(int);
+    bool start(void) override;
+    bool stop(void) override;
+    bool setUpdatePeriod(int) override;
 
-    void GnssHwHandleThread(void);
-    uint16_t GetYearOfHardware() {return 0;}
+    void GnssHwHandleThread(void) override;
+    uint16_t GetYearOfHardware() override {return 0;}
 };
 
 

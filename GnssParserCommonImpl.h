@@ -20,57 +20,64 @@
 #include "GnssIParser.h"
 
 class GnssParserCommonImpl : public GnssIParser {
+
+    /*!
+     * \brief isBigEndian - check if current system is big endian
+     * \return true if big endian
+     */
+    bool isBigEndian();
+
+    template <typename T>
+    T get(const uint8_t* ptr)
+    {
+        union
+        {
+            T out;
+            uint8_t in[sizeof(T)];
+        } result;
+
+        size_t sizeOfType = sizeof(T);
+        for(size_t i = 0; i < sizeOfType; ++i) {
+            result.in[i] = ptr[i];
+        }
+
+        return result.out;
+    }
+
+    template <typename T>
+    T convert(const uint8_t* ptr)
+    {
+        union
+        {
+            T out;
+            uint8_t in[sizeof(T)];
+        } result;
+
+        size_t reverseCounter = sizeof(T) - 1;
+        for (auto& byte : result.in) {
+            byte = ptr[reverseCounter];
+            --reverseCounter;
+        }
+
+        return result.out;
+    }
+
 public:
     /*!
      * \brief retrieveSvInfo - provide data collected from parsed messages
      * \param gnssData - a reference to fill the object
      * \return status of operation
      */
-    virtual uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) = 0;
+    virtual uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) override = 0;
 
     /*!
      * \brief dumpDebug - provide minimal debug log
      */
-    virtual void dumpDebug();
+    virtual void dumpDebug() override;
 
-    virtual ~GnssParserCommonImpl() {}
+    virtual ~GnssParserCommonImpl() override {}
 
 protected:
-    /*!
-     * \brief getUint16 - get two byte integer
-     * \param ptr - a pointer to a byte array
-     * \return unsigned short integer value
-     */
-    uint16_t getUint16(const uint8_t* ptr);
-
-    /*!
-     * \brief getUint32 - get four byte integer
-     * \param ptr - a pointer to a byte array
-     * \return unsigned integer value
-     */
-    uint32_t getUint32(const uint8_t* ptr);
-
-    /*!
-     * \brief getFloat - get four byte float value
-     * \param ptr - a pointer to a byte array
-     * \return float value
-     */
-    float getFloat(const uint8_t* ptr);
-
-    /*!
-     * \brief getInt16 - get two byte integer
-     * \param ptr - a pointer to a byte array
-     * \return signed short integer value
-     */
-    int16_t getInt16(const uint8_t* ptr);
-
-    /*!
-     * \brief getInt32 - get four byte integer
-     * \param ptr - a pointer to a byte array
-     * \return signed integer value
-     */
-    int32_t getInt32(const uint8_t* ptr);
-
     /*!
      * \brief scaleDown - scaling usin division
      */
@@ -124,5 +131,24 @@ protected:
      * \param buflen - length in bytes of data to be dumped
      */
     void hexdump(const char* file, void* ptr, size_t buflen);
+
+    /*!
+     * \brief getValue
+     * \param ptr
+     * \return
+     */
+    template <typename T>
+    T getValue(const uint8_t* ptr)
+    {
+        if (nullptr == ptr) {
+            return 0;
+        }
+
+        if (isBigEndian()) {
+            return convert<T>(ptr);
+        }
+
+        return get<T>(ptr);
+    }
 };
 #endif // __GNSSPARSERCOMMONIMPL_H__

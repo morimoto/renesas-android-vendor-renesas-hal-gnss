@@ -44,8 +44,8 @@ public:
      * \param payload - a pointer to the payload of incoming message
      * \param payloadLen - length in bytes of payload
      */
-    GnssNavClockParser(const char* payload, uint16_t payloadLen);
-    ~GnssNavClockParser(){}
+    GnssNavClockParser(const uint8_t* payload, uint16_t payloadLen);
+    ~GnssNavClockParser() override {}
 
     /*!
      * \brief retrieveSvInfo - fill the gnssData object with collected data
@@ -88,7 +88,7 @@ private:
         uint32_t freqAccuracyEstimate;
     } navClock_t;
 
-    uint8_t* mPayload = nullptr;
+    const uint8_t* mPayload;
     uint16_t mPayloadLen = 0;
 
     bool mValid = false;

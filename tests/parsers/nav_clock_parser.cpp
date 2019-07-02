@@ -28,7 +28,7 @@
 //d0 03 00 00  976         timeAccuracy ns
 //43 0f 00 00  3907        Freq acc estimate ps/s
 
-static const char ubxNavClockDump[] = {
+static const uint8_t ubxNavClockDump[] = {
     0x80, 0xee, 0x2e, 0x1d,
     0xe8, 0x74, 0x06, 0x00,
     0xd8, 0xfd, 0xff, 0xff,
@@ -140,7 +140,7 @@ TEST_F(GnssNavClockParserTest, checkRetrievedDataFromDumpInput)
     IGnssMeasurementCallback::GnssData data;
     EXPECT_EQ(ClockDone, obj.retrieveSvInfo(data));
     IGnssMeasurementCallback::GnssClock &clock = data.clock;
-    EXPECT_EQ(navClockSample.clockBias, clock.fullBiasNs);
+    EXPECT_EQ(navClockSample.clockBias, clock.biasNs);
     EXPECT_EQ(navClockSample.clockDrift, clock.driftNsps);
     EXPECT_EQ((uint32_t)0, clock.hwClockDiscontinuityCount);
 }

@@ -42,56 +42,56 @@ uint8_t GnssParserCommonImplTest::retrieveSvInfo(IGnssMeasurementCallback::GnssD
 TEST_F(GnssParserCommonImplTest, getUint16NormalInput)
 {
     const uint16_t expected = 513;
-    uint16_t res = GnssParserCommonImpl::getUint16(sample);
+    uint16_t res = GnssParserCommonImpl::getValue<uint16_t>(sample);
     ASSERT_EQ(expected, res);
 }
 
 TEST_F(GnssParserCommonImplTest, getUint16ZeroBytes)
 {
     const uint16_t expected = 0;
-    uint16_t res = GnssParserCommonImpl::getUint16(&sample[sizeof(sample) - 2]);
+    uint16_t res = GnssParserCommonImpl::getValue<uint16_t>(&sample[sizeof(sample) - 2]);
     ASSERT_EQ(expected, res);
 }
 
 TEST_F(GnssParserCommonImplTest, getUint16FFBytes)
 {
     const uint16_t expected = (uint16_t)-1;
-    uint16_t res = GnssParserCommonImpl::getUint16(&sample[sizeof(sample) - 4]);
+    uint16_t res = GnssParserCommonImpl::getValue<uint16_t>(&sample[sizeof(sample) - 4]);
     ASSERT_EQ(expected, res);
 }
 
 TEST_F(GnssParserCommonImplTest, getUint16NullInput)
 {
     const uint16_t expected = 0;
-    uint16_t res = GnssParserCommonImpl::getUint16(nullptr);
+    uint16_t res = GnssParserCommonImpl::getValue<uint16_t>(nullptr);
     ASSERT_EQ(expected, res);
 }
 
 TEST_F(GnssParserCommonImplTest, getUint32NormalInput)
 {
     const uint32_t expected = 67305985;
-    uint32_t res = GnssParserCommonImpl::getUint32(sample);
+    uint32_t res = GnssParserCommonImpl::getValue<uint32_t>(sample);
     ASSERT_EQ(expected, res);
 }
 
 TEST_F(GnssParserCommonImplTest, getUint32ZeroBytes)
 {
     const uint32_t expected = 0;
-    uint32_t res = GnssParserCommonImpl::getUint32(&sample[4]);
+    uint32_t res = GnssParserCommonImpl::getValue<uint32_t>(&sample[4]);
     ASSERT_EQ(expected, res);
 }
 
 TEST_F(GnssParserCommonImplTest, getUint32FFBytes)
 {
     const uint32_t expected = (uint32_t) -1;
-    uint32_t res = GnssParserCommonImpl::getUint32(&sample[8]);
+    uint32_t res = GnssParserCommonImpl::getValue<uint32_t>(&sample[8]);
     ASSERT_EQ(expected, res);
 }
 
 TEST_F(GnssParserCommonImplTest, getUint32NullInput)
 {
     const uint32_t expected = 0;
-    uint32_t res = GnssParserCommonImpl::getUint32(nullptr);
+    uint32_t res = GnssParserCommonImpl::getValue<uint32_t>(nullptr);
     ASSERT_EQ(expected, res);
 }
 
@@ -108,8 +108,8 @@ TEST_F(GnssParserCommonImplTest, scaleUpIntDouble)
 TEST_F(GnssParserCommonImplTest, scaleUpDoubleUint32)
 {
     const uint32_t varUint32 = 10;
-    const double varDouble = 0.25;
-    const uint32_t expUint32 = 2;
+    const double varDouble = 2.25;
+    const uint32_t expUint32 = 20;
     auto res = scaleUp(varDouble, varUint32);
     ASSERT_EQ(expUint32, res);
     ASSERT_EQ(sizeof(res), sizeof(varUint32));
