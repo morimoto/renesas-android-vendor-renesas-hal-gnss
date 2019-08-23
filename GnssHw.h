@@ -127,6 +127,11 @@ class GnssHwTTY : public GnssHwIface
     std::mutex mUbxThreadLock;
     std::mutex mHandleThreadLock;
 
+    double mUbxFirmwareVersion = 0.0;
+    std::atomic<bool> mFwVersionReady = false;
+    std::condition_variable mFirmwareCv;
+    std::mutex mFwLock;
+
     enum class SatelliteType {
         GPS_SBAS_QZSS = 0,
         GLONASS       = 1,
@@ -242,7 +247,8 @@ protected:
     void SetNMEA23();
     void SetNMEA41();
     void PollCommonMessages();
-    void PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t ubxCfgGnss[]);
+    void PollMonVer();
+    void PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t* ubxCfgGnss, const size_t& cfgSize);
     void SetConstValuesOfHardware(uint16_t gen);
 
     void InitUblox7Gen();
@@ -265,6 +271,7 @@ protected:
     void SetYearOfHardware();
     void UBX_ACKParse(const uint8_t* data, uint16_t dataLen);
     void UBX_NACKParse(const uint8_t* data, uint16_t dataLen);
+    void UBX_MonVerParse(const char* data, uint16_t dataLen);
     GnssHwTTY();
 
 public:

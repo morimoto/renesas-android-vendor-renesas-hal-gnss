@@ -27,6 +27,8 @@
 #include <cstdlib>
 #include <algorithm>
 #include <memory>
+#include <cmath>
+#include <regex>
 
 #include <utils/SystemClock.h>
 #include <sys/system_properties.h>
@@ -44,18 +46,24 @@
 #include "GnssMeasQueue.h"
 #include "UsbHandler.h"
 
+
+static const double SPG201 = 2.01;
+static const double SPG301 = 3.01;
+
 static const uint16_t ublox7 = 0x01a7;
 static const uint16_t ublox8 = 0x01a8;
 
 static const uint8_t classUbxNav = 0x01;
 static const uint8_t classUbxRxm = 0x02;
 static const uint8_t classNmeaCfg = 0xF0;
+static const uint8_t classUbxMon = 0x0A;
 
 static const uint8_t idClock = 0x22;
 static const uint8_t idMeasx = 0x14;
 static const uint8_t idTimeGps = 0x20;
 static const uint8_t idStatus = 0x03;
 static const uint8_t idRMC = 0x04;
+static const uint8_t idVer = 0x04;
 
 static const uint8_t rate = 0x01;
 static const uint8_t rateRMC = 0x01;
@@ -103,6 +111,11 @@ static const uint8_t ublox_enable_nmea23[] = {0x06, 0x17, 0x0C, 0x00, 0x20, 0x23
                                               0x01, 0x00, 0x00, 0x01};
 
 static void GetProp(char* secmajor, char* sbas);
+
+static bool DoubleCmp(double a, double b, double epsilon = 0.001)
+{
+    return std::fabs(a - b) < epsilon;
+}
 
 template <typename mPtr>
 static inline void CheckNotNull(mPtr val, const char* msg)
@@ -422,18 +435,26 @@ void GnssHwTTY::ConfigGnssUblox7()
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
 }
 
-void GnssHwTTY::PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t ubxCfgGnss[64])
+void GnssHwTTY::PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t* ubxCfgGnss, const size_t& cfgSize)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    if (nullptr == propSecmajor || nullptr == propSbas || nullptr == ubxCfgGnss) {
+    if (nullptr == propSecmajor || nullptr == propSbas ||
+            nullptr == ubxCfgGnss || 0 == cfgSize) {
         ALOGV("[%s, line %d] Wrong input", __func__, __LINE__);
         return;
     }
 
-    const int CFG_GNSS_ENTRY_SIZE = 8;
-    const int CFG_GNSS_SBAS    = 2;
-    const int CFG_GNSS_BEIDOU  = 4;
-    const int CFG_GNSS_GLONASS = 7;
+    int cfg_gnss_entry_size = 8;
+    int cfg_gnss_sbas = 2;
+    int cfg_gnss_beidou = 4;
+    int cfg_gnss_glonass = 7;
+
+    if (DoubleCmp(SPG201, mUbxFirmwareVersion)) {
+        cfg_gnss_entry_size = 6;
+        cfg_gnss_sbas = 2;
+        cfg_gnss_beidou = 3;
+        cfg_gnss_glonass = 5;
+    }
 
     const int CFG_GNSS_MIN = 1;
     const int CFG_GNSS_ENB = 4;
@@ -441,19 +462,19 @@ void GnssHwTTY::PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t ub
     bool sbasEnabled = true;
     if (strncmp(propSbas, "DISABLE", PROPERTY_VALUE_MAX) == 0) {
         sbasEnabled = false;
-        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_SBAS + CFG_GNSS_MIN] = 0x00; // set minimum tracking channels for SBAS to zero
-        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_SBAS + CFG_GNSS_ENB] = 0x00; // disable SBAS
+        ubxCfgGnss[cfg_gnss_entry_size * cfg_gnss_sbas + CFG_GNSS_MIN] = 0x00; // set minimum tracking channels for SBAS to zero
+        ubxCfgGnss[cfg_gnss_entry_size * cfg_gnss_sbas + CFG_GNSS_ENB] = 0x00; // disable SBAS
     }
 
-    ALOGI("Using GPS (major GNSS) and minor ones: GALILEO, QZSS%s", (sbasEnabled) ? ", SBAS" : "");
+//    ALOGI("Using GPS (major GNSS) and minor ones: GALILEO, QZSS%s", (sbasEnabled) ? ", SBAS" : "");
     if (strncmp(propSecmajor, "GLONASS", PROPERTY_VALUE_MAX) == 0) {
-        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_GLONASS + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for GLONASS to eight
-        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_GLONASS + CFG_GNSS_ENB] = 0x01; // enable GLONASS
+        ubxCfgGnss[cfg_gnss_entry_size * cfg_gnss_glonass + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for GLONASS to eight
+        ubxCfgGnss[cfg_gnss_entry_size * cfg_gnss_glonass + CFG_GNSS_ENB] = 0x01; // enable GLONASS
         ALOGI("Using GLONASS as second major GNSS");
         mMajorGnssStatus = MajorGnssStatus::GPS_GLONASS;
     } else if (strncmp(propSecmajor, "BEIDOU", PROPERTY_VALUE_MAX) == 0) {
-        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_BEIDOU + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for BEIDOU to eight
-        ubxCfgGnss[CFG_GNSS_ENTRY_SIZE * CFG_GNSS_BEIDOU + CFG_GNSS_ENB] = 0x01; // enable BEIDOU
+        ubxCfgGnss[cfg_gnss_entry_size * cfg_gnss_beidou + CFG_GNSS_MIN] = 0x08; // set minimum tracking channels for BEIDOU to eight
+        ubxCfgGnss[cfg_gnss_entry_size * cfg_gnss_beidou + CFG_GNSS_ENB] = 0x01; // enable BEIDOU
         ALOGI("Using BEIDOU as second major GNSS");
         mMajorGnssStatus = MajorGnssStatus::GPS_BEIDOU;
     } else {
@@ -488,18 +509,38 @@ void GnssHwTTY::ConfigGnssUblox8()
     //    QZSS    | 05 00 03 00 01 00 01 05
     //    GLONASS | 06 08 0E 00 01 00 01 01
 
-    uint8_t ubloxCfgGnss[] = {0x06, 0x3E, 0x3C, 0x00, 0x00, 0x20, 0x20, 0x07,
-                              0x00, 0x08, 0x10, 0x00, 0x01, 0x00, 0x01, 0x01,  // GPS
-                              0x01, 0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x01,  // SBAS
-                              0x02, 0x04, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01,  // GALILEO
-                              0x03, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x01,  // BEIDOU
-                              0x04, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x03,  // IMES
-                              0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x05,  // QZSS
-                              0x06, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x01, 0x01}; // GLONASS
+    uint8_t* msgCfgGnss = nullptr;
+    size_t msgCfgSize = 0;
+    uint8_t ubloxCfgGnssSpg2[] = {0x06, 0x3E, 0x2C, 0x00, 0x00, 0x20, 0x20, 0x05,
+                                  0x00, 0x08, 0x10, 0x00, 0x01, 0x00, 0x01, 0x01,  // GPS
+                                  0x01, 0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x01,  // SBAS
+                                  0x03, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x01,  // BEIDOU
+                                  0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x05,  // QZSS
+                                  0x06, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x01, 0x01}; // GLONASS
 
-    PrepareGnssConfig(propSecmajor, propSbas, ubloxCfgGnss);
+    uint8_t ubloxCfgGnssSpg3[] = {0x06, 0x3E, 0x3C, 0x00, 0x00, 0x20, 0x20, 0x07,
+                                  0x00, 0x08, 0x10, 0x00, 0x01, 0x00, 0x01, 0x01,  // GPS
+                                  0x01, 0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x01,  // SBAS
+                                  0x02, 0x04, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01,  // GALILEO
+                                  0x03, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x01,  // BEIDOU
+                                  0x04, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x03,  // IMES
+                                  0x05, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x05,  // QZSS
+                                  0x06, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x01, 0x01}; // GLONASS
 
-    UBX_Send(ubloxCfgGnss, sizeof(ubloxCfgGnss));
+    if (DoubleCmp(SPG201, mUbxFirmwareVersion)) {
+        msgCfgGnss = ubloxCfgGnssSpg2;
+        msgCfgSize = sizeof(ubloxCfgGnssSpg2);
+    } else if (DoubleCmp(SPG301, mUbxFirmwareVersion)) {
+        msgCfgGnss = ubloxCfgGnssSpg3;
+        msgCfgSize = sizeof(ubloxCfgGnssSpg3);
+    } else {
+        ALOGI("Running with default gnss configuration");
+        return;
+    }
+
+    PrepareGnssConfig(propSecmajor, propSbas, msgCfgGnss, msgCfgSize);
+
+    UBX_Send(msgCfgGnss, msgCfgSize);
     UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
 }
 
@@ -565,11 +606,26 @@ void GnssHwTTY::InitUblox8Gen()
     UBX_SetMessageRateCurrentPort(classUbxRxm, idMeasx, rate, "UBX-RXM-MEASX config failed");
 }
 
+void GnssHwTTY::PollMonVer()
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    const uint8_t msgPollMonVer[] = { 0x0a, 0x04, 0x00, 0x00 };
+    UBX_Send(msgPollMonVer, sizeof(msgPollMonVer));
+
+    if (!mFwVersionReady) {
+        std::unique_lock<std::mutex> lock(mFwLock);
+        mFirmwareCv.wait_for(lock, std::chrono::milliseconds{mUbxTimeoutMs}, [=] { return mFwVersionReady.load();});
+    }
+
+    ALOGV("[%s, line %d] Exit", __func__, __LINE__);
+}
+
 void GnssHwTTY::GnssHwUbxInitThread(void)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
     UBX_Reset();
+    PollMonVer();
     switch (mUbxGeneration) {
     case ublox7: {
         InitUblox7Gen();
@@ -1610,6 +1666,8 @@ void GnssHwTTY::SelectParser(uint8_t cl, uint8_t id, const uint8_t* data, uint16
         UBX_ACKParse(data, dataLen);
     } else if (mAckClass == cl && mAckNakId == id) {
         UBX_NACKParse(data, dataLen);
+    } else if (classUbxMon == cl && idVer == id) {
+        UBX_MonVerParse(reinterpret_cast<const char*>(data), dataLen);
     }
 
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
@@ -1655,4 +1713,25 @@ void GnssHwTTY::UBX_NACKParse(const uint8_t* data, uint16_t dataLen)
             }
         }
     }
+}
+
+void GnssHwTTY::UBX_MonVerParse(const char* data, uint16_t dataLen)
+{
+    ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    const uint16_t swVersionLen = 30;
+    if (nullptr == data || dataLen < swVersionLen) {
+        ALOGV("[%s, line %d] Wrong input", __func__, __LINE__);
+        ALOGE("Failed to parse ubx-mon-ver");
+        return;
+    }
+
+    std::cmatch swStr;
+    std::regex example("\\d\\.\\d\\d");
+    if (std::regex_search(data, swStr, example)) {
+        mUbxFirmwareVersion = atof(swStr.str().c_str());
+    }
+
+    mFwVersionReady = true;
+    mFirmwareCv.notify_one();
+    ALOGI("Firmware Version %.2f", mUbxFirmwareVersion);
 }
