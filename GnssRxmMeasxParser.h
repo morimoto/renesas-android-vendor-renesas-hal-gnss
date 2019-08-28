@@ -34,14 +34,11 @@
  * Description: Satellite Measurements for RRLP
 */
 
-using ::android::hardware::gnss::V1_0::IGnssMeasurementCallback;
-using ::android::hardware::gnss::V1_0::GnssConstellationType;
-using ::android::hardware::gnss::V1_0::GnssMax;
-
-typedef IGnssMeasurementCallback::GnssMeasurementState GnssMS;
-typedef IGnssMeasurementCallback::GnssMultipathIndicator GnssMI;
-typedef IGnssMeasurementCallback::GnssAccumulatedDeltaRangeState GnssADRS;
-typedef IGnssMeasurementCallback::GnssMeasurementFlags GnssMF;
+typedef MeasurementCb::GnssMeasurementState MeasurementState;
+typedef MeasurementCb::GnssMultipathIndicator MultipathId;
+typedef MeasurementCb::GnssAccumulatedDeltaRangeState
+AccumulatedDeltaRangeState;
+typedef MeasurementCb::GnssMeasurementFlags MeasurementFlags;
 
 class GnssRxmMeasxParser : public GnssParserCommonImpl {
 public:
@@ -53,7 +50,7 @@ public:
      * \param gnssData - reference to gnssData object, to be filled
      * \return RxmDone on success, otherwise NotReady
      */
-    uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) final;
+    uint8_t retrieveSvInfo(MeasurementCb::GnssData& gnssData) final;
 
 
     /*!
@@ -64,8 +61,6 @@ public:
 
 private:
     typedef struct SingleBlock {
-        uint8_t version;
-        uint8_t numSvs;
         uint32_t gpsTOW;
         uint32_t glonassTOW;
         uint32_t bdsTOW;
@@ -74,6 +69,8 @@ private:
         uint16_t glonassTOWacc;
         uint16_t bdsTOWacc;
         uint16_t qzssTOWacc;
+        uint8_t version;
+        uint8_t numSvs;
         uint8_t TOWset;
     } singleBlock_t;
 
@@ -86,17 +83,17 @@ private:
     } repeatedBlock_t;
 
 
+    std::vector<repeatedBlock_t> data;
     const uint8_t* mPayload;
+    MeasurementState mTOWstate = MeasurementState::STATE_TOW_DECODED;
+    singleBlock_t meta = {};
     uint16_t mPayloadLen = 0;
 
-    std::vector<repeatedBlock_t> data;
-    singleBlock_t meta;
     /*!
      * \brief mValid - object is valid if all procedures were done successfully
      * \brief denotes if the data could be retrieved
      */
     bool mValid = false;
-    GnssMS mTOWstate = GnssMS::STATE_TOW_DECODED;
 
 protected:
     enum UbxGnssId : uint8_t {
@@ -108,7 +105,7 @@ protected:
         GLONASS = 6,
     };
 
-    GnssRxmMeasxParser(){}
+    GnssRxmMeasxParser() : mPayload(nullptr) {}
 
     /*!
      * \brief parseRxmMeasMsg - collect data from input message and fill meta and data private members
@@ -156,7 +153,7 @@ protected:
      * \param gnssId - index of constellation in means of UbxGnssId
      * \return constellation in means of GnssConstellationType
      */
-    GnssConstellationType getConstellationFromGnssId(const uint8_t gnssId);
+    CnstlType getConstellationFromGnssId(const uint8_t gnssId);
 
     /*!
      * \brief getValidSvidForGnssId - validate svid
@@ -180,7 +177,8 @@ protected:
      * \param instance - reference to the hidl_array of GnssMeasurement structures
      * \param block - reference to the repeated block that corresponds to the concrete Satellite Vehicle
      */
-    void getGnssMeasurement(IGnssMeasurementCallback::GnssMeasurement &instance, repeatedBlock_t &block);
+    void getGnssMeasurement(MeasurementCb::GnssMeasurement& instance,
+                            const repeatedBlock_t& block);
 };
 
 #endif // __GNSSRXMMEASXPARSER_H__

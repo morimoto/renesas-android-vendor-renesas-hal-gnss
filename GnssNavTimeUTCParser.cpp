@@ -135,7 +135,7 @@ bool GnssNavTimeUTCParser::setTimeNano()
     return true;
 }
 
-uint8_t GnssNavTimeUTCParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData __unused)
+uint8_t GnssNavTimeUTCParser::retrieveSvInfo(MeasurementCb::GnssData &gnssData __unused)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     return NotReady;
@@ -183,6 +183,7 @@ bool GnssNavTimeUTCParser::checkFlags()
     bool validITow = isValidFlag(data.flags, validITowMask);
     bool validWeek = isValidFlag(data.flags, validWeekMask);
     bool validUtc = isValidFlag(data.flags, validUtcMask);
+    (void)UTCStandardId;
     (void)validITow;
 
     ALOGV("[%s, line %d] flags: tow %u, week %u, utc %u, standard %u",

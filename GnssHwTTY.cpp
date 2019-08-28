@@ -65,7 +65,7 @@ static const uint8_t idStatus = 0x03;
 static const uint8_t idRMC = 0x04;
 static const uint8_t idVer = 0x04;
 
-static const uint8_t rate = 0x01;
+static const uint8_t defaultRate = 0x01;
 static const uint8_t rateRMC = 0x01;
 
 // According to u-blox M8 Receiver Description - Manual, UBX-13003221, R16 (5.11.2018),  32.2.14 RMC, p. 124
@@ -378,16 +378,11 @@ static void GetProp(char* secmajor, char* sbas)
     property_get("ro.boot.gps.secmajor", secmajor, "glonass");
     property_get("ro.boot.gps.sbas", sbas, "enable");
 
-    auto prop_secmajor_len = strnlen(secmajor, PROPERTY_VALUE_MAX);
-    auto prop_sbas_len = strnlen(sbas, PROPERTY_VALUE_MAX);
+    std::string secondMajor(secmajor);
+    std::string sbasEnabled(sbas);
 
-    for (size_t i = 0; i < prop_secmajor_len; i++) {
-        secmajor[i] = static_cast<char>(toupper(secmajor[i]));
-    }
-
-    for (size_t i = 0; i < prop_sbas_len; i++) {
-        sbas[i] = static_cast<char>(toupper(sbas[i]));
-    }
+    std::transform(secondMajor.begin(), secondMajor.end(), secmajor, ::toupper);
+    std::transform(sbasEnabled.begin(), sbasEnabled.end(), sbas, ::toupper);
 }
 
 void GnssHwTTY::ConfigGnssUblox7()
@@ -555,9 +550,9 @@ void GnssHwTTY::PollCommonMessages()
     UBX_SetMessageRate(0xF0, 0x01, 0, nullptr); // disable GLL
     UBX_SetMessageRate(0xF0, 0x05, 0, nullptr); // disable VTG
 
-    UBX_SetMessageRateCurrentPort(classUbxNav, idClock, rate, "UBX-NAV-CLOCK config failed");
-    UBX_SetMessageRateCurrentPort(classUbxNav, idTimeGps, rate, "UBX-NAV-GPS-TIME config failed");
-    UBX_SetMessageRateCurrentPort(classUbxNav, idStatus, rate, "UBX-NAV-STATUS config failed");
+    UBX_SetMessageRateCurrentPort(classUbxNav, idClock, defaultRate, "UBX-NAV-CLOCK config failed");
+    UBX_SetMessageRateCurrentPort(classUbxNav, idTimeGps, defaultRate, "UBX-NAV-GPS-TIME config failed");
+    UBX_SetMessageRateCurrentPort(classUbxNav, idStatus, defaultRate, "UBX-NAV-STATUS config failed");
 
     UBX_SetMessageRate(classNmeaCfg, idRMC, rateRMC, nullptr); // reduce RMC rate
 
@@ -603,7 +598,7 @@ void GnssHwTTY::InitUblox8Gen()
     ConfigGnssUblox8();
     PollCommonMessages();
 
-    UBX_SetMessageRateCurrentPort(classUbxRxm, idMeasx, rate, "UBX-RXM-MEASX config failed");
+    UBX_SetMessageRateCurrentPort(classUbxRxm, idMeasx, defaultRate, "UBX-RXM-MEASX config failed");
 }
 
 void GnssHwTTY::PollMonVer()
@@ -1157,7 +1152,7 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
     }
 
     if (valid_msg) {
-        /* Per one GPGSV message max 4 sattelite records */
+        // Per one GPGSV message max 4 sattelite records
         size_t offset = static_cast<size_t>((sentence_idx - 1) * 4);
         size_t parts = static_cast<size_t>(std::min((num_svs - static_cast<int>(offset)), 4));
 
@@ -1173,23 +1168,23 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
             size_t idx = 4 + (part * 4);
 
             /**
-         * Pseudo-random number for the SV, or FCN/OSN number for Glonass. The
-         * distinction is made by looking at constellation field. Values must be
-         * in the range of:
-         *
-         * - GNSS:    1-32
-         * - SBAS:    120-151, 183-192
-         * - GLONASS: 1-24, the orbital slot number (OSN), if known.  Or, if not:
-         *            93-106, the frequency channel number (FCN) (-7 to +6) offset by
-         *            + 100
-         *            i.e. report an FCN of -7 as 93, FCN of 0 as 100, and FCN of +6
-         *            as 106.
-         * - QZSS:    193-200
-         * - Galileo: 1-36
-         * - Beidou:  1-37
-         */
+             * Pseudo-random number for the SV, or FCN/OSN number for Glonass. The
+             * distinction is made by looking at constellation field. Values must be
+             * in the range of:
+             *
+             * - GNSS:    1-32
+             * - SBAS:    120-151, 183-192
+             * - GLONASS: 1-24, the orbital slot number (OSN), if known.  Or, if not:
+             *            93-106, the frequency channel number (FCN) (-7 to +6) offset by
+             *            + 100
+             *            i.e. report an FCN of -7 as 93, FCN of 0 as 100, and FCN of +6
+             *            as 106.
+             * - QZSS:    193-200
+             * - Galileo: 1-36
+             * - Beidou:  1-37
+             */
 
-            sv.svid = static_cast<int16_t>(std::atoi(gsv[idx + 0].c_str()));
+            sv.svid = static_cast<int16_t>(std::atoi(gsv[idx].c_str()));
 
             std::vector<int64_t>* usedInFix = &mSatellitesUsedInFix[static_cast<int>(currentSatelliteType)];
             for (auto it = usedInFix->begin(); it != usedInFix->end();) {
@@ -1284,13 +1279,11 @@ void GnssHwTTY::NMEA_ReaderParse_xxGSV(char *msg)
               mSatellites[0].size(), mSatellites[1].size(), mSatellites[2].size(), mSatellites[3].size(),
               mSatellites[4].size(), svCount);
 
-        if (sentences == sentence_idx) { /* Last SVS received and parsed */
-            if (mEnabled) {
-                if (mGnssCb != nullptr) {
-                    auto ret = mGnssCb->gnssSvStatusCb(mSvStatus);
-                    if (!ret.isOk()) {
-                        ALOGE("[%s, line %d]: Unable to invoke gnssSvStatusCb", __func__, __LINE__);
-                    }
+        if (mEnabled) {
+            if (mGnssCb != nullptr) {
+                auto ret = mGnssCb->gnssSvStatusCb(mSvStatus);
+                if (!ret.isOk()) {
+                    ALOGE("[%s, line %d]: Unable to invoke gnssSvStatusCb", __func__, __LINE__);
                 }
             }
         }
@@ -1511,6 +1504,9 @@ void GnssHwTTY::UBX_ReaderParse(UbxBufferElement *ubx)
 void GnssHwTTY::UBX_Send(const uint8_t* msg, size_t len)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
+    const size_t ofstUbxSync1 = 0;
+    const size_t ofstUbxSync2 = 1;
+    const size_t ofstPayload = 2;
 
     if (nullptr == msg) {
         ALOGD("[%s, line %d] Null input msg", __func__, __LINE__);
@@ -1519,20 +1515,20 @@ void GnssHwTTY::UBX_Send(const uint8_t* msg, size_t len)
     }
 
     if (len >= mUbxBufferSize) {
-        len = mUbxBufferSize - 1;
+        len = mUbxBufferSize - ofstPayload;
     }
 
     uint8_t tx_buffer[mUbxBufferSize];
 
     // header (sync)
-    tx_buffer[0] = mUbxSync1;
-    tx_buffer[1] = mUbxSync2;
+    tx_buffer[ofstUbxSync1] = mUbxSync1;
+    tx_buffer[ofstUbxSync2] = mUbxSync2;
 
     // data
-    memcpy(&tx_buffer[2], msg, len);
+    memcpy(&tx_buffer[ofstPayload], msg, len);
 
     // checksum
-    size_t checksum_offset_a = 2 + len;
+    size_t checksum_offset_a = ofstPayload + len;
     size_t checksum_offset_b = checksum_offset_a + 1;
 
     tx_buffer[checksum_offset_a] = 0;

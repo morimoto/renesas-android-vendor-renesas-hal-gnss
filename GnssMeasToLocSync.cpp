@@ -19,6 +19,11 @@
 
 #include "GnssMeasToLocSync.h"
 
+GnssMeasToLocSync& GnssMeasToLocSync::getInstance() {
+    static GnssMeasToLocSync instance;
+    return instance;
+}
+
 GnssMeasToLocSync::GnssMeasToLocSync()
 {
     mEventsToWait = 0;

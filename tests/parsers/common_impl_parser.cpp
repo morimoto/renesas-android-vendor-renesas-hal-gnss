@@ -30,10 +30,10 @@ static const uint8_t sample[] = {
 class GnssParserCommonImplTest : public GnssParserCommonImpl, public ::testing::Test {
 protected:
     void SetUp() {}
-    uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) final;
+    uint8_t retrieveSvInfo(MeasurementCb::GnssData &gnssData) final;
 };
 
-uint8_t GnssParserCommonImplTest::retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData)
+uint8_t GnssParserCommonImplTest::retrieveSvInfo(MeasurementCb::GnssData &gnssData)
 {
     (void)gnssData;
     return 0;

@@ -61,9 +61,9 @@ void GnssHwTTYTest::SetUp()
     singleBlockSize = 44;
     cl = 0x02;
     id = 0x14;
-    mStateFlags = IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED |
-            IGnssMeasurementCallback::GnssMeasurementState::STATE_BIT_SYNC |
-            IGnssMeasurementCallback::GnssMeasurementState::STATE_SUBFRAME_SYNC;
+    mStateFlags = MeasurementCb::GnssMeasurementState::STATE_TOW_DECODED |
+            MeasurementCb::GnssMeasurementState::STATE_BIT_SYNC |
+            MeasurementCb::GnssMeasurementState::STATE_SUBFRAME_SYNC;
 }
 
 TEST_F(GnssHwTTYTest, selectParserRxmMeasxDumpNormalInput)
@@ -79,7 +79,7 @@ TEST_F(GnssHwTTYTest, selectParserRxmMeasxDumpNormalInput)
     const uint32_t emptyDataMeasCount = 0;
     const uint32_t dumpedDataMeasCount = 6;
 
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     data.measurementCount = 0;
     EXPECT_EQ(emptyDataMeasCount, data.measurementCount);
 
@@ -94,10 +94,10 @@ TEST_F(GnssHwTTYTest, selectParserRxmMeasxDumpNormalInput)
 
     for (uint32_t i = 0; i < data.measurementCount; ++i) {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
-        EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
+        EXPECT_EQ(CnstlType::GPS, data.measurements[i].constellation);
         EXPECT_EQ(mStateFlags, data.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
-        EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
+        EXPECT_EQ(MeasurementCb::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
         EXPECT_EQ((expectedPseudoRangeRate[i]*prrScaling), data.measurements[i].pseudorangeRateMps);
     }
 }
@@ -116,7 +116,7 @@ TEST_F(GnssHwTTYTest, DISABLED_selectParserRxmGnssMeasurementsCallbackThreadNorm
     const uint32_t emptyDataMeasCount = 0;
     const uint32_t dumpedDataMeasCount = 6;
 
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     data.measurementCount = 0;
     EXPECT_EQ(emptyDataMeasCount, data.measurementCount);
 
@@ -130,10 +130,10 @@ TEST_F(GnssHwTTYTest, DISABLED_selectParserRxmGnssMeasurementsCallbackThreadNorm
 
     for (uint32_t i = 0; i < data.measurementCount; ++i) {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
-        EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
-        EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED, data.measurements[i].state);
+        EXPECT_EQ(CnstlType::GPS, data.measurements[i].constellation);
+        EXPECT_EQ((uint32_t)MeasurementCb::GnssMeasurementState::STATE_TOW_DECODED, data.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
-        EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
+        EXPECT_EQ(MeasurementCb::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
         EXPECT_EQ(expectedPseudoRangeRate[i], data.measurements[i].pseudorangeRateMps);
     }
 
@@ -142,7 +142,7 @@ TEST_F(GnssHwTTYTest, DISABLED_selectParserRxmGnssMeasurementsCallbackThreadNorm
         SelectParser(cl, id, rxmMeasxMsg, payloadLen);
     }
 
-    GnssMeasurement gnssMeas;
+    GnssMeasurementImpl gnssMeas;
     gnssMeas.callbackThread();
 }
 
@@ -157,7 +157,7 @@ TEST_F(GnssHwTTYTest, DISABLED_checkCallbackThreadWithOneMsgInQueue)
 
     ASSERT_EQ((size_t)1, instance.getSize());
 
-    GnssMeasurement gnssMeas;
+    GnssMeasurementImpl gnssMeas;
     gnssMeas.callbackThread();
 }
 
@@ -176,7 +176,7 @@ TEST_F(GnssHwTTYTest, DISABLED_checkCallbackThreadWithFiveMsgInQueue)
 
     ASSERT_EQ(five, instance.getSize());
 
-    GnssMeasurement gnssMeas;
+    GnssMeasurementImpl gnssMeas;
     gnssMeas.callbackThread();
 }
 
@@ -194,6 +194,6 @@ TEST_F(GnssHwTTYTest, DISABLED_checkCallbackThreadWithTenMsgInQueue)
 
     ASSERT_EQ(ten, instance.getSize());
 
-    GnssMeasurement gnssMeas;
+    GnssMeasurementImpl gnssMeas;
     gnssMeas.callbackThread();
 }

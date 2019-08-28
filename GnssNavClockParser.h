@@ -34,9 +34,6 @@
  * Description: Satellite Measurements for RRLP
 */
 
-using ::android::hardware::gnss::V1_0::IGnssMeasurementCallback;
-using ::android::hardware::gnss::V1_0::GnssConstellationType;
-
 class GnssNavClockParser : public GnssParserCommonImpl {
 public:
     /*!
@@ -52,7 +49,7 @@ public:
      * \param gnssData - reference to gnssData object
      * \return  ClockDone on success, otherwise NotReady
      */
-    uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) final;
+    uint8_t retrieveSvInfo(MeasurementCb::GnssData &gnssData) final;
 
     /*!
      * \brief dumpDebug - print log in logcat, and write dump to file
@@ -60,7 +57,7 @@ public:
     void dumpDebug() override;
 
 protected:
-    GnssNavClockParser(){}
+    GnssNavClockParser() : mPayload(nullptr) {}
 
     /*!
      * \brief parseNavClockMsg
@@ -77,7 +74,7 @@ protected:
      * \brief getGnssClock - fill the clock member, of GnssData struct
      * \param instance - a reference to the clockfield of GnssData structure
      */
-    void getGnssClock(IGnssMeasurementCallback::GnssClock &instance);
+    void getGnssClock(MeasurementCb::GnssClock &instance);
 
 private:
     typedef struct NavClock {
@@ -89,10 +86,10 @@ private:
     } navClock_t;
 
     const uint8_t* mPayload;
+    navClock_t data = {};
     uint16_t mPayloadLen = 0;
 
     bool mValid = false;
-    navClock_t data;
 };
 
 #endif //__GNSSNAVCLOCKPARSER_H__

@@ -68,7 +68,7 @@ void GnssNavClockParser::parseNavClockMsg()
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
-void GnssNavClockParser::getGnssClock(IGnssMeasurementCallback::GnssClock &instance)
+void GnssNavClockParser::getGnssClock(MeasurementCb::GnssClock &instance)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     const double psToNsScale = 1000.0;
@@ -79,13 +79,13 @@ void GnssNavClockParser::getGnssClock(IGnssMeasurementCallback::GnssClock &insta
     instance.driftUncertaintyNsps = scaleDown(data.freqAccuracyEstimate, psToNsScale);
     instance.hwClockDiscontinuityCount = 0;
 
-    instance.gnssClockFlags |= static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_BIAS);
-    instance.gnssClockFlags |= static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_BIAS_UNCERTAINTY);
-    instance.gnssClockFlags |= static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_DRIFT);
-    instance.gnssClockFlags |= static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_DRIFT_UNCERTAINTY);
+    instance.gnssClockFlags |= static_cast<uint16_t>(MeasurementCb::GnssClockFlags::HAS_BIAS);
+    instance.gnssClockFlags |= static_cast<uint16_t>(MeasurementCb::GnssClockFlags::HAS_BIAS_UNCERTAINTY);
+    instance.gnssClockFlags |= static_cast<uint16_t>(MeasurementCb::GnssClockFlags::HAS_DRIFT);
+    instance.gnssClockFlags |= static_cast<uint16_t>(MeasurementCb::GnssClockFlags::HAS_DRIFT_UNCERTAINTY);
 }
 
-uint8_t GnssNavClockParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData)
+uint8_t GnssNavClockParser::retrieveSvInfo(MeasurementCb::GnssData &gnssData)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 

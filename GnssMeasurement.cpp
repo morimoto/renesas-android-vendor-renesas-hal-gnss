@@ -33,14 +33,14 @@ static const bool on = true;
 static const bool off = false;
 static const int8_t measBeforeLocationEventsNum = 2; // value depends on CTS testGnssMeasurementWhenNoLocation
 
-sp<IGnssMeasurementCallback> GnssMeasurement::sGnssMeasurementsCbIface = nullptr;
+sp<MeasurementCb> GnssMeasurementImpl::sGnssMeasurementsCbIface = nullptr;
 
-GnssMeasurement::GnssMeasurement():
+GnssMeasurementImpl::GnssMeasurementImpl():
     mThreadExit(false)
 {}
 
 // Methods from ::android::hardware::gnss::V1_0::IGnssMeasurement follow.
-Return<GnssMeasurement::GnssMeasurementStatus> GnssMeasurement::setCallback(
+Return<GnssMeasurementImpl::GnssMeasurementStatus> GnssMeasurementImpl::setCallback(
         const sp<IGnssMeasurementCallback>& callback)
 {
 
@@ -57,13 +57,13 @@ Return<GnssMeasurement::GnssMeasurementStatus> GnssMeasurement::setCallback(
 
     mThreadExit = false;
     if (!mGnssMeasurementsCallbackThread.joinable()) {
-        mGnssMeasurementsCallbackThread = std::thread(&GnssMeasurement::callbackThread, this);
+        mGnssMeasurementsCallbackThread = std::thread(&GnssMeasurementImpl::callbackThread, this);
     }
 
     return GnssMeasurementStatus::SUCCESS;
 }
 
-Return<void> GnssMeasurement::close()
+Return<void> GnssMeasurementImpl::close()
 {
     if (sGnssMeasurementsCbIface == nullptr) {
         ALOGD("%s: called before setCallback", __func__);
@@ -84,7 +84,7 @@ Return<void> GnssMeasurement::close()
     return Void();
 }
 
-void GnssMeasurement::callbackThread(void)
+void GnssMeasurementImpl::callbackThread(void)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
@@ -93,7 +93,7 @@ void GnssMeasurement::callbackThread(void)
     instance.setState(on);
     while (!mThreadExit) {
         uint8_t flagReady = 0;
-        auto data = std::make_unique<IGnssMeasurementCallback::GnssData> ();
+        auto data = std::make_unique<MeasurementCb::GnssData> ();
         while (!instance.empty()) {
             auto parser = instance.pop();
             if (nullptr == parser) {

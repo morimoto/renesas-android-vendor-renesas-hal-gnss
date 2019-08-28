@@ -125,7 +125,7 @@ private:
     sp<GnssGeofencing> mGnssGeofencingIface = nullptr;
     sp<AGnss> mAGnssIface = nullptr;
     sp<GnssNi> mGnssNi = nullptr;
-    sp<GnssMeasurement> mGnssMeasurement = nullptr;
+    sp<GnssMeasurementImpl> mGnssMeasurement = nullptr;
     sp<GnssNavigationMessage> mGnssNavigationMessage = nullptr;
     sp<GnssDebug> mGnssDebug = nullptr;
     sp<GnssConfiguration> mGnssConfig = nullptr;

@@ -41,9 +41,9 @@ const uint8_t rxmMeasxMsg[] = {
     0x7a, 0x01, 0x4a, 0x02, 0x8b, 0xd7, 0x0b, 0x00, 0x00, 0x17, 0x00, 0x00
     };
 
-static const uint32_t mStateFlags = IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED |
-        IGnssMeasurementCallback::GnssMeasurementState::STATE_BIT_SYNC |
-        IGnssMeasurementCallback::GnssMeasurementState::STATE_SUBFRAME_SYNC;
+static const uint32_t mStateFlags = MeasurementCb::GnssMeasurementState::STATE_TOW_DECODED |
+        MeasurementCb::GnssMeasurementState::STATE_BIT_SYNC |
+        MeasurementCb::GnssMeasurementState::STATE_SUBFRAME_SYNC;
 
 TEST(GnssMeasQueueTest, pushOnePopOneExpectNotEmpty)
 {
@@ -56,7 +56,7 @@ TEST(GnssMeasQueueTest, pushOnePopOneExpectNotEmpty)
     EXPECT_TRUE(instance.empty());
 
     const uint32_t dumpedDataMeasCount = 6;
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
 
     ASSERT_EQ(GnssIParser::RxmDone, rxm->retrieveSvInfo(data));
     ASSERT_EQ(dumpedDataMeasCount, data.measurementCount);
@@ -69,10 +69,10 @@ TEST(GnssMeasQueueTest, pushOnePopOneExpectNotEmpty)
     for (uint32_t i = 0; i < data.measurementCount; ++i)
     {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
-        EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
+        EXPECT_EQ(CnstlType::GPS, data.measurements[i].constellation);
         EXPECT_EQ(mStateFlags, data.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
-        EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
+        EXPECT_EQ(MeasurementCb::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
         EXPECT_EQ((prrScaling *expectedPseudoRangeRate[i]), data.measurements[i].pseudorangeRateMps);
     }
 }
@@ -100,8 +100,8 @@ TEST(GnssMeasQueueTest, pushTwoSameObjPopTwoExpectSizeCorrect)
     EXPECT_EQ((size_t)0, instance.getSize());
 
     const uint32_t dumpedDataMeasCount = 6;
-    IGnssMeasurementCallback::GnssData data1;
-    IGnssMeasurementCallback::GnssData data2;
+    MeasurementCb::GnssData data1;
+    MeasurementCb::GnssData data2;
 
     ASSERT_EQ(GnssIParser::RxmDone, rxm1->retrieveSvInfo(data1));
     ASSERT_EQ(GnssIParser::RxmDone, rxm2->retrieveSvInfo(data2));
@@ -115,10 +115,10 @@ TEST(GnssMeasQueueTest, pushTwoSameObjPopTwoExpectSizeCorrect)
 
     for (uint32_t i = 0; i < data2.measurementCount; ++i) {
         EXPECT_EQ(exptectedSvid[i], data2.measurements[i].svid);
-        EXPECT_EQ(GnssConstellationType::GPS, data2.measurements[i].constellation);
+        EXPECT_EQ(CnstlType::GPS, data2.measurements[i].constellation);
         EXPECT_EQ(mStateFlags, data2.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data2.measurements[i].cN0DbHz);
-        EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data2.measurements[i].multipathIndicator);
+        EXPECT_EQ(MeasurementCb::GnssMultipathIndicator::INDICATOR_PRESENT, data2.measurements[i].multipathIndicator);
         EXPECT_EQ((prrScaling * expectedPseudoRangeRate[i]), data2.measurements[i].pseudorangeRateMps);
     }
 }
@@ -147,7 +147,7 @@ TEST(GnssMeasQueueTest, pushHundredObjectsCheckSize)
     auto rxm = instance.pop();
     EXPECT_EQ((size_t)0, instance.getSize());
     EXPECT_TRUE(instance.empty());
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     const uint32_t dumpedDataMeasCount = 6;
 
     ASSERT_EQ(GnssIParser::RxmDone, rxm->retrieveSvInfo(data));
@@ -160,10 +160,10 @@ TEST(GnssMeasQueueTest, pushHundredObjectsCheckSize)
 
     for (uint32_t i = 0; i < data.measurementCount; ++i) {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
-        EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
+        EXPECT_EQ(CnstlType::GPS, data.measurements[i].constellation);
         EXPECT_EQ(mStateFlags, data.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
-        EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
+        EXPECT_EQ(MeasurementCb::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
         EXPECT_EQ((expectedPseudoRangeRate[i] * prrScaling), data.measurements[i].pseudorangeRateMps);
     }
 }
@@ -200,7 +200,7 @@ static void popThread(void)
     do {
         auto rxm = instance.pop();
         if (nullptr != rxm) {
-            IGnssMeasurementCallback::GnssData data;
+            MeasurementCb::GnssData data;
             const uint32_t dumpedDataMeasCount = 6;
 
             ASSERT_EQ(GnssIParser::RxmDone, rxm->retrieveSvInfo(data));
@@ -208,10 +208,10 @@ static void popThread(void)
 
             for (uint32_t i = 0; i < data.measurementCount; ++i) {
                 EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
-                EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
+                EXPECT_EQ(CnstlType::GPS, data.measurements[i].constellation);
                 EXPECT_EQ(mStateFlags, data.measurements[i].state);
                 EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
-                EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
+                EXPECT_EQ(MeasurementCb::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
                 EXPECT_EQ((prrScaling * expectedPseudoRangeRate[i]), data.measurements[i].pseudorangeRateMps);
             }
             ++count;
@@ -252,7 +252,7 @@ TEST(GnssMeasQueueTest, setStateTrueCheckPushPop)
 
     auto rxm = instance.pop();
     EXPECT_TRUE(instance.empty());
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(GnssIParser::RxmDone, rxm->retrieveSvInfo(data));
 }
 

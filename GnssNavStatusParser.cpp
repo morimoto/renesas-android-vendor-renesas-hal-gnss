@@ -22,7 +22,7 @@
 
 static const size_t blockSize = 16;
 static const int64_t msToNs = 1000000;
-static const uint16_t fullBiasFlag = static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_FULL_BIAS);
+static const uint16_t fullBiasFlag = static_cast<uint16_t>(MeasurementCb::GnssClockFlags::HAS_FULL_BIAS);
 
 // Using offsets according to the protocol description of UBX-NAV-STATUS
 enum NavStatusOffsets : uint8_t {
@@ -80,7 +80,7 @@ static bool hasFlagFullBias(const uint16_t flags)
     return (fullBiasFlag == (fullBiasFlag & flags));
 }
 
-uint8_t GnssNavStatusParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData)
+uint8_t GnssNavStatusParser::retrieveSvInfo(MeasurementCb::GnssData &gnssData)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 

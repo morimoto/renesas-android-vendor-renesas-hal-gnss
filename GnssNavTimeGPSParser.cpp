@@ -91,7 +91,7 @@ bool GnssNavTimeGPSParser::setTimeNano()
     return true;
 }
 
-uint8_t GnssNavTimeGPSParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData)
+uint8_t GnssNavTimeGPSParser::retrieveSvInfo(MeasurementCb::GnssData &gnssData)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     if (mValid) {
@@ -102,14 +102,14 @@ uint8_t GnssNavTimeGPSParser::retrieveSvInfo(IGnssMeasurementCallback::GnssData 
         gnssData.clock.timeUncertaintyNs = static_cast<double>(data.tAcc);
 
         gnssData.clock.gnssClockFlags =
-                static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_TIME_UNCERTAINTY);
-        gnssData.clock.gnssClockFlags |= static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_FULL_BIAS);
+                static_cast<uint16_t>(MeasurementCb::GnssClockFlags::HAS_TIME_UNCERTAINTY);
+        gnssData.clock.gnssClockFlags |= static_cast<uint16_t>(MeasurementCb::GnssClockFlags::HAS_FULL_BIAS);
 
         const uint8_t validLeapMask = 0x04;
         if (isValidFlag(data.valid, validLeapMask)) {
             gnssData.clock.leapSecond = data.leapS;
             gnssData.clock.gnssClockFlags |=
-                    static_cast<uint16_t>(IGnssMeasurementCallback::GnssClockFlags::HAS_LEAP_SECOND);
+                    static_cast<uint16_t>(MeasurementCb::GnssClockFlags::HAS_LEAP_SECOND);
         }
 
         ALOGV("[%s, line %d] Exit", __func__, __LINE__);

@@ -52,13 +52,13 @@ void GnssRxmMeasxParserTest::SetUp()
 {
     repeatedBlockSize = 24;
     singleBlockSize = 44;
-    mStateFlags = IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_DECODED |
-            IGnssMeasurementCallback::GnssMeasurementState::STATE_BIT_SYNC |
-            IGnssMeasurementCallback::GnssMeasurementState::STATE_SUBFRAME_SYNC;
+    mStateFlags = MeasurementCb::GnssMeasurementState::STATE_TOW_DECODED |
+            MeasurementCb::GnssMeasurementState::STATE_BIT_SYNC |
+            MeasurementCb::GnssMeasurementState::STATE_SUBFRAME_SYNC;
 
-    mStateKnownFlags = IGnssMeasurementCallback::GnssMeasurementState::STATE_TOW_KNOWN |
-            IGnssMeasurementCallback::GnssMeasurementState::STATE_BIT_SYNC |
-            IGnssMeasurementCallback::GnssMeasurementState::STATE_SUBFRAME_SYNC;
+    mStateKnownFlags = MeasurementCb::GnssMeasurementState::STATE_TOW_KNOWN |
+            MeasurementCb::GnssMeasurementState::STATE_BIT_SYNC |
+            MeasurementCb::GnssMeasurementState::STATE_SUBFRAME_SYNC;
 }
 
 TEST_F(GnssRxmMeasxParserTest, objectWithNullPtrPayload)
@@ -153,7 +153,7 @@ TEST_F(GnssRxmMeasxParserTest, incompleteInputNotFullBlocksRetrieveNotReady)
     const uint16_t magic = 5;
     const uint16_t len = singleBlockSize + repeatedBlockSize - magic;
     GnssRxmMeasxParser parser(rxmMeasxMsg, len);
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     EXPECT_TRUE(sizeof(rxmMeasxMsg) > (size_t)len);
     ASSERT_EQ(GnssIParser::NotReady, parser.retrieveSvInfo(data));
 }
@@ -171,7 +171,7 @@ TEST_F(GnssRxmMeasxParserTest, testParseSingleBlockNullInput)
 TEST_F(GnssRxmMeasxParserTest, retrieveDataNormalInput)
 {
     const uint32_t dumpedDataMeasCount = 6;
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     GnssRxmMeasxParser parser(rxmMeasxMsg, sizeof(rxmMeasxMsg));
 
     ASSERT_EQ(GnssIParser::RxmDone, parser.retrieveSvInfo(data));
@@ -185,17 +185,17 @@ TEST_F(GnssRxmMeasxParserTest, retrieveDataNormalInput)
     for(uint32_t i = 0; i < data.measurementCount; ++i)
     {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
-        EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
+        EXPECT_EQ(CnstlType::GPS, data.measurements[i].constellation);
         EXPECT_EQ(mStateFlags, data.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
-        EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
+        EXPECT_EQ(MeasurementCb::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
         EXPECT_EQ((expectedPseudoRangeRate[i]*prrScaling), data.measurements[i].pseudorangeRateMps);
     }
 }
 
 TEST_F(GnssRxmMeasxParserTest, retrieveDataIncompleteInput)
 {
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     const uint16_t magic = 5;
     const uint16_t len = singleBlockSize + repeatedBlockSize + magic;
 
@@ -213,10 +213,10 @@ TEST_F(GnssRxmMeasxParserTest, retrieveDataIncompleteInput)
     for(uint32_t i = 0; i < data.measurementCount; ++i)
     {
         EXPECT_EQ(exptectedSvid[i], data.measurements[i].svid);
-        EXPECT_EQ(GnssConstellationType::GPS, data.measurements[i].constellation);
+        EXPECT_EQ(CnstlType::GPS, data.measurements[i].constellation);
         EXPECT_EQ(mStateFlags, data.measurements[i].state);
         EXPECT_EQ(expectedCN0DbHz[i], data.measurements[i].cN0DbHz);
-        EXPECT_EQ(IGnssMeasurementCallback::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
+        EXPECT_EQ(MeasurementCb::GnssMultipathIndicator::INDICATOR_PRESENT, data.measurements[i].multipathIndicator);
         EXPECT_EQ((expectedPseudoRangeRate[i]*prrScaling), data.measurements[i].pseudorangeRateMps);
     }
 }
@@ -230,15 +230,15 @@ TEST_F(GnssRxmMeasxParserTest, checkConstellationConvertion)
     const uint8_t QZSS = 5;
     const uint8_t GLONASS = 6;
 
-    EXPECT_EQ(GnssConstellationType::GPS, getConstellationFromGnssId(GPS));
-    EXPECT_EQ(GnssConstellationType::SBAS, getConstellationFromGnssId(SBAS));
-    EXPECT_EQ(GnssConstellationType::GALILEO, getConstellationFromGnssId(GALILEO));
-    EXPECT_EQ(GnssConstellationType::BEIDOU, getConstellationFromGnssId(BEIDOU));
-    EXPECT_EQ(GnssConstellationType::QZSS, getConstellationFromGnssId(QZSS));
-    EXPECT_EQ(GnssConstellationType::GLONASS, getConstellationFromGnssId(GLONASS));
+    EXPECT_EQ(CnstlType::GPS, getConstellationFromGnssId(GPS));
+    EXPECT_EQ(CnstlType::SBAS, getConstellationFromGnssId(SBAS));
+    EXPECT_EQ(CnstlType::GALILEO, getConstellationFromGnssId(GALILEO));
+    EXPECT_EQ(CnstlType::BEIDOU, getConstellationFromGnssId(BEIDOU));
+    EXPECT_EQ(CnstlType::QZSS, getConstellationFromGnssId(QZSS));
+    EXPECT_EQ(CnstlType::GLONASS, getConstellationFromGnssId(GLONASS));
 
-    EXPECT_EQ(GnssConstellationType::UNKNOWN, getConstellationFromGnssId((uint8_t)-1));
-    EXPECT_EQ(GnssConstellationType::UNKNOWN, getConstellationFromGnssId((uint8_t)7));
+    EXPECT_EQ(CnstlType::UNKNOWN, getConstellationFromGnssId((uint8_t)-1));
+    EXPECT_EQ(CnstlType::UNKNOWN, getConstellationFromGnssId((uint8_t)7));
 }
 
 TEST_F(GnssRxmMeasxParserTest, checkNsConvertion)
@@ -258,7 +258,7 @@ TEST_F(GnssRxmMeasxParserTest, checkNsConvertion)
 TEST_F(GnssRxmMeasxParserTest, checkTOWforGnssId)
 {
     GnssRxmMeasxParser parser(rxmMeasxMsg, sizeof(rxmMeasxMsg));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(GnssIParser::RxmDone, parser.retrieveSvInfo(data));
     EXPECT_EQ(mStateFlags, data.measurements[0].state);
     EXPECT_TRUE(data.measurements[0].receivedSvTimeInNs > 0);
@@ -275,7 +275,7 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforGnssIdTruncatedInput) {
     };
 
     GnssRxmMeasxParser parser(sampleInput, sizeof(sampleInput));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(GnssIParser::RxmDone, parser.retrieveSvInfo(data));
     EXPECT_EQ(mStateFlags, data.measurements[0].state);
     EXPECT_TRUE(data.measurements[0].receivedSvTimeInNs > 0);
@@ -304,7 +304,7 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforAllGnssIdTruncatedInput)
     for (size_t i = 0; i < sizeof(gnssIdArr); i++) {
         sampleInput[gnssIdOffset] = gnssIdArr[i];
         GnssRxmMeasxParser parser(sampleInput, sizeof(sampleInput));
-        IGnssMeasurementCallback::GnssData data;
+        MeasurementCb::GnssData data;
         ASSERT_EQ(GnssIParser::RxmDone, parser.retrieveSvInfo(data));
 
         switch(i) {
@@ -315,8 +315,8 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforAllGnssIdTruncatedInput)
             EXPECT_TRUE(data.measurements[0].receivedSvTimeUncertaintyInNs > (int64_t)0);
             break;
         case 4:
-            EXPECT_EQ(GnssConstellationType::UNKNOWN, data.measurements[0].constellation);
-            EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_UNKNOWN,
+            EXPECT_EQ(CnstlType::UNKNOWN, data.measurements[0].constellation);
+            EXPECT_EQ((uint32_t)MeasurementCb::GnssMeasurementState::STATE_UNKNOWN,
                       data.measurements[0].state);
             EXPECT_TRUE(data.measurements[0].receivedSvTimeInNs == 0);
             EXPECT_TRUE(data.measurements[0].receivedSvTimeUncertaintyInNs == (int64_t)0);
@@ -330,7 +330,7 @@ TEST_F(GnssRxmMeasxParserTest, checkTOWforAllGnssIdTruncatedInput)
             EXPECT_TRUE(data.measurements[0].receivedSvTimeUncertaintyInNs > (int64_t)0);
             break;
         default:
-            EXPECT_EQ((uint32_t)IGnssMeasurementCallback::GnssMeasurementState::STATE_UNKNOWN,
+            EXPECT_EQ((uint32_t)MeasurementCb::GnssMeasurementState::STATE_UNKNOWN,
                       data.measurements[0].state);
             EXPECT_TRUE(data.measurements[0].receivedSvTimeInNs == 0);
             EXPECT_TRUE(data.measurements[0].receivedSvTimeUncertaintyInNs == (int64_t)0);

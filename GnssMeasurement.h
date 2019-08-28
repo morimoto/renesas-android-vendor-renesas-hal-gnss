@@ -29,37 +29,34 @@ namespace gnss {
 namespace V1_0 {
 namespace renesas {
 
-using ::android::hardware::gnss::V1_0::IGnssMeasurement;
-using ::android::hardware::gnss::V1_0::IGnssMeasurementCallback;
 using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::hardware::hidl_vec;
 using ::android::hardware::hidl_string;
-using ::android::sp;
 
 /*
  * Extended interface for GNSS Measurements support. Also contains wrapper methods to allow methods
- * from IGnssMeasurementCallback interface to be passed into the conventional implementation of the
+ * from MeasCb interface to be passed into the conventional implementation of the
  * GNSS HAL.
  */
-struct GnssMeasurement : public IGnssMeasurement {
-    GnssMeasurement();
+struct GnssMeasurementImpl : public IGnssMeasurement {
+    GnssMeasurementImpl();
 
     /*
      * Methods from ::android::hardware::gnss::V1_0::IGnssMeasurement follow.
      * These declarations were generated from IGnssMeasurement.hal.
      */
     Return<GnssMeasurementStatus> setCallback(
-        const sp<IGnssMeasurementCallback>& callback) override;
+        const ::android::sp<IGnssMeasurementCallback>& callback) override;
     Return<void> close() override;
 
     void callbackThread(void);
 private:
-    std::atomic<bool> mThreadExit;
-    static sp<IGnssMeasurementCallback> sGnssMeasurementsCbIface;
     std::thread mGnssMeasurementsCallbackThread;
-    std::mutex mCallbackMutex;
     std::condition_variable mCallbackCond;
+    std::mutex mCallbackMutex;
+    std::atomic<bool> mThreadExit;
+    static ::android::sp<IGnssMeasurementCallback> sGnssMeasurementsCbIface;
 };
 
 }  // namespace renesas

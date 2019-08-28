@@ -58,35 +58,35 @@ TEST_F(GnssNavTimeUTCParserTest, createObjWithNullInputMaxLen)
 TEST_F(GnssNavTimeUTCParserTest, checkRetrieveNotReadyNullPayloadNormalSize)
 {
     GnssNavTimeUTCParser obj(nullptr, (uint16_t)sizeof(navTimeUtcDump));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavTimeUTCParserTest, checkRetrieveNotReadyWithDumpInputZeroLen)
 {
     GnssNavTimeUTCParser obj(navTimeUtcDump, (uint16_t)0);
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavTimeUTCParserTest, checkRetrieveNotReadyWithDumpInputMaxLen)
 {
     GnssNavTimeUTCParser obj(navTimeUtcDump, (uint16_t)-1);
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavTimeUTCParserTest, checkRetrieveNotReadyWithNullInputZeroLen)
 {
     GnssNavTimeUTCParser obj(nullptr, (uint16_t)0);
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavTimeUTCParserTest, checkRetrieveNotReadyWithNullInputMaxLen)
 {
     GnssNavTimeUTCParser obj(nullptr, (uint16_t)-1);
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
@@ -101,7 +101,7 @@ TEST_F(GnssNavTimeUTCParserTest, checkRetrieveNotReadyInvalidWeekFlag)
     };
 
     GnssNavTimeUTCParser obj(navTimeUtcInvalidFlag, (uint16_t)sizeof(navTimeUtcInvalidFlag));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
@@ -116,7 +116,7 @@ TEST_F(GnssNavTimeUTCParserTest, checkRetrieveNotReadyInvalidUtcFlag)
     };
 
     GnssNavTimeUTCParser obj(navTimeUtcInvalidFlag, (uint16_t)sizeof(navTimeUtcInvalidFlag));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
@@ -132,7 +132,7 @@ TEST_F(GnssNavTimeUTCParserTest, DISABLED_checkRetrieveNotReadyInvalidITowFlag)
     };
 
     GnssNavTimeUTCParser obj(navTimeUtcInvalidFlag, (uint16_t)sizeof(navTimeUtcInvalidFlag));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(UTCDone, obj.retrieveSvInfo(data));
 }
 
@@ -147,7 +147,7 @@ TEST_F(GnssNavTimeUTCParserTest, checkRetrieveNotReadyInvalidZeroFlag)
     };
 
     GnssNavTimeUTCParser obj(navTimeUtcInvalidFlag, (uint16_t)sizeof(navTimeUtcInvalidFlag));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 

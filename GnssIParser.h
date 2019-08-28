@@ -20,9 +20,8 @@
 #include <android/hardware/gnss/1.0/types.h>
 #include <android/hardware/gnss/1.0/IGnssMeasurementCallback.h>
 
-using ::android::hardware::gnss::V1_0::IGnssMeasurementCallback;
-using ::android::hardware::gnss::V1_0::GnssConstellationType;
-
+typedef ::android::hardware::gnss::V1_0::IGnssMeasurementCallback MeasurementCb;
+typedef ::android::hardware::gnss::V1_0::GnssConstellationType CnstlType;
 class GnssIParser {
 public:
     enum GnssIParserReturn : uint8_t {
@@ -40,7 +39,7 @@ public:
      * \param gnssData - a reference to fill the object
      * \return GnssIParserReturn::*Done on success, otherwise NotReady
      */
-    virtual uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) = 0;
+    virtual uint8_t retrieveSvInfo(MeasurementCb::GnssData &gnssData) = 0;
 
     /*!
      * \brief dumpDebug - print some debug info or hexdump for concrete parser

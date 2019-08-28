@@ -158,7 +158,7 @@ void GnssHwFAKE::GnssHwHandleThread(void)
 
         location.bearingDegrees = bearing;
 
-        time_t tm;
+        time_t tm = {};
         (void)tm;
         for (int i = (int)t; i >= 0; i--) {
             if (i == 0) {

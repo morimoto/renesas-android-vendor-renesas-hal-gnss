@@ -33,10 +33,7 @@ public:
      * \brief getInstance - provide an instance of the single object, create if there is no object
      * \return reference - to the sync object
      */
-    static GnssMeasToLocSync& getInstance() {
-        static GnssMeasToLocSync instance;
-        return instance;
-    }
+    static GnssMeasToLocSync& getInstance();
 
     /*!
      * \brief WaitAndSend - wait for measurements to be sent enough, before locationCb provide location

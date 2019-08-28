@@ -34,10 +34,7 @@ public:
      * \brief  this is FIFO queue
      * \return reference - to the queue
      */
-    static GnssMeasQueue& getInstance() {
-        static GnssMeasQueue instance;
-        return instance;
-    }
+    static GnssMeasQueue& getInstance();
 
     /*!
      * \brief push -  add an object to the end of the queue

@@ -31,8 +31,6 @@
  * Description: Receiver Navigation Status
 */
 
-using ::android::hardware::gnss::V1_0::IGnssMeasurementCallback;
-
 class GnssNavStatusParser : public GnssParserCommonImpl {
 
 public:
@@ -42,14 +40,14 @@ public:
      * \param payloadLen - length in bytes of payload
      */
     GnssNavStatusParser(const uint8_t* payload, uint16_t payloadLen);
-    ~GnssNavStatusParser(){}
+    ~GnssNavStatusParser() override {}
 
     /*!
      * \brief retrieveSvInfo - fill the gnssData object with collected data
      * \param gnssData - reference to gnssData object
      * \return  StatusDone on success, otherwise NotReady
      */
-    uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) final;
+    uint8_t retrieveSvInfo(MeasurementCb::GnssData &gnssData) final;
 
     /*!
      * \brief dumpDebug - print log in logcat, and write dump to file
@@ -62,15 +60,15 @@ private:
         uint32_t msss;
     } singleBlock_t;
 
+    int64_t timeNano = 0;
     const uint8_t* mPayload;
+    singleBlock_t data = {};
     uint16_t mPayloadLen = 0;
 
-    singleBlock_t data;
-    int64_t timeNano;
     bool mValid = false;
 
 protected:
-    GnssNavStatusParser(){}
+    GnssNavStatusParser() : mPayload(nullptr) {}
 
     /*!
      * \brief parseNavStatusMsg - collect data from input message, set validity

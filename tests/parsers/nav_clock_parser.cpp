@@ -95,51 +95,51 @@ TEST_F(GnssNavClockParserTest, createObjFromNullPayloadMaxLength)
 TEST_F(GnssNavClockParserTest, createObjFromDumpRetrieveClockDone)
 {
     GnssNavClockParser obj(ubxNavClockDump, (uint16_t)sizeof(ubxNavClockDump));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(ClockDone, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavClockParserTest, createObjFromDumpAndZeroLengthRetrieveNotReady)
 {
     GnssNavClockParser obj(ubxNavClockDump, (uint16_t)0);
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavClockParserTest, createObjFromNullPayloadRetrieveNotReady)
 {
     GnssNavClockParser obj(nullptr, (uint16_t)sizeof(ubxNavClockDump));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavClockParserTest, createObjFromNullPayloadZeroLengthRetrieveNotReady)
 {
     GnssNavClockParser obj(nullptr, (uint16_t)0);
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavClockParserTest, createObjFromDumpMaxLengthRetrieveNotReady)
 {
     GnssNavClockParser obj(ubxNavClockDump, (uint16_t)-1);
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavClockParserTest, createObjFromNullPayloadMaxLengthRetrieveNotReady)
 {
     GnssNavClockParser obj(nullptr, (uint16_t)-1);
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     ASSERT_EQ(NotReady, obj.retrieveSvInfo(data));
 }
 
 TEST_F(GnssNavClockParserTest, checkRetrievedDataFromDumpInput)
 {
     GnssNavClockParser obj(ubxNavClockDump, sizeof(ubxNavClockDump));
-    IGnssMeasurementCallback::GnssData data;
+    MeasurementCb::GnssData data;
     EXPECT_EQ(ClockDone, obj.retrieveSvInfo(data));
-    IGnssMeasurementCallback::GnssClock &clock = data.clock;
+    MeasurementCb::GnssClock &clock = data.clock;
     EXPECT_EQ(navClockSample.clockBias, clock.biasNs);
     EXPECT_EQ(navClockSample.clockDrift, clock.driftNsps);
     EXPECT_EQ((uint32_t)0, clock.hwClockDiscontinuityCount);

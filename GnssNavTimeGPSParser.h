@@ -34,9 +34,6 @@
  * Description: GPS Time Solution
 */
 
-using ::android::hardware::gnss::V1_0::IGnssMeasurementCallback;
-using ::android::hardware::gnss::V1_0::GnssConstellationType;
-
 class GnssNavTimeGPSParser : public GnssParserCommonImpl {
 
 public:
@@ -53,7 +50,7 @@ public:
      * \param gnssData - reference to gnssData object
      * \return  GPSTimeDone on success, otherwise NotReady
      */
-    uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) final;
+    uint8_t retrieveSvInfo(MeasurementCb::GnssData &gnssData) final;
 
     /*!
      * \brief dumpDebug - print log in logcat, and write dump to file
@@ -71,14 +68,14 @@ private:
     } singleBlock_t;
 
     const uint8_t* mPayload;
+    singleBlock_t data = {};
+    int64_t timeNano = 0;
     uint16_t mPayloadLen = 0;
 
-    singleBlock_t data;
-    int64_t timeNano = 0;
     bool mValid = false;
 
 protected:
-    GnssNavTimeGPSParser(){}
+    GnssNavTimeGPSParser() : mPayload(nullptr) {}
 
     /*!
      * \brief parseNavTimeGPSMsg - collect data from input message, set validity

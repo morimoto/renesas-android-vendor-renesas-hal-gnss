@@ -57,6 +57,9 @@ class GnssParserCommonImpl : public GnssIParser {
         for (auto& byte : result.in) {
             byte = ptr[reverseCounter];
             --reverseCounter;
+            if (0 == reverseCounter) {
+                break;
+            }
         }
 
         return result.out;
@@ -68,7 +71,7 @@ public:
      * \param gnssData - a reference to fill the object
      * \return status of operation
      */
-    virtual uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) override = 0;
+    virtual uint8_t retrieveSvInfo(MeasurementCb::GnssData &gnssData) override = 0;
 
     /*!
      * \brief dumpDebug - provide minimal debug log

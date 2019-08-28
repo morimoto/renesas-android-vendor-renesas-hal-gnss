@@ -34,9 +34,6 @@
  * Description: Satellite Measurements for RRLP
 */
 
-using ::android::hardware::gnss::V1_0::IGnssMeasurementCallback;
-using ::android::hardware::gnss::V1_0::GnssConstellationType;
-
 class GnssNavTimeUTCParser : public GnssParserCommonImpl {
 
 public:
@@ -53,7 +50,7 @@ public:
      * \param gnssData - reference to gnssData object
      * \return  UTCDone on success, otherwise NotReady
      */
-    uint8_t retrieveSvInfo(IGnssMeasurementCallback::GnssData &gnssData) final;
+    uint8_t retrieveSvInfo(MeasurementCb::GnssData &gnssData) final;
 
     /*!
      * \brief dumpDebug - print log in logcat, and write dump to file
@@ -76,10 +73,10 @@ private:
     } singleBlock_t;
 
     const uint8_t* mPayload;
+    int64_t timeNano = 0;
+    singleBlock_t data;
     uint16_t mPayloadLen = 0;
 
-    singleBlock_t data;
-    int64_t timeNano = 0;
     bool mValid = false;
 
 protected:

@@ -21,6 +21,11 @@
 
 #include "GnssMeasQueue.h"
 
+GnssMeasQueue& GnssMeasQueue::getInstance() {
+    static GnssMeasQueue instance;
+    return instance;
+}
+
 GnssMeasQueue::GnssMeasQueue()
 {
     ALOGV("[%s, line %d] Constructor", __func__, __LINE__);

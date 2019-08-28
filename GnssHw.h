@@ -30,15 +30,13 @@
 #include <android/hardware/gnss/1.0/IGnss.h>
 
 using namespace std::chrono_literals;
-
-using android::sp;
 using namespace android::hardware::gnss::V1_0;
 
 class GnssHwIface : public android::RefBase
 {
 protected:
     GnssHwIface() {}
-    int requestedUpdateIntervalUs;
+    int requestedUpdateIntervalUs = 0;
 
 public:
     void SetUpHandleThread()
@@ -55,15 +53,15 @@ public:
     virtual bool setUpdatePeriod(int) = 0;
     virtual uint16_t GetYearOfHardware() = 0;
 
-    void setCallback(const sp<::IGnssCallback>& callback) {
+    void setCallback(const android::sp<::IGnssCallback>& callback) {
         mGnssCb = callback;
     }
 
     std::atomic<bool>               mThreadExit;
-    sp<IGnssCallback>               mGnssCb = nullptr;
+    android::sp<IGnssCallback>      mGnssCb = nullptr;
 
-    GnssLocation                    mGnssLocation;
-    IGnssCallback::GnssSvStatus     mSvStatus;
+    GnssLocation                    mGnssLocation = {};
+    IGnssCallback::GnssSvStatus     mSvStatus = {};
 
     bool                            mResetReceiverOnStart = false;
 
@@ -308,6 +306,5 @@ public:
     void GnssHwHandleThread(void) override;
     uint16_t GetYearOfHardware() override {return 0;}
 };
-
 
 #endif /* GNSS_HW_H_ */
