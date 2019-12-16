@@ -193,6 +193,7 @@ class GnssHwTTY : public GnssHwIface
     const size_t  mUbxFirstPayloadOffset  = 6;
 
     const int64_t mUbxTimeoutMs = 5000;
+    const size_t  mUbxRetriesCnt = 5;
 
     std::atomic<int> mUbxAckReceived;
 
@@ -246,6 +247,7 @@ protected:
     void SetNMEA41();
     void PollCommonMessages();
     void PollMonVer();
+    void PollMonVerRepeated();
     void PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t* ubxCfgGnss, const size_t& cfgSize);
     void SetConstValuesOfHardware(uint16_t gen);
 
@@ -259,8 +261,11 @@ protected:
     void UBX_ChecksumAdd(uint8_t ch);
     void UBX_ReaderParse(UbxBufferElement* ubx);
     void UBX_Send(const uint8_t* msg, size_t len);
+    void UBX_SendRepeatedWithAck(const uint8_t* msg, size_t len);
     void UBX_Expect(UbxRxState astate, const char* errormsg); // Expect state (non blocking)
     bool UBX_Wait(UbxRxState astate, const char* errormsg, int64_t timeoutMs);   // Wait state (blocking)
+    bool UBX_Wait_ACK(const uint8_t* msg);
+    bool UBX_Wait_MonVer();
     void UBX_CriticalProtocolError(const char* errormsg);
 
     void UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg);

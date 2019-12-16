@@ -126,6 +126,103 @@ static inline void CheckNotNull(mPtr val, const char* msg)
     }
 }
 
+bool GnssHwTTY::UBX_Wait_ACK(const uint8_t *msg)
+{
+    uint8_t CK_A = 0, CK_B = 0;
+    uint8_t in_char = 0;
+    uint64_t timeoutNs = mUbxTimeoutMs * 1000 * 1000;
+    int64_t waitStart = android::elapsedRealtimeNano();
+    //UBX-ACK (0x05)          [Header    |Class| ID |   Length   |  Payload  |  Checksum]
+    uint8_t ackPacket[10] = { 0xB5, 0x62, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint32_t i = 0;
+
+    while ((android::elapsedRealtimeNano() - waitStart) < timeoutNs) {
+        ssize_t ret = read(mFd, &in_char, sizeof(in_char));
+        if (ret < 0 && errno == EAGAIN)
+            continue;
+        if (i <= 2) {
+            //Header
+            if (in_char == ackPacket[i])
+                i++;
+            else
+                i = 0;
+        } else if (i == 3) {
+            //ID ack/nack
+            ackPacket[i++] = in_char;
+            if (in_char == 0) {
+                ALOGE("UBX protocol failure (Received UBX NACK)");
+                return false;
+            } else if (in_char > 1) {
+                ALOGE("UBX protocol failure (Invalid UBX-ACK-NAK message ID)");
+                return false;
+            }
+        } else if (i > 3) {
+            //Len, payload, crc
+            ackPacket[i++] = in_char;
+        }
+        //Message received
+        if (i > 9) {
+            for (i = 2; i < 8; i++) {
+                CK_A = CK_A + ackPacket[i];
+                CK_B = CK_B + CK_A;
+            }
+            if (msg[0] == ackPacket[6] && msg[1] == ackPacket[7]
+                    && CK_A == ackPacket[8] && CK_B == ackPacket[9]) {
+                return true;
+            } else {
+                ALOGE("UBX protocol failure (UBX ACK Checksum Failure)");
+                return false;
+            }
+        }
+    }
+    ALOGE("UBX protocol failure (No UBX ACK received, exit with timeout)");
+    return false;
+}
+
+bool GnssHwTTY::UBX_Wait_MonVer()
+{
+    uint8_t in_char = 0;
+    uint64_t timeoutNs = mUbxTimeoutMs * 1000 * 1000;
+    int64_t waitStart = android::elapsedRealtimeNano();
+    //UBX-MON-VER (0x0A 0x04) [Header    |Class| ID |   Length   |  Payload  |  Checksum]
+    char verPacket[mUbxBufferSize] = { 0xB5, 0x62, 0x0A, 0x04 };
+    uint16_t versionLen = 0;
+    uint32_t i = 0;
+
+    while ((android::elapsedRealtimeNano() - waitStart) < timeoutNs) {
+        ssize_t ret = read(mFd, &in_char, sizeof(in_char));
+        if (ret < 0 && errno == EAGAIN)
+            continue;
+        if (i <= 3) {
+            //Header
+            if (in_char == verPacket[i])
+                i++;
+            else
+                i = 0;
+        } else {
+            //Len, payload
+            if (i == mUbxLengthFirstByteNo)
+                versionLen += in_char;
+            else if (i == mUbxLengthSecondByteNo)
+                versionLen += in_char << 8;
+            verPacket[i++] = in_char;
+        }
+        //Payload received + Other, skip Checksum
+        if (i > versionLen + 7) {
+            std::cmatch swStr;
+            std::regex example("\\d\\.\\d\\d");
+            if (std::regex_search(&verPacket[6], swStr, example)) {
+                mUbxFirmwareVersion = atof(swStr.str().c_str());
+            }
+            mFwVersionReady = true;
+            ALOGI("Firmware Version %.2f", mUbxFirmwareVersion);
+            return true;
+        }
+    }
+    ALOGE("UBX protocol failure (UBX-MON-VER , exit with timeout)");
+    return false;
+}
+
 GnssHwIface::~GnssHwIface(void)
 {
     mThreadExit = true;
@@ -196,7 +293,8 @@ void GnssHwTTY::resetOnStart()
 
         uint8_t ublox_cfg_reset[] = {0x06, 0x04, 0x04, 0x00, 0xFF, 0xFF, 0x02, 0x00};
         UBX_Send(ublox_cfg_reset, sizeof(ublox_cfg_reset));
-
+        //Don't expect this message to be acknowledged by the receiver.
+        usleep(25000);
         mResetReceiverOnStart = false;
 }
 
@@ -340,17 +438,14 @@ void GnssHwTTY::JoinWorkerThreads()
 void GnssHwTTY::ClearConfig()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    UBX_Send(ublox_cfg_clear, sizeof(ublox_cfg_clear));
-    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to clear UBX config", mUbxTimeoutMs);
+    UBX_SendRepeatedWithAck(ublox_cfg_clear, sizeof(ublox_cfg_clear));
 }
 
 void GnssHwTTY::SetNMEA41()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     // Enabling NMEA 4.1 Extended satellite numbering, set flag freeze bearing
-    UBX_Send(ublox_enable_nmea41, sizeof(ublox_enable_nmea41));
-    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NMEA version to 4.1", mUbxTimeoutMs);
-
+    UBX_SendRepeatedWithAck(ublox_enable_nmea41, sizeof(ublox_enable_nmea41));
     //SetUp length of messages according to protocol version
     mRmcFieldsNumber = rmcFieldsNumberNMEAv41;
     mGsaFieldsNumber = gsaFieldsNumberNMEAv41;
@@ -360,9 +455,7 @@ void GnssHwTTY::SetNMEA23()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
     // Enabling NMEA 2.3 Extended satellite numbering, set flag freeze bearing
-    UBX_Send(ublox_enable_nmea23, sizeof(ublox_enable_nmea23));
-    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NMEA version to 2.3", mUbxTimeoutMs);
-
+    UBX_SendRepeatedWithAck(ublox_enable_nmea23, sizeof(ublox_enable_nmea23));
     //SetUp length of messages according to protocol version
     mRmcFieldsNumber = rmcFieldsNumberNMEAv23;
     mGsaFieldsNumber = gsaFieldsNumberNMEAv23;
@@ -426,8 +519,7 @@ void GnssHwTTY::ConfigGnssUblox7()
     ALOGI("No second major GNSS is being used");
     mMajorGnssStatus = MajorGnssStatus::GPS_ONLY;
 
-    UBX_Send(ublox_cfg_gnss, sizeof(ublox_cfg_gnss));
-    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
+    UBX_SendRepeatedWithAck(ublox_cfg_gnss, sizeof(ublox_cfg_gnss));
 }
 
 void GnssHwTTY::PrepareGnssConfig(char* propSecmajor, char* propSbas, uint8_t* ubxCfgGnss, const size_t& cfgSize)
@@ -535,16 +627,14 @@ void GnssHwTTY::ConfigGnssUblox8()
 
     PrepareGnssConfig(propSecmajor, propSbas, msgCfgGnss, msgCfgSize);
 
-    UBX_Send(msgCfgGnss, msgCfgSize);
-    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to switch GNSS", mUbxTimeoutMs);
+    UBX_SendRepeatedWithAck(msgCfgGnss, msgCfgSize);
 }
 
 void GnssHwTTY::PollCommonMessages()
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
 
-    UBX_Send(ublox_nav5, sizeof(ublox_nav5));
-    UBX_Wait(UbxRxState::WAITING_ACK, "Failed to set NAV5 to automotive", mUbxTimeoutMs);
+    UBX_SendRepeatedWithAck(ublox_nav5, sizeof(ublox_nav5));
 
     UBX_SetMessageRate(0xF1, 0x00, 1, "Failed to enable PUBX,00 message"); // enable PUBX,00
     UBX_SetMessageRate(0xF0, 0x01, 0, nullptr); // disable GLL
@@ -615,12 +705,25 @@ void GnssHwTTY::PollMonVer()
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
+void GnssHwTTY::PollMonVerRepeated()
+{
+    const uint8_t msgPollMonVer[] = { 0x0a, 0x04, 0x00, 0x00 };
+    for (auto i = 0; i < mUbxRetriesCnt; ++i) {
+        UBX_Send(msgPollMonVer, sizeof(msgPollMonVer));
+        if (UBX_Wait_MonVer()) {
+            return;
+        }
+    }
+    UBX_CriticalProtocolError(
+                   "UBX protocol failure (No MON-VER received even during retries, give up)");
+}
+
 void GnssHwTTY::GnssHwUbxInitThread(void)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-
+    resetOnStart();
     UBX_Reset();
-    PollMonVer();
+    PollMonVerRepeated();
     switch (mUbxGeneration) {
     case ublox7: {
         InitUblox7Gen();
@@ -636,6 +739,9 @@ void GnssHwTTY::GnssHwUbxInitThread(void)
     }
 
     }
+
+    this->SetUpHandleThread();
+
     ALOGV("[%s, line %d] Exit", __func__, __LINE__);
 }
 
@@ -1557,6 +1663,18 @@ void GnssHwTTY::UBX_Send(const uint8_t* msg, size_t len)
     }
 }
 
+void GnssHwTTY::UBX_SendRepeatedWithAck(const uint8_t* msg, size_t len)
+{
+    for (auto i = 0; i < mUbxRetriesCnt; ++i) {
+        UBX_Send(msg, len);
+        if (UBX_Wait_ACK(msg)) {
+            return;
+        }
+    }
+    UBX_CriticalProtocolError(
+                   "UBX protocol failure (No ACK received even during retries, give up)");
+}
+
 void GnssHwTTY::UBX_Expect(UbxRxState astate, const char* errormsg)
 {
     UbxStateQueueElement element;
@@ -1597,19 +1715,17 @@ bool GnssHwTTY::UBX_Wait(UbxRxState astate, const char* errormsg, int64_t timeou
     return true;
 }
 
-void GnssHwTTY::UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char *msg)
+void GnssHwTTY::UBX_SetMessageRate(uint8_t msg_class, uint8_t msg_id, uint8_t rate, __attribute__((unused))  const char *msg)
 {
     uint8_t ublox_buf[] = {0x06, 0x01, 0x08, 0x00, msg_class, msg_id,
                            rate, rate, 0x00, rate, rate, 0x00};
-    UBX_Send(ublox_buf, sizeof(ublox_buf));
-    UBX_Wait(UbxRxState::WAITING_ACK, msg, mUbxTimeoutMs);
+    UBX_SendRepeatedWithAck(ublox_buf, sizeof(ublox_buf));
 }
 
-void GnssHwTTY::UBX_SetMessageRateCurrentPort(uint8_t msg_class, uint8_t msg_id, uint8_t rate, const char* msg)
+void GnssHwTTY::UBX_SetMessageRateCurrentPort(uint8_t msg_class, uint8_t msg_id, uint8_t rate, __attribute__((unused)) const char* msg)
 {
     uint8_t ublox_buf[] = {0x06, 0x01, 0x03, 0x00, msg_class, msg_id, rate};
-    UBX_Send(ublox_buf, sizeof(ublox_buf));
-    UBX_Wait(UbxRxState::WAITING_ACK, msg, mUbxTimeoutMs);
+    UBX_SendRepeatedWithAck(ublox_buf, sizeof(ublox_buf));
 }
 
 bool GnssHwTTY::CheckHwPropertyKf()

@@ -46,7 +46,7 @@ Gnss::Gnss(void) :
 
     if (mGnssHwIface == nullptr) {
         mGnssHwIface = new GnssHwTTY(-1);
-        mGnssHwIface->SetUpHandleThread();
+        //mGnssHwIface->SetUpHandleThread();
         mGnssMeasurement = new GnssMeasurementImpl();
         ALOGI("Using TTY HW backend");
     }
