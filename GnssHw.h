@@ -154,6 +154,7 @@ class GnssHwTTY : public GnssHwIface
     bool CheckUsbDeviceVendorUbx();
     bool CheckHwPropertyKf();
     void resetOnStart();
+    bool UbxSetSpeed(uint8_t port, uint32_t speed);
 
     void ReaderPushChar(unsigned char ch);
 

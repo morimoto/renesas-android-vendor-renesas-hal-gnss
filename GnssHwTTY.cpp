@@ -91,9 +91,9 @@ static const float bearingAccUblox8 = 0.3f; // degrees according to NEO-8 datash
 
 static const std::string ttyUsbDefault("/dev/ttyACM0");
 static const std::string ttyDefaultKf("/dev/ttySC3");
-
-static const uint8_t ublox_cfg_clear[] = {0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00,
-                                          0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+//Set MASK to avoid IO port clearing
+static const uint8_t ublox_cfg_clear[] = {0x06, 0x09, 0x0D, 0x00, 0xFE, 0xFF, 0x00, 0x00,
+                                          0x00, 0x00, 0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00,
                                           0x17};
 
 static const uint8_t ublox_nav5[] = {0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x04, 0x02,
@@ -298,6 +298,113 @@ void GnssHwTTY::resetOnStart()
         mResetReceiverOnStart = false;
 }
 
+#ifdef BIG_ENDIAN_CPU
+static inline uint32_t cpu_to_le32(uint32_t value)
+{
+	return ((((value) & 0xff000000u) >> 24) | (((value) & 0x00ff0000u) >>  8) | \
+	(((value) & 0x0000ff00u) <<  8) | (((value) & 0x000000ffu) << 24));
+}
+static inline uint16_t cpu_to_le16(uint32_t value)
+{
+	return ((((value) >> 8) & 0xffu) | (((value) & 0xffu) << 8));
+}
+#else
+static inline uint32_t cpu_to_le32(uint32_t value)
+{
+	return value;
+}
+static inline uint16_t cpu_to_le16(uint32_t value)
+{
+	return value;
+}
+#endif
+
+static inline uint32_t Encode8N1()
+{
+    return (uint32_t) (1<<11) | (3<<6);
+}
+
+static inline speed_t EncodeSpeed(uint32_t baudrate)
+{
+    speed_t speed;
+
+    /* Set baudrate */
+    switch(baudrate) {
+        case 2400: speed = B2400; break;
+        case 4800: speed= B4800; break;
+        case 9600: speed = B9600; break;
+        case 19200: speed = B19200; break;
+        case 38400: speed = B38400; break;
+        case 57600: speed = B57600; break;
+        case 115200: speed = B115200; break;
+        default: {
+            speed = B9600;
+            ALOGW("Unsupported baud rate %d.. setting default 9600", baudrate);
+        }
+    }
+    return speed;
+}
+
+static inline bool SetTtyBaudrate(int fd, uint32_t baudrate)
+{
+    /* Setup serial port */
+    struct termios  ios;
+    ::tcgetattr(fd, &ios);
+
+    ios.c_cflag  = CS8 | CLOCAL | CREAD;
+    ios.c_iflag  = IGNPAR;
+    ios.c_oflag  = 0;
+    ios.c_lflag  = 0;  /* disable ECHO, ICANON, etc... */
+    ios.c_cflag |= EncodeSpeed(baudrate);
+
+    if (::tcsetattr(fd, TCSANOW, &ios)) {
+        return false;
+    }
+    return true;
+}
+
+bool GnssHwTTY::UbxSetSpeed(uint8_t port, uint32_t speed)
+{
+    const size_t ubxCfgDataLen = 20;
+    const size_t ubxCfgHeaderLen = 4; // 4 bytes for Class, Port Id and Length(2 bytes)
+    uint8_t ublox_cfg_prt[ubxCfgDataLen + ubxCfgHeaderLen];
+    uint8_t *payload_buf = &ublox_cfg_prt[ubxCfgHeaderLen];
+
+    ALOGV("[%s, line %d]", __func__, __LINE__);
+
+    memset(ublox_cfg_prt, 0, sizeof(ublox_cfg_prt));
+    // offset 0 has class code
+    ublox_cfg_prt[0] = 0x06;
+    //offset 2 has 2 bytes of payload length
+    *((uint16_t *)&ublox_cfg_prt[2]) = cpu_to_le16(ubxCfgDataLen);
+
+    payload_buf[0] = port;
+    *((uint32_t *)&payload_buf[4]) = cpu_to_le32(Encode8N1());
+    *((uint32_t *)&payload_buf[8]) = cpu_to_le32(speed);
+
+    /* enable NMEA and UBX protocols by default, we dont use RTCM protocol so far */
+    const uint8_t UBX_PROTOCOL_MASK = 0x01;
+    const uint8_t NMEA_PROTOCOL_MASK = 0x02;
+    payload_buf[12] = NMEA_PROTOCOL_MASK | UBX_PROTOCOL_MASK;
+    payload_buf[14] = NMEA_PROTOCOL_MASK | UBX_PROTOCOL_MASK;
+    UBX_Send(ublox_cfg_prt, sizeof(ublox_cfg_prt));
+    if (tcdrain(mFd)) {
+        ALOGW("tcdrain has failed! This is not fatal, but can result in further errors\n");
+    }
+
+    if (!SetTtyBaudrate(mFd, speed)) {
+        ALOGE("Can not set tty baudrate to %d!\n", speed);
+        return false;
+    }
+    ::tcflush(mFd, TCOFLUSH);
+
+    if (!UBX_Wait_ACK(ublox_cfg_prt)) {
+        ALOGW("No ACK for Speed Change! This is fatal\n");
+        return false;
+    }
+    return true;
+}
+
 bool GnssHwTTY::start(void)
 {
     if (mResetReceiverOnStart) {
@@ -335,12 +442,17 @@ bool GnssHwTTY::OpenDevice(const char* ttyDevDefault)
 
     char prop_tty_dev[PROPERTY_VALUE_MAX] = {};
     char prop_tty_baudrate[PROPERTY_VALUE_MAX] = {};
+    char prop_gnss_baudrate[PROPERTY_VALUE_MAX] = {};
+    const char *tty_default_rate = "9600";
+    const char *gnss_default_rate = "38400";
 
     property_get("ro.boot.gps.tty_dev", prop_tty_dev, ttyDevDefault);
-    property_get("ro.boot.gps.tty_baudrate", prop_tty_baudrate, "9600");
+    property_get("ro.boot.gps.tty_baudrate", prop_tty_baudrate, tty_default_rate);
+    property_get("ro.boot.gps.gnss_baudrate", prop_gnss_baudrate, gnss_default_rate);
 
-    int32_t baudrate = std::atoi(prop_tty_baudrate);
-
+    uint32_t baudrate = std::atoi(prop_tty_baudrate);
+    /*We support gnss baud rate change for SKKF only*/
+    uint32_t gnss_baudrate = mIsKingfisher ? std::atoi(prop_gnss_baudrate) : baudrate;
     /* Open the serial tty device */
     do {
         mFd = ::open(prop_tty_dev, O_RDWR | O_NOCTTY);
@@ -351,35 +463,28 @@ bool GnssHwTTY::OpenDevice(const char* ttyDevDefault)
         return false;
     }
 
-    mHandleThreadCv.notify_one();
+    ALOGI("TTY %s@%d(%d) fd=%d", prop_tty_dev, baudrate, gnss_baudrate, mFd);
 
-    ALOGI("TTY %s@%s fd=%d", prop_tty_dev, prop_tty_baudrate, mFd);
-
-    /* Setup serial port */
-    struct termios  ios;
-    ::tcgetattr(mFd, &ios);
-
-    ios.c_cflag  = CS8 | CLOCAL | CREAD;
-    ios.c_iflag  = IGNPAR;
-    ios.c_oflag  = 0;
-    ios.c_lflag  = 0;  /* disable ECHO, ICANON, etc... */
-
-    /* Set baudrate */
-    switch(baudrate) {
-    case 2400: ios.c_cflag |= B2400; break;
-    case 4800: ios.c_cflag |= B4800; break;
-    case 9600: ios.c_cflag |= B9600; break;
-    case 19200: ios.c_cflag |= B19200; break;
-    case 38400: ios.c_cflag |= B38400; break;
-    default: {
-        ios.c_cflag |= B9600;
-        ALOGW("Unsupported baud rate %d.. setting default 9600", baudrate);
+    if (!SetTtyBaudrate(mFd, baudrate)) {
+        ALOGE("Can not set tty baudrate to %d!\n", baudrate);
+        return false;
     }
-    }
-
-    ::tcsetattr(mFd, TCSANOW, &ios);
     ::tcflush(mFd, TCIOFLUSH);
 
+
+    if (baudrate != gnss_baudrate) {
+        /*We need to change the gnss baud rate.
+        * This is currently supported on SKKF platform only,
+        * So we hardcode the port ID
+        */
+        const uint8_t PortID = 1;
+        if (!UbxSetSpeed(PortID, gnss_baudrate)) {
+            ALOGD("Can not set Gnss port parameters\n");
+            return false;
+        }
+    }
+
+    mHandleThreadCv.notify_one();
     return true;
 }
 
