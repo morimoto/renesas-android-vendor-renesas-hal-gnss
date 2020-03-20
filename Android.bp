@@ -78,6 +78,7 @@ cc_binary {
         "libhidlbase",
         "libusbhost",
         "libhidltransport",
+	"libgpio",
         "android.hardware.gnss@1.0",
     ],
 }

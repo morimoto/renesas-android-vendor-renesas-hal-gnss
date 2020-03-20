@@ -29,6 +29,7 @@
 #include <memory>
 #include <cmath>
 #include <regex>
+#include <libgpio.h>
 
 #include <utils/SystemClock.h>
 #include <sys/system_properties.h>
@@ -436,6 +437,18 @@ bool GnssHwTTY::stop(void)
     return true;
 }
 
+int resetDevice() {
+    int ret = libgpio_set_value(GPS_RST_CHIP, GPS_RST_LINE, OFF);
+    if (!ret) {
+        usleep(200000);
+        ret = libgpio_set_value(GPS_RST_CHIP, GPS_RST_LINE, ON);
+        if (!ret) {
+            usleep(1000000);
+        }
+    }
+    return ret;
+}
+
 bool GnssHwTTY::OpenDevice(const char* ttyDevDefault)
 {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
@@ -453,6 +466,16 @@ bool GnssHwTTY::OpenDevice(const char* ttyDevDefault)
     uint32_t baudrate = std::atoi(prop_tty_baudrate);
     /*We support gnss baud rate change for SKKF only*/
     uint32_t gnss_baudrate = mIsKingfisher ? std::atoi(prop_gnss_baudrate) : baudrate;
+    if (mIsKingfisher) {
+        /*In case of SKKF, we may change the default baud rate,
+        * so when HAL is restarted without Power off, we need to
+        * reset device to make sure it operates at tty_default_rate
+        */
+        int ret = resetDevice();
+        if (ret < 0) {
+            ALOGW("Can not reset GNSS device, this may cause further malfunction!\n");
+        }
+    }
     /* Open the serial tty device */
     do {
         mFd = ::open(prop_tty_dev, O_RDWR | O_NOCTTY);
