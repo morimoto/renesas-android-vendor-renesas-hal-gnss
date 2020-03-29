@@ -77,8 +77,7 @@ cc_binary {
         "libbinder",
         "libhidlbase",
         "libusbhost",
-        "libhidltransport",
-	"libgpio",
+        "libgpio",
         "android.hardware.gnss@1.0",
     ],
 }
@@ -152,7 +151,6 @@ cc_test {
         "libbinder",
         "libhidlbase",
         "libusbhost",
-        "libhidltransport",
         "android.hardware.gnss@1.0",
     ],
 
