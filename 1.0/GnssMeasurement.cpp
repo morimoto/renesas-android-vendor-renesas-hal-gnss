@@ -109,6 +109,8 @@ void GnssMeasurementImpl::callbackThread(void)
                 break;
             }
         }
+        // TODO: figure out what is this for - maybe
+        // in 2.0 we should do it if (!enableFullTracking)
         std::unique_lock<std::mutex> lock(mCallbackMutex);
         mCallbackCond.wait_for(lock,
                       std::chrono::seconds(1));
