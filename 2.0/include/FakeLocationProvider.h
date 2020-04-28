@@ -29,8 +29,10 @@ protected:
 private:
     FakeLocationProvider(FakeLocationProvider&) = delete;
     FakeLocationProvider& operator=(const FakeLocationProvider&) = delete;
+    void LoadFakeTxt();
 
     std::unique_ptr<FakeLocationBuilder> mBuilder;
+    std::vector<fakeLocationPoint_t> mFakePoints;
 };
 
 } // namespace android::hardware::gnss::V2_0::renesas

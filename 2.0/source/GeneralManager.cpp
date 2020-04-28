@@ -115,8 +115,6 @@ android::status_t GeneralManager::Run() {
     Transport& transport = Transport::GetInstance(mReceiver);
 
     if (GnssReceiverType::FakeReceiver == mReceiver->GetReceiverType()) {
-        mReader = std::make_unique<FakeReader>(transport);
-        mReader->Start();
         SetupLocationProvider();
         mReceiverStatus = GnssReceiverStatus::READY;
         return ::android::OK;

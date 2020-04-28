@@ -99,4 +99,5 @@ private:
     std::thread mReadingLoop;
     std::atomic<bool> mExitThread;
     Transport& mTransport;
+    std::mutex mLock;
 };

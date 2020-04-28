@@ -57,6 +57,7 @@ void FakeReader::ReadingLoop() {
         }
 
         auto uptrFakePoint = std::make_shared<fakeLocationPoint_t>(*it);
+        std::unique_lock<std::mutex> lock(mLock);
         pipe.Push<std::shared_ptr<fakeLocationPoint_t>>(uptrFakePoint);
         ++it;
     }
@@ -66,7 +67,6 @@ RDError FakeReader::LoadFakeTxt() {
     while (TError::FailedToRead != mTransport.Read<std::string>
            (mRawLocationInput)) {
         std::vector<std::string> parts;
-
         if (SplitLine(mRawLocationInput.back(), parts) != RDError::Success) {
             continue;
         }

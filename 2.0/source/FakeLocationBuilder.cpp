@@ -36,9 +36,6 @@ using std::chrono::milliseconds;
 
 namespace android::hardware::gnss::V2_0::renesas {
 
-static constexpr uint32_t numPointsNeeded = 2;
-static constexpr size_t msgQueTimeout = 2000;
-
 typedef ::android::hardware::gnss::V1_0::GnssLocation GnssLocation;
 typedef ::android::hardware::gnss::V1_0::GnssLocationFlags GnssLocationFlags;
 
@@ -46,46 +43,64 @@ FakeLocationBuilder::FakeLocationBuilder():
     mMsgQueue(MessageQueue::GetInstance()),
     mMsgQueueCV(mMsgQueue.GetConditionVariable<FLBType>()) {}
 
-FLBError FakeLocationBuilder::Build(LocationData& outData) {
-    // Get numPointsNeeded (2) fakeLocationPoint_t from message queue
-    // to set location data parameters accordingly
-    std::unique_lock<std::mutex> lock(mLock);
-    mMsgQueueCV.wait_for(lock, milliseconds{msgQueTimeout},
-                [&] {return mMsgQueue.GetSize<FLBType>() > numPointsNeeded;});
-    FLBType pt_from = mMsgQueue.Pop<FLBType>(),
-            pt_to = mMsgQueue.Pop<FLBType>();
+FLBError FakeLocationBuilder::Build(fakeLocationPoint_t& from,
+        fakeLocationPoint_t& to, std::queue<LocationData>& outData) {
+    fakeLocationPoint_t pt_from = from,
+        pt_to = to;
 
-    if ((pt_from == nullptr) || (pt_to == nullptr)) {
-        return FLBError::INCOMPLETE;
-    }
+    LocationData location;
+
+    location.v1_0.speedMetersPerSec = pt_from.speed;
+    location.v1_0.latitudeDegrees = pt_from.latitude;
+    location.v1_0.longitudeDegrees = pt_from.longitude;
+
+    const double dlon = (pt_to.longitude - pt_from.longitude) * PI / 180;
+    const double dlat = (pt_to.latitude - pt_from.latitude) * PI / 180;
+    const double a = pow((sin(dlat / 2)), 2) + cos(pt_from.latitude * PI / 180) *
+        cos(pt_to.latitude * PI / 180) * pow((sin(dlon / 2)), 2);
+    const double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    const double d = EARTH_RADIUS * c; // Distance
+    const double t = d / location.v1_0.speedMetersPerSec; // Time in seconds to reach last point
+    // lat lon step for next reporting point
+    const double latStep = (pt_to.latitude - pt_from.latitude) / t;
+    const double lonStep = (pt_to.longitude - pt_from.longitude) / t;
 
     // Calculating bearing between points
-    const double dlon = (pt_to->longitude - pt_from->longitude) * PI / 180;
-    const double X = cos(pt_to->latitude * PI / 180) * sin(dlon);
-    const double Y = cos(pt_from->latitude * PI / 180) *
-        sin(pt_to->latitude * PI / 180) - sin(pt_from->latitude * PI / 180) *
-        cos(pt_to->latitude * PI / 180) * cos(dlon);
+    const double X = cos(pt_to.latitude * PI / 180) * sin(dlon);
+    const double Y = cos(pt_from.latitude * PI / 180) *
+        sin(pt_to.latitude * PI / 180) - sin(pt_from.latitude * PI / 180) *
+        cos(pt_to.latitude * PI / 180) * cos(dlon);
     const float bearing = static_cast<float>(atan2(X, Y) * 180 / PI);
-    outData.v1_0.horizontalAccuracyMeters = 1.f;
-    outData.v1_0.gnssLocationFlags = static_cast<uint16_t>(
-                GnssLocationFlags::HAS_SPEED |
-                GnssLocationFlags::HAS_HORIZONTAL_ACCURACY |
-                GnssLocationFlags::HAS_ALTITUDE |
-                GnssLocationFlags::HAS_LAT_LONG |
-                GnssLocationFlags::HAS_BEARING);
-    /* ---------------------------------------------------------- */
-    outData.v1_0.speedMetersPerSec = pt_from->speed;
-    outData.v1_0.latitudeDegrees = pt_from->latitude;
-    outData.v1_0.longitudeDegrees = pt_from->longitude;
-    outData.v1_0.bearingDegrees = bearing;
-    auto current_time_ms = duration_cast<milliseconds>
-                    (std::chrono::system_clock::now().time_since_epoch());
-    outData.v1_0.timestamp = current_time_ms.count();
-    outData.elapsedRealtime.flags = ElapsedRealtimeFlags::HAS_TIMESTAMP_NS |
-                                ElapsedRealtimeFlags::HAS_TIME_UNCERTAINTY_NS;
-    outData.elapsedRealtime.timestampNs =
-        static_cast<uint64_t>(::android::elapsedRealtimeNano());
-    outData.elapsedRealtime.timeUncertaintyNs = 0;
+
+    location.v1_0.bearingDegrees = bearing;
+    for (int i = 0; i <= static_cast<int>(t); i++) {
+        location.v1_0.horizontalAccuracyMeters = 1.f;
+        location.v1_0.gnssLocationFlags = static_cast<uint16_t>(
+                    GnssLocationFlags::HAS_SPEED |
+                    GnssLocationFlags::HAS_HORIZONTAL_ACCURACY |
+                    GnssLocationFlags::HAS_ALTITUDE |
+                    GnssLocationFlags::HAS_LAT_LONG |
+                    GnssLocationFlags::HAS_BEARING);
+        /* ---------------------------------------------------------- */
+        if (i == static_cast<int>(t)) {
+            location.v1_0.latitudeDegrees = pt_to.latitude;
+            location.v1_0.longitudeDegrees = pt_to.longitude;
+            location.v1_0.speedMetersPerSec = d - (static_cast<int>(t)) * pt_from.speed;
+        }
+        else {
+            location.v1_0.latitudeDegrees += latStep;
+            location.v1_0.longitudeDegrees += lonStep;
+        }
+        auto current_time_ms = duration_cast<milliseconds>
+                        (std::chrono::system_clock::now().time_since_epoch());
+        location.v1_0.timestamp = current_time_ms.count();
+        location.elapsedRealtime.flags = ElapsedRealtimeFlags::HAS_TIMESTAMP_NS |
+                                    ElapsedRealtimeFlags::HAS_TIME_UNCERTAINTY_NS;
+        location.elapsedRealtime.timestampNs =
+            static_cast<uint64_t>(::android::elapsedRealtimeNano());
+        location.elapsedRealtime.timeUncertaintyNs = 0;
+        outData.push(location);
+    }
     return FLBError::SUCCESS;
 }
 

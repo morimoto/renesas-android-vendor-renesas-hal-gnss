@@ -48,13 +48,6 @@ TError Transport::Open(GnssReceiverType recType) {
 }
 
 TError Transport::OpenFakeFile() {
-    std::lock_guard<std::mutex> lock(readWriteLock);
-    fakeStream.open(mPath, std::ios_base::in);
-
-    if (!fakeStream.is_open()) {
-        return TError::TransportNotReady;
-    }
-
     return TError::TransportReady;
 }
 
@@ -82,10 +75,6 @@ TError Transport::Close() {
     if (closedFd != mFd) {
         ::close(mFd);
         mFd = closedFd;
-    }
-
-    if (fakeStream.is_open()) {
-        fakeStream.close();
     }
 
     return TError::TransportNotReady;

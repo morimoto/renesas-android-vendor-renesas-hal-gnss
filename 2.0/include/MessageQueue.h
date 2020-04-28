@@ -33,6 +33,9 @@ public:
     template<typename T>
     T Pop();
 
+    template<typename T>
+    T Front();
+
     // TODO(g.chabukiani): review this design better
     template<typename T>
     bool Empty();
@@ -111,6 +114,23 @@ T MessageQueue::Pop() {
     ALOGV("GnssRenesasQueue [%s], size = %zu", __PRETTY_FUNCTION__, size);
     auto val = mQueue<T>.front();
     mQueue<T>.pop();
+    return val;
+}
+
+
+template <typename T>
+T MessageQueue::Front() {
+    std::lock_guard<std::mutex> lock(locker<T>.mLock);
+    ALOGV("GnssRenesasQueue [%s]", __PRETTY_FUNCTION__);
+
+    if (mQueue<T>.empty()) {
+        ALOGV("GnssRenesasQueue [%s] empty", __PRETTY_FUNCTION__);
+        return nullptr;
+    }
+
+    auto size = mQueue<T>.size();
+    ALOGV("GnssRenesasQueue [%s], size = %zu", __PRETTY_FUNCTION__, size);
+    auto val = mQueue<T>.front();
     return val;
 }
 

@@ -56,7 +56,9 @@ public:
      *          INCOMPLETE - some messages from receivers are missing,
      *          INVALID - received GNSS data is invalid
      */
-    FLBError Build(LocationData& outData);
+    FLBError Build(std::queue<LocationData>& outData);
+    FLBError Build(fakeLocationPoint_t& pt_from,\
+            fakeLocationPoint_t& pt_to, std::queue<LocationData>& outData);
 private:
     FakeLocationBuilder(FakeLocationBuilder&) = delete;
     FakeLocationBuilder& operator=(const FakeLocationBuilder&) = delete;
