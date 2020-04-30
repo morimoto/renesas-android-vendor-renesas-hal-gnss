@@ -72,7 +72,6 @@ void GeneralManager::StartAfterChange() {
         transport.ResetTransport(mReceiver);
         mReader = std::make_unique<TtyReader>(transport);
         mReader->Start();
-        UpdateReceiverInfo();
         RunConfig();
     }
 }
@@ -127,11 +126,6 @@ android::status_t GeneralManager::Run() {
     mNmeaMsgHandler->StartProcessing();
     mReader->Start();
 
-    if (!mReceiverInfoThread.joinable()) {
-        mReceiverInfoThread =
-                    std::thread(&GeneralManager::UpdateReceiverInfo, this);
-    }
-
     if (!mConfigThread.joinable()) {
         mConfigThread = std::thread(&GeneralManager::RunConfig, this);
     }
@@ -143,33 +137,8 @@ android::status_t GeneralManager::Run() {
     return ::android::OK;
 }
 
-void GeneralManager::UpdateReceiverInfo() {
-    ALOGV("%s", __func__);
-    mReceiverStatus = GnssReceiverStatus::WAIT_FOR_SETUP;
-
-    if (DSError::Success != mDeviceScanner->UpdateTopReceiverInfo()) {
-        GnssCriticalError(std::string("UpdateTopReceiverInfo failed"));
-    }
-
-    mNmeaMsgHandler->UpdateProtocolVersion(GetNmeaProtocol());
-    mReceiverStatus = GnssReceiverStatus::SETUP_DONE;
-    mReceiverCv.notify_all();
-}
-
 void GeneralManager::RunConfig() {
     ALOGV("%s", __func__);
-
-    if (mReceiverStatus == GnssReceiverStatus::WAIT_FOR_SETUP) {
-        std::unique_lock<std::mutex> lock(mLock);
-        const size_t timeout = 5000;
-        mReceiverCv.wait_for(lock, std::chrono::milliseconds{timeout},
-            [&] {return mReceiverStatus == GnssReceiverStatus::SETUP_DONE;});
-    }
-
-    if (mReceiverStatus == GnssReceiverStatus::WAIT_FOR_SETUP) {
-        GnssCriticalError(std::string("Receiver setup timeout"));
-    }
-
     mReceiverStatus = GnssReceiverStatus::WAIT_FOR_CONFIG;
     Configurator config(mReceiver);
 
@@ -177,9 +146,9 @@ void GeneralManager::RunConfig() {
         GnssCriticalError("Receiver config failed");
     }
 
+    mNmeaMsgHandler->UpdateProtocolVersion(GetNmeaProtocol());
     SetupMeasurementProvider();
     mReceiverStatus = GnssReceiverStatus::CONFIG_DONE;
-    ALOGV("%s - config success", __func__);
 }
 
 GMError GeneralManager::SetCallbackV1_1(const GnssCbPtr_1_1& cb) {

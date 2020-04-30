@@ -24,6 +24,7 @@
 
 namespace android::hardware::gnss::V2_0::renesas {
 
+static constexpr size_t cfgResetLen = 8;
 static constexpr size_t cfgClearLen = 17;
 static constexpr size_t cfgNav5Len = 40;
 static constexpr size_t cfgNmea41Len = 19;
@@ -32,11 +33,17 @@ static constexpr size_t cfgGnssSPG100Len = 40;
 static constexpr size_t cfgGnssSPG201Len = 48;
 static constexpr size_t cfgGnssSPG301Len = 64;
 static constexpr size_t cfgSetRateLen = 12;
+static constexpr size_t msgPollVerLen = 4;
+static constexpr size_t ubxCfgDataLen = 20;
+static constexpr size_t ubxCfgHeaderLen = 4;
 
 static constexpr uint8_t maxAckRetries = 5;
 
 static constexpr uint8_t cfgDefaulRate = 1;
 static constexpr uint8_t cfgDisableRate = 0;
+
+static const int32_t gnssDefaultRate = 38400;
+static const std::string propGnssBaudRate = "ro.boot.gps.gnss_baudrate";
 
 enum class CError : uint8_t {
     Success,
@@ -79,6 +86,45 @@ protected:
     CError WaitConfirmation(const UbxClass& _class, const UbxId& _id);
     CError UbxProcessAck(const UbxClass& _class, const UbxId& _id,
                          const std::shared_ptr<UbxACK>& type);
+
+    /*!
+     * \brief UbxChangeBaudRate
+     * \return
+     */
+    CError UbxChangeBaudRate();
+
+    /*!
+     * \brief UbxGnssReset
+     * \return
+     */
+    CError UbxGnssReset();
+
+    /*!
+     * \brief UbxSetSpeed
+     * \param port
+     * \param speed
+     * \return
+     */
+    CError UbxSetSpeed(uint8_t port, uint32_t speed);
+
+    /*!
+     * \brief UbxSetSpeed
+     * \param resetMode
+     * \return
+     */
+    CError UbxCfgRst(uint8_t resetMode);
+
+    /*!
+     * \brief PollUbxMonVer
+     * \return
+     */
+    CError PollUbxMonVer();
+
+    /*!
+     * \brief ProcessUbxMonVer
+     * \return
+     */
+    CError ProcessUbxMonVer();
 private:
     typedef CError (Configurator::*cfgStepPtr)();
     static const std::vector<std::vector<cfgStepPtr>> mConfigs;
@@ -110,9 +156,17 @@ template <std::size_t size>
 void PrepareGnssConfig(const std::array<uint8_t, CfgIndex::COUNT>& index,
             std::array<uint8_t, size>& ubxCfgGnss);
 
+const std::array<uint8_t, msgPollVerLen> msgPollMonVer = {
+    0x0a, 0x04, 0x00, 0x00
+};
+
+const std::array<uint8_t, cfgResetLen> cfgReset = {
+    0x06, 0x04, 0x04, 0x00, 0xFF, 0xFF, 0x00, 0x00
+};
+
 const std::array<uint8_t, cfgClearLen> cfgClear = {
-    0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+    0x06, 0x09, 0x0D, 0x00, 0xFE, 0xFF, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00,
     0x17
 };
 

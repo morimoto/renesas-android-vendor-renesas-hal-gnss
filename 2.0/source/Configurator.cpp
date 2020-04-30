@@ -26,6 +26,26 @@
 #include "include/MessageQueue.h"
 #include "include/Configurator.h"
 
+#ifdef BIG_ENDIAN_CPU
+static inline uint32_t cpu_to_le32(uint32_t value) {
+    return ((((value)&0xff000000u) >> 24) | (((value)&0x00ff0000u) >> 8) |
+            (((value)&0x0000ff00u) << 8) | (((value)&0x000000ffu) << 24));
+}
+static inline uint16_t cpu_to_le16(uint32_t value) {
+    return ((((value) >> 8) & 0xffu) | (((value)&0xffu) << 8));
+}
+#else
+static inline uint32_t cpu_to_le32(uint32_t value) {
+    return value;
+}
+static inline uint16_t cpu_to_le16(uint32_t value) {
+    return value;
+}
+#endif
+
+static inline uint32_t Encode8N1() {
+    return (uint32_t)(1 << 11) | (3 << 6);
+}
 
 namespace android::hardware::gnss::V2_0::renesas {
 
@@ -34,12 +54,14 @@ using cfg = Configurator;
 const std::vector<std::vector<cfg::cfgStepPtr>> cfg::mConfigs = {
     {
         // protocol of init for u-blox FW version SPG 1.00
+        &cfg::UbxGnssReset,
         &cfg::UbxClearConfig, &cfg::UbxSetNmea23, &cfg::UbxConfigGnssSGP100,
         &cfg::UbxSetNav5, &cfg::UbxSetPubx00, &cfg::UbxDisableNmeaGll,
         &cfg::UbxDisableNmeaVtg, &cfg::UbxSetRmc
     },
     {
         // protocol of init for u-blox FW version SPG 2.01
+        &cfg::UbxGnssReset,
         &cfg::UbxClearConfig, &cfg::UbxSetNmea41, &cfg::UbxConfigGnssSGP201,
         &cfg::UbxSetNav5, &cfg::UbxSetPubx00, &cfg::UbxDisableNmeaGll,
         &cfg::UbxDisableNmeaVtg, &cfg::UbxPollNavGps, &cfg::UbxPollNavClock,
@@ -47,13 +69,13 @@ const std::vector<std::vector<cfg::cfgStepPtr>> cfg::mConfigs = {
     },
     {
         // protocol of init for u-blox FW version SPG 3.01
+        &cfg::UbxGnssReset,
         &cfg::UbxClearConfig, &cfg::UbxSetNmea41, &cfg::UbxConfigGnssSGP301,
         &cfg::UbxSetNav5, &cfg::UbxSetPubx00, &cfg::UbxDisableNmeaGll,
         &cfg::UbxDisableNmeaVtg, &cfg::UbxPollNavGps, &cfg::UbxPollNavClock,
         &cfg::UbxPollRxmMeasx, &cfg::UbxPollNavStatus, &cfg::UbxSetRmc
     }
 };
-
 
 CError Configurator::Config() {
     ALOGV("Create Configurator");
@@ -78,6 +100,15 @@ CError Configurator::ConfigUbx() {
         ALOGV("%s, mReceiver == null", __func__);
         return CError::InternalError;
     }
+
+    if (CError::Success != UbxChangeBaudRate()){
+        return CError::InternalError;
+    }
+
+    if (CError::Success != PollUbxMonVer()) {
+        return CError::InternalError;
+    }
+
     MessageQueue& pipe = MessageQueue::GetInstance();
     pipe.Clear<std::shared_ptr<UbxACK>>();
     try {
@@ -95,7 +126,7 @@ CError Configurator::ConfigUbx() {
         return CError::UnsupportedReceiver;
     }
 
-    ALOGV("Config Success");
+    ALOGI("Config Success");
     return CError::Success;
 }
 
@@ -181,6 +212,127 @@ CError Configurator::UbxPollRxmMeasx() {
 CError Configurator::UbxSetRmc() {
     ALOGV("%s", __func__);
     return UbxSetMessageRate(UbxClass::NMEA_CFG, UbxId::RMC, cfgDefaulRate);
+}
+CError Configurator::UbxGnssReset() {
+    ALOGV("%s", __func__);
+    const uint8_t gnssReset = 0x02;  //Controlled software reset (GNSSonly)
+
+    return UbxCfgRst(gnssReset);
+}
+
+CError Configurator::UbxSetSpeed(uint8_t port, uint32_t speed) {
+    ALOGV("[%s, line %d]", __func__, __LINE__);
+    std::array<uint8_t, ubxCfgDataLen + ubxCfgHeaderLen> msgUbloxCfgPrt = {};
+    uint8_t* payload_buf = &msgUbloxCfgPrt[ubxCfgHeaderLen];
+
+    // offset 0 has class code
+    msgUbloxCfgPrt[0] = static_cast<uint8_t>(UbxClass::CFG);
+    //offset 2 has 2 bytes of payload length
+    *((uint16_t*)&msgUbloxCfgPrt[2]) = cpu_to_le16(ubxCfgDataLen);
+
+    payload_buf[0] = port;
+    *((uint32_t*)&payload_buf[4]) = cpu_to_le32(Encode8N1());
+    *((uint32_t*)&payload_buf[8]) = cpu_to_le32(speed);
+
+    /* enable NMEA and UBX protocols by default, we dont use RTCM protocol so far */
+    const uint8_t UBX_PROTOCOL_MASK = 0x01;
+    const uint8_t NMEA_PROTOCOL_MASK = 0x02;
+    payload_buf[12] = NMEA_PROTOCOL_MASK | UBX_PROTOCOL_MASK;
+    payload_buf[14] = NMEA_PROTOCOL_MASK | UBX_PROTOCOL_MASK;
+    auto res = mTransport.Write<msgUbloxCfgPrt.size()>(msgUbloxCfgPrt);
+
+    if (TError::Success != res) {
+        return CError::InternalError;
+    }
+
+    if (TError::TransportReady != mTransport.SetTtyBaudrate(speed)) {
+        ALOGE("Can not set tty baudrate to %d!\n", speed);
+        return CError::InternalError;
+    }
+
+    if (CError::Success != WaitConfirmation(UbxClass::CFG, UbxId::NACK)) {
+        ALOGW("No ACK for Speed Change! This is fatal\n");
+        return CError::InternalError;
+    }
+
+    mReceiver->SetBaudRate(speed);
+    return CError::Success;
+}
+CError Configurator::UbxChangeBaudRate() {
+    uint32_t gnssBaudrate = property_get_int32(propGnssBaudRate.c_str(),
+                                               gnssDefaultRate);
+
+    if (mTransport.GetTtyBaudrate() != gnssBaudrate) {
+        const uint8_t PortID = 1;
+
+        if (CError::Success != UbxSetSpeed(PortID, gnssBaudrate)) {
+            ALOGE("Can not set Gnss port baudrate to %d!\n", gnssBaudrate);
+            return CError::InternalError;
+        }
+        ALOGD("Set gnss baudrate %u - success\n", gnssBaudrate);
+    }
+
+    return CError::Success;
+}
+
+CError Configurator::PollUbxMonVer() {
+    ALOGV("%s", __func__);
+    auto res = mTransport.Write<msgPollVerLen>(msgPollMonVer);
+
+    if (TError::Success != res) {
+        return CError::InternalError;
+    }
+
+    MessageQueue& pipe = MessageQueue::GetInstance();
+    std::condition_variable& cv =
+        pipe.GetConditionVariable<std::shared_ptr<IUbxParser<monVerOut>>>();
+    std::unique_lock<std::mutex> lock(mLock);
+    const size_t timeout = 5000;
+    cv.wait_for(lock, std::chrono::milliseconds{timeout},
+                [&] { return !pipe.Empty<std::shared_ptr<IUbxParser<monVerOut>>>(); });
+    ALOGV("%s, ready", __func__);
+
+    if (pipe.Empty<std::shared_ptr<IUbxParser<monVerOut>>>()) {
+        ALOGE("%s, empty pipe", __func__);
+        return CError::InternalError;
+    }
+
+    return ProcessUbxMonVer();
+}
+
+CError Configurator::ProcessUbxMonVer() {
+    MessageQueue& pipe = MessageQueue::GetInstance();
+    auto parcel = pipe.Pop<std::shared_ptr<IUbxParser<monVerOut>>>();
+    monVerOut_t value = {};
+
+    if (nullptr == parcel) {
+        return CError::InternalError;
+    }
+
+    if (UPError::Success != parcel->GetData(value)) {
+        return CError::InternalError;
+    }
+
+    auto res = mReceiver->SetFwVersion(value.swVersion);
+    ALOGI("Firmware Version %.2f", mReceiver->GetFirmwareVersion());
+    return (res == RError::NotSupported ? CError::UnsupportedReceiver : CError::Success);
+}
+
+CError Configurator::UbxCfgRst(uint8_t resetMode) {
+    ALOGV("%s, line %d", __func__, __LINE__);
+    std::array<uint8_t, cfgResetLen> cfgRstReset(cfgReset);
+
+    // offset 2 has resetMode
+    cfgRstReset[ubxCfgHeaderLen + 2] = resetMode;
+    auto res = mTransport.Write<cfgResetLen>(cfgRstReset);
+
+    if (TError::Success != res) {
+        return CError::InternalError;
+    }
+
+    //Don't expect this message to be acknowledged by the receiver.
+    usleep(25000);
+    return CError::Success;
 }
 
 //TODO(g.chabukiani): poll nav-pvt message,

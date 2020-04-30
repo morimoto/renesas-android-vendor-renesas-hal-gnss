@@ -81,27 +81,7 @@ public:
      */
     DSError Scan();
 
-    /*!
-     * \brief UpdateTopReceiverInfo -- should communicate with receiver
-     *        over UART and get its hw model, fw version, supported protocol.
-     * \return
-     */
-    DSError UpdateTopReceiverInfo();
-
-
 protected:
-    /*!
-     * \brief PollUbxMonVer
-     * \return
-     */
-    DSError PollUbxMonVer();
-
-    /*!
-     * \brief ProcessUbxMonVer
-     * \return
-     */
-    DSError ProcessUbxMonVer();
-
     /*!
      * \brief CreateFakeReceiver
      * \param type
@@ -191,9 +171,8 @@ private:
     typedef struct PredefinedSettings {
         std::string ttyPath;
         std::string secmajor;
-        std::string baudRate;
         std::string sbas;
-        uint64_t requestedBaudrate;
+        uint32_t requestedBaudrate;
     } predefinedSettings_t;
 
     static const std::string mPropRequestedReceiver;
@@ -201,6 +180,7 @@ private:
     static const std::string mPropBaudRate;
     static const std::string mPropSecmajor;
     static const std::string mPropSbas;
+    static const int32_t mTtyDefaultRate;
 
     static const std::string mSalvatorUbloxTtyPath;
     static const std::string mSalvatorOtherTtyPath;

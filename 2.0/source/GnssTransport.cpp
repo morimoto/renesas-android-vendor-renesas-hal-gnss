@@ -110,8 +110,13 @@ TError Transport::Close() {
 
 TError Transport::SetUpLine() {
     // Setup serial port
-    ALOGV("%s", __func__);
+    ALOGI("%s, baudrate: %u", __func__, mBaudRate);
     struct termios  ios;
+
+    if (tcdrain(mFd)) {
+        ALOGW("tcdrain has failed! This is not fatal, but can result in further errors\n");
+    }
+
     ::tcgetattr(mFd, &ios);
     ios.c_cflag  = CS8 | CLOCAL | CREAD;
     ios.c_iflag  = IGNPAR;
@@ -145,14 +150,26 @@ TError Transport::SetUpLine() {
         break;
     }
 
+    case 57600: {
+        ios.c_cflag |= B57600;
+        break;
+    }
+
+    case 115200: {
+        ios.c_cflag |= B115200;
+        break;
+    }
+
     default: {
         ios.c_cflag |= B9600;
         ALOGW("Unsupported baud rate %d.. setting default 9600", mBaudRate);
     }
     }
 
-    ::tcsetattr(mFd, TCSANOW, &ios);
-    ::tcflush(mFd, TCIOFLUSH);
+    if (::tcsetattr(mFd, TCSANOW, &ios)) {
+        return TError::TransportNotReady;
+    }
+
     return TError::TransportReady;
 }
 
@@ -212,4 +229,15 @@ TError Transport::SetEndianness() {
 
 Endian Transport::GetEndianType() const {
     return mEndianType;
+}
+
+TError Transport::SetTtyBaudrate(uint32_t baudrate) {
+    std::lock_guard<std::mutex> lock(readWriteLock);
+
+    mBaudRate = baudrate;
+    return SetUpLine();
+}
+
+uint32_t Transport::GetTtyBaudrate(){
+    return mBaudRate;
 }

@@ -102,6 +102,18 @@ public:
      */
     TError ResetGnssReceiver();
 
+    /*!
+     * \brief Transport::SetTtyBaudrate
+     * \return
+     */
+    TError SetTtyBaudrate(uint32_t baudrate);
+
+    /*!
+     * \brief Transport::GetTtyBaudrate
+     * \return
+     */
+    uint32_t GetTtyBaudrate();
+
 protected:
     /*!
      * \brief Open

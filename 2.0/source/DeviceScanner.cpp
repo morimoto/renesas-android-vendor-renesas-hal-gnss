@@ -56,6 +56,8 @@ const std::string DeviceScanner::mFakeRoutePath = "/vendor/etc/fake_route.txt";
 
 const std::string DeviceScanner::mDefaultPropertyValue = "";
 
+const int32_t DeviceScanner::mTtyDefaultRate = 9600;
+
 DSError DeviceScanner::DetectDevice() {
     ALOGV("%s", __func__);
     char propBuf[PROPERTY_VALUE_MAX] = {};
@@ -203,10 +205,7 @@ DSError DeviceScanner::CreateUbxReceiver(const std::string& path,
         {std::make_shared<UbloxReceiver>(path, type), priority};
     size_t emptyLen = mDefaultPropertyValue.length();
 
-    if (mSettings.baudRate.length() > emptyLen) {
-        receiver.receiver->SetBaudRate(static_cast<uint32_t>
-                                       (mSettings.requestedBaudrate));
-    }
+    receiver.receiver->SetBaudRate(mSettings.requestedBaudrate);
 
     if (mSettings.secmajor.length() > emptyLen) {
         receiver.receiver->SetSecondMajorConstellation(mSettings.secmajor);
@@ -225,13 +224,8 @@ DSError DeviceScanner::CreateDefaultReceiver(const std::string& path,
     ALOGV("%s", __func__);
     receiver_t receiver =
             {std::make_shared<DefaultReceiver>(path, type), priority};
-    size_t emptyLen = mDefaultPropertyValue.length();
 
-    if (mSettings.baudRate.length() > emptyLen) {
-        receiver.receiver->SetBaudRate(static_cast<uint32_t>
-                                       (mSettings.requestedBaudrate));
-    }
-
+    receiver.receiver->SetBaudRate(mSettings.requestedBaudrate);
     mReceivers.push(receiver);
     return DSError::Success;
 }
@@ -288,22 +282,16 @@ DSError DeviceScanner::CheckPredefinedSettings() {
     char propTty[PROPERTY_VALUE_MAX] = {};
     char propSecmajor[PROPERTY_VALUE_MAX] = {};
     char propSbas[PROPERTY_VALUE_MAX] = {};
-    char propTtyBaudRate[PROPERTY_VALUE_MAX] = {};
     property_get(mPropRequestedReceiver.c_str(), propTty,
                  mDefaultPropertyValue.c_str());
     property_get(mPropSecmajor.c_str(), propSecmajor,
                  mDefaultPropertyValue.c_str());
     property_get(mPropSbas.c_str(), propSbas, mDefaultPropertyValue.c_str());
-    property_get(mPropBaudRate.c_str(), propTtyBaudRate,
-                 mDefaultPropertyValue.c_str());
     mSettings.ttyPath = std::string(propTty);
     mSettings.secmajor = std::string(propSecmajor);
     mSettings.sbas = std::string(propSbas);
-    mSettings.baudRate = std::string(propTtyBaudRate);
-
-    if (mSettings.baudRate.length() > mDefaultPropertyValue.length()) {
-        mSettings.requestedBaudrate = std::stoul(mSettings.baudRate);
-    }
+    mSettings.requestedBaudrate = property_get_int32(mPropBaudRate.c_str(),
+                                                     mTtyDefaultRate);
 
     return DSError::Success;
 }
@@ -322,70 +310,6 @@ bool DeviceScanner::CheckTtyPath(const std::string& path) {
     }
 
     return (res == 0);
-}
-
-DSError DeviceScanner::UpdateTopReceiverInfo() {
-    ALOGV("%s", __func__);
-    auto topReceiver = mReceivers.top();
-
-    if (topReceiver.priority == Priority::Fake) {
-        ALOGV("%s, fake receiver", __func__);
-        return DSError::FakeReceiver;
-    }
-
-    if (GnssVendor::Ublox == topReceiver.receiver->GetVendorId()) {
-        return PollUbxMonVer();
-    }
-
-    return DSError::UnsupportedReceiver;
-}
-
-DSError DeviceScanner::PollUbxMonVer() {
-    ALOGV("%s", __func__);
-    const size_t msgPollVerLen = 4;
-    std::array<uint8_t, msgPollVerLen> msgPollMonVer =
-                                        {0x0a, 0x04, 0x00, 0x00};
-    Transport& transport = Transport::GetInstance(mReceivers.top().receiver);
-    auto res = transport.Write<msgPollVerLen>(msgPollMonVer);
-
-    if (TError::Success != res) {
-        return DSError::InternalError;
-    }
-
-    MessageQueue& pipe = MessageQueue::GetInstance();
-    std::condition_variable& cv =
-        pipe.GetConditionVariable<std::shared_ptr<IUbxParser<monVerOut>>>();
-    std::unique_lock<std::mutex> lock(mLock);
-    const size_t timeout = 5000;
-    cv.wait_for(lock, std::chrono::milliseconds{timeout},
-        [&] {return !pipe.Empty<std::shared_ptr<IUbxParser<monVerOut>>>();});
-    ALOGV("%s, ready", __func__);
-
-    if (pipe.Empty<std::shared_ptr<IUbxParser<monVerOut>>>()) {
-        ALOGE("%s, empty pipe", __func__);
-        return DSError::InternalError;
-    }
-
-    return ProcessUbxMonVer();
-}
-
-DSError DeviceScanner::ProcessUbxMonVer() {
-    MessageQueue& pipe = MessageQueue::GetInstance();
-    auto parcel = pipe.Pop<std::shared_ptr<IUbxParser<monVerOut>>>();
-    monVerOut_t value = {};
-
-    if (nullptr == parcel) {
-        return DSError::InternalError;
-    }
-
-    if (UPError::Success != parcel->GetData(value)) {
-        return DSError::InternalError;
-    }
-
-    auto res = mReceivers.top().receiver->SetFwVersion(value.swVersion);
-    ALOGI("Firmware Version %.2f", mReceivers.top().receiver->GetFirmwareVersion());
-    return (res == RError::NotSupported ? DSError::UnsupportedReceiver :
-            DSError::Success);
 }
 
 } //namespace android::hardware::gnss::V2_0::renesas

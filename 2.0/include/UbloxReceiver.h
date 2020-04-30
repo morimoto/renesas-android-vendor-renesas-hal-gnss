@@ -149,7 +149,6 @@ private:
     UbloxReceiver& operator=(const UbloxReceiver&) = delete;
     UbloxReceiver(const UbloxReceiver&) = delete;
 
-    const uint32_t defaultLineBaudRate = 9600u;
     const double SPG_100 = 1.00;
     const double SPG_201 = 2.01;
     const double SPG_301 = 3.01;
@@ -161,7 +160,7 @@ private:
     uint16_t mVendorId = static_cast<uint16_t>(VendorId::Ublox);
     uint16_t mProductId;
 
-    uint32_t mLineBaudRate = defaultLineBaudRate;
+    uint32_t mLineBaudRate;
     uint32_t mYearOfHw = 0u;
     float mFirmware = 0.0f;
 
