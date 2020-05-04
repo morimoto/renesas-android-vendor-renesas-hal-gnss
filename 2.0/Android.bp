@@ -75,6 +75,7 @@ cc_binary {
     ],
 
     shared_libs: [
+        "libgpio",
         "liblog",
         "libcutils",
         "libdl",

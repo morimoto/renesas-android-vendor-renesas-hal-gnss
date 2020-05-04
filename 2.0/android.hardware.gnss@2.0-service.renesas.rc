@@ -1,6 +1,8 @@
+on boot && property:"ro.hardware"="kingfisher"
+    chmod 660 /dev/gpiochip9
 service gnss-hal /vendor/bin/hw/android.hardware.gnss@2.0-service.renesas
     interface android.hardware.gnss@2.0::IGnss default
     class hal
     user gps
-    group system gps radio usb
+    group root system gps radio usb
     disabled

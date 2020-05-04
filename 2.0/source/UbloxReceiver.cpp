@@ -191,21 +191,21 @@ RError UbloxReceiver::SetBaudRate(const uint32_t& baudrate) {
 
 RError UbloxReceiver::SetFwVersion(const double& version) {
     ALOGV("%s", __func__);
-    auto compare = [&] (double a, double epsilon = 0.001) {
+    auto isVersionEqual = [&] (double a, double epsilon = 0.001) {
         return (std::fabs(a - version) < epsilon);
     };
 
-    if (compare(SPG_100)) {
+    mFirmware = static_cast<float>(version);
+    if (isVersionEqual(SPG_100)) {
         mSwVersion = SWVersion::SPG_100;
-    } else if (compare(SPG_201)) {
+    } else if (isVersionEqual(SPG_201)) {
         mSwVersion = SWVersion::SPG_201;
-    } else if (compare(SPG_301)) {
+    } else if (isVersionEqual(SPG_301)) {
         mSwVersion = SWVersion::SPG_301;
     } else {
         return RError::NotSupported;
     }
 
-    mFirmware = static_cast<float>(version);
     return RError::Success;
 }
 

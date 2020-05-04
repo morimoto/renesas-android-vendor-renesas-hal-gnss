@@ -383,6 +383,7 @@ DSError DeviceScanner::ProcessUbxMonVer() {
     }
 
     auto res = mReceivers.top().receiver->SetFwVersion(value.swVersion);
+    ALOGI("Firmware Version %.2f", mReceivers.top().receiver->GetFirmwareVersion());
     return (res == RError::NotSupported ? DSError::UnsupportedReceiver :
             DSError::Success);
 }

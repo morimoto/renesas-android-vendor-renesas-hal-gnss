@@ -20,6 +20,7 @@
 #include <log/log.h>
 #include <termios.h>
 #include <fcntl.h>
+#include <libgpio.h>
 #include "include/GnssTransport.h"
 
 char Transport::ReadByte(TError& errCode) {
@@ -51,11 +52,38 @@ TError Transport::OpenFakeFile() {
     return TError::TransportReady;
 }
 
+TError Transport::ResetGnssReceiver() {
+    const int delayOff = 200000;
+    const int delayOn = 1000000;
+    int ret = libgpio_set_value(GPS_RST_CHIP, GPS_RST_LINE, OFF);
+
+    if (!ret) {
+        usleep(delayOff);
+        ret = libgpio_set_value(GPS_RST_CHIP, GPS_RST_LINE, ON);
+
+        if (!ret) {
+            usleep(delayOn);
+        }
+    }
+
+    return ret < 0 ? TError::InternalError : TError::Success;
+}
+
 TError Transport::OpenTTY() {
     ALOGV("%s", __func__);
     std::lock_guard<std::mutex> lock(readWriteLock);
     ALOGV("%s, %s", __func__, mPath.c_str());
 
+    if (GnssReceiverType::OnboardChip == mReceiverType) {
+        /*In case of SKKF, we may change the default baud rate,
+        * so when HAL is restarted without Power off, we need to
+        * reset device to make sure it operates at tty_default_rate
+        */
+        auto ret = ResetGnssReceiver();
+        if (TError::Success != ret) {
+            ALOGW("Can not reset GNSS device, this may cause further malfunction!\n");
+        }
+    }
     do {
         mFd = ::open(mPath.c_str(), O_RDWR | O_NOCTTY);
     } while (mFd <= closedFd && errno == EINTR);
@@ -141,9 +169,10 @@ TError Transport::ResetTransport(const std::shared_ptr<IGnssReceiver>&
     } else {
         receiver->GetPath(mPath);
         mBaudRate = receiver->GetBaudRate();
+        mReceiverType = receiver->GetReceiverType();
     }
 
-    return Open(receiver->GetReceiverType());
+    return Open(mReceiverType);
 }
 
 TError Transport::GetTransportState() {

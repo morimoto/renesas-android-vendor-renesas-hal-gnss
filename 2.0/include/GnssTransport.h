@@ -40,6 +40,7 @@ enum class TError : uint8_t {
     FailedToWrite,
     TransportReady,
     TransportNotReady,
+    InternalError,
 };
 
 class Transport {
@@ -94,6 +95,13 @@ public:
      * \return
      */
     Endian GetEndianType() const;
+
+    /*!
+     * \brief Transport::ResetDevice
+     * \return
+     */
+    TError ResetGnssReceiver();
+
 protected:
     /*!
      * \brief Open
@@ -160,7 +168,7 @@ private:
     std::fstream fakeStream;
     std::mutex readWriteLock;
     Endian mEndianType = Endian::Unset;
-
+    GnssReceiverType mReceiverType;
     const uint8_t mSync1 = 0xB5;
     const uint8_t mSync2 = 0x62;
 };
