@@ -28,10 +28,10 @@ namespace android::hardware::gnss::V2_0::renesas {
 class GeneralManager;
 
 enum class Priority : uint8_t {
-    UbxUsb = 1,
+    Fake = 1,
+    UbxUsb,
     UbxNative,
     Requested,
-    Fake,
     Default,
 };
 
