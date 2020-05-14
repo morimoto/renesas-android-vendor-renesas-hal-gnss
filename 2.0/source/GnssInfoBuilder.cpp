@@ -29,8 +29,6 @@ using ::android::hardware::gnss::V2_0::GnssConstellationType;
 
 namespace android::hardware::gnss::V2_0::renesas {
 
-static constexpr size_t getSatellitesTimeout = 1000;
-
 GnssInfoBuilder::GnssInfoBuilder():
         mMsgQueue(MessageQueue::GetInstance()),
         mSvInfoCV(mMsgQueue.GetConditionVariable<SvInfoQueueType>()),
@@ -89,9 +87,12 @@ void GnssInfoBuilder::GetFixSatellites() {
 
 IBError GnssInfoBuilder::GetSatellite(SvInfoOutType out,
                                       uint8_t expectedMsgNum) {
-
+    if (mMsgQueue.Empty<SvInfoQueueType>()) {
+        std::unique_lock<std::mutex> lock(mLock);
+        mSvInfoCV.wait(lock,
+                       [&] { return !mMsgQueue.Empty<SvInfoQueueType>(); });
+    }
     auto parcel = mMsgQueue.Pop<SvInfoQueueType>();
-
     if (parcel == nullptr) {
         return IBError::INCOMPLETE;
     } else if (!parcel->IsValid()) {
@@ -109,39 +110,21 @@ IBError GnssInfoBuilder::GetSatellite(SvInfoOutType out,
 void GnssInfoBuilder::GetSatellites() {
     ALOGV("%s", __func__);
     while (!mThreadExit) {
-        if (mMsgQueue.Empty<SvInfoQueueType>()) {
-            std::unique_lock<std::mutex> lock(mLock);
-            mSvInfoCV.wait(lock,
-                    [&] {return !mMsgQueue.Empty<SvInfoQueueType>();});
-        }
-        const auto start = steady_clock::now();
-        double uptime;
-
         SvInfoType sv;
         uint8_t currMsgNum = 1;
         uint8_t gnssId;
         bool complete = false;
 
-        while (IBError::SUCCESS != GetSatellite(sv, currMsgNum)) {
-            uptime =
-                duration_cast<milliseconds>(steady_clock::now() - start).count();
-            if (uptime >= getSatellitesTimeout) {
+        while (IBError::SUCCESS == GetSatellite(sv, currMsgNum++)) {
+            if (sv.msgNum == 1) {
+                gnssId = sv.gnssId;
+            } else if (gnssId != sv.gnssId) {
                 break;
             }
-            sv.svInfoList.clear();
-        }
-        gnssId = sv.gnssId;
-        while (sv.msgNum != sv.msgAmount) {
-            if (IBError::SUCCESS != GetSatellite(sv, ++currMsgNum) || sv.gnssId != gnssId) {
-                break;
-            }
-            uptime =
-                duration_cast<milliseconds>(steady_clock::now() - start).count();
-            if (uptime >= getSatellitesTimeout) {
-                break;
-            }
+
             if (sv.msgAmount == sv.msgNum) {
                 complete = true;
+                break;
             }
         }
         if (!complete) {
