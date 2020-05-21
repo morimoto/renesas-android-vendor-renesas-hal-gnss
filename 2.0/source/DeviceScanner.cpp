@@ -20,16 +20,19 @@
 #include <unistd.h>
 #include <log/log.h>
 
-#include "include/IUbxParser.h"
-#include "include/UbxMonVer.h"
-#include "include/GnssTransport.h"
-#include "include/MessageQueue.h"
 #include "include/DeviceScanner.h"
-#include "include/UbloxReceiver.h"
-#include "include/DefaultReceiver.h"
-#include "include/FakeReceiver.h"
+
 #include <cutils/properties.h>
 #include <sys/system_properties.h>
+
+#include "include/DefaultReceiver.h"
+#include "include/FakeReceiver.h"
+#include "include/GeneralManager.h"
+#include "include/GnssTransport.h"
+#include "include/IUbxParser.h"
+#include "include/MessageQueue.h"
+#include "include/UbloxReceiver.h"
+#include "include/UbxMonVer.h"
 
 static const uint16_t ubxVid = 0x1546;
 static const int maxCheckRetries = 5;
@@ -38,6 +41,7 @@ static const std::string deviceClass = "tty";
 static const std::set<DevId> supportedDevices = {ubxVid};
 
 namespace android::hardware::gnss::V2_0::renesas {
+// TODO (d.gamazin) Move to separate header
 const std::string DeviceScanner::mPropRequestedReceiver = "ro.boot.gps.mode";
 const std::string DeviceScanner::mPropBaudRate = "ro.boot.gps.tty_baudrate";
 const std::string DeviceScanner::mPropSecmajor = "ro.boot.gps.secmajor";
@@ -81,11 +85,11 @@ DSError DeviceScanner::DetectDevice() {
 
 void DeviceScanner::PrintReceivers() {
     receiversQueue_t Receivers = mReceivers;
-
     ALOGV("mReceivers.size(): %lu", mReceivers.size());
+
     while (!Receivers.empty()) {
         std::string path;
-        Receivers.top().receiver->GetPath(path);
+        path = Receivers.top().receiver->GetTransport()->GetPath();
         ALOGV("receiver path : %s", path.c_str());
         Receivers.pop();
     }
@@ -97,7 +101,7 @@ bool DeviceScanner::ReceiverAlreadyAdded(const std::string& newPath) {
 
     while (!Receivers.empty()) {
         std::string path;
-        Receivers.top().receiver->GetPath(path);
+        path = Receivers.top().receiver->GetTransport()->GetPath();
 
         if (path == newPath) {
             return true;
@@ -114,12 +118,14 @@ void DeviceScanner::InsertNewReceiver(const std::string& path, DevId devId) {
     switch (devId.vid) {
         case (static_cast<uint16_t>(VendorId::Ublox)): {
             if (CheckTtyPath(path) && !ReceiverAlreadyAdded(path)) {
-                CreateUbxReceiver(path, GnssReceiverType::UsbDongle, Priority::UbxUsb);
+                CreateUbxReceiver(path, GnssReceiverType::UsbDongle,
+                                  Priority::UbxUsb);
             }
             break;
         }
-        default:
+        default: {
             break;
+        }
     }
 }
 
@@ -129,12 +135,15 @@ void DeviceScanner::RemoveReceiver(const std::string& pathToRemove) {
 
     while (!mReceivers.empty()) {
         std::string path;
-        mReceivers.top().receiver->GetPath(path);
+        path = mReceivers.top().receiver->GetTransport()->GetPath();
+
         if (path != pathToRemove) {
             newReceivers.push(mReceivers.top());
         }
+
         mReceivers.pop();
     }
+
     mReceivers = newReceivers;
 }
 
@@ -201,11 +210,12 @@ DSError DeviceScanner::Scan() {
 DSError DeviceScanner::CreateUbxReceiver(const std::string& path,
         const GnssReceiverType& type, const Priority& priority) {
     ALOGV("%s", __func__);
-    receiver_t receiver =
-        {std::make_shared<UbloxReceiver>(path, type), priority};
+    std::shared_ptr<UbloxReceiver> ubReceiver = std::make_shared<UbloxReceiver>
+                                                (path, type);
+    receiver_t receiver = {ubReceiver, priority};
     size_t emptyLen = mDefaultPropertyValue.length();
-
-    receiver.receiver->SetBaudRate(mSettings.requestedBaudrate);
+    ubReceiver->SetBaudRate(static_cast<uint32_t>
+                            (mSettings.requestedBaudrate));
 
     if (mSettings.secmajor.length() > emptyLen) {
         receiver.receiver->SetSecondMajorConstellation(mSettings.secmajor);
@@ -222,10 +232,11 @@ DSError DeviceScanner::CreateUbxReceiver(const std::string& path,
 DSError DeviceScanner::CreateDefaultReceiver(const std::string& path,
         const GnssReceiverType& type, const Priority& priority) {
     ALOGV("%s", __func__);
-    receiver_t receiver =
-            {std::make_shared<DefaultReceiver>(path, type), priority};
-
-    receiver.receiver->SetBaudRate(mSettings.requestedBaudrate);
+    std::shared_ptr<DefaultReceiver> dfReceiver = std::make_shared<DefaultReceiver>
+                                                  (path, type);
+    receiver_t receiver = {dfReceiver, priority};
+    dfReceiver->SetBaudRate(static_cast<uint32_t>
+                            (mSettings.requestedBaudrate));
     mReceivers.push(receiver);
     return DSError::Success;
 }
@@ -240,10 +251,11 @@ DSError DeviceScanner::CreateFakeReceiver() {
 
 std::shared_ptr<IGnssReceiver> DeviceScanner::GetReceiver() {
     ALOGV("%s", __func__);
+
     if (0 < mReceivers.size()) {
         std::string path;
         receiver_t receiver = mReceivers.top();
-        receiver.receiver->GetPath(path);
+        path = receiver.receiver->GetTransport()->GetPath();
         ALOGV("%s, receiver path: %s", __func__, path.c_str());
         return receiver.receiver;
     }

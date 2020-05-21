@@ -19,6 +19,8 @@
 #include <android-base/logging.h>
 
 #include "include/GeneralManager.h"
+
+#include "include/DeviceScanner.h"
 #include "include/LocationProvider.h"
 #include "include/FakeLocationProvider.h"
 #include "include/FakeReader.h"
@@ -54,23 +56,24 @@ GeneralManager::~GeneralManager() {
 void GeneralManager::StopToChange() {
     ALOGV("%s", __func__);
     mReceiverStatus = GnssReceiverStatus::WAIT_FOR_RECEIVER;
+
     if (nullptr != mReader) {
         mReader->Stop();
-        Transport::GetInstance(mReceiver).ResetTransport(nullptr);
+        mReceiver->GetTransport()->Reset();
     }
 }
 
 void GeneralManager::StartAfterChange() {
     ALOGV("%s", __func__);
     mReceiver = mDeviceScanner->GetReceiver();
+
     if (nullptr == mReceiver) {
         ALOGW("No GNSS receiver");
         mReceiverStatus = GnssReceiverStatus::WAIT_FOR_RECEIVER;
-    } else if (mIsRun){
+    } else if (mIsRun) {
         mReceiverStatus = GnssReceiverStatus::RECEIVER_FOUND;
-        Transport& transport = Transport::GetInstance(mReceiver);
-        transport.ResetTransport(mReceiver);
-        mReader = std::make_unique<TtyReader>(transport);
+        std::shared_ptr<Transport> transport = mReceiver->GetTransport();
+        transport->Reset();
         mReader->Start();
         RunConfig();
     }
@@ -111,7 +114,7 @@ android::status_t GeneralManager::Run() {
 
     mReceiverStatus = GnssReceiverStatus::RECEIVER_FOUND;
     mReceiver = mDeviceScanner->GetReceiver();
-    Transport& transport = Transport::GetInstance(mReceiver);
+    std::shared_ptr<Transport> transport = mReceiver->GetTransport();
 
     if (GnssReceiverType::FakeReceiver == mReceiver->GetReceiverType()) {
         SetupLocationProvider();

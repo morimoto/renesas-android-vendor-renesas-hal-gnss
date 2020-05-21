@@ -18,9 +18,11 @@
 #include "include/FakeReader.h"
 #include "include/MessageQueue.h"
 
+namespace android::hardware::gnss::V2_0::renesas {
+
 static const std::string mFakeRoute = "/vendor/etc/fake_route.txt";
 
-FakeReader::FakeReader(Transport& transport) :
+FakeReader::FakeReader(std::shared_ptr<Transport> transport) :
     mExitThread(false),
     mTransport(transport) {
     LoadFakeTxt();
@@ -64,7 +66,7 @@ void FakeReader::ReadingLoop() {
 }
 
 RDError FakeReader::LoadFakeTxt() {
-    while (TError::FailedToRead != mTransport.Read<std::string>
+    while (TError::FailedToRead != mTransport->Read<std::string>
            (mRawLocationInput)) {
         std::vector<std::string> parts;
         if (SplitLine(mRawLocationInput.back(), parts) != RDError::Success) {
@@ -115,4 +117,4 @@ RDError FakeReader::SetUpNotificationCallback(cbPtr notificationCb) {
     return RDError::InvalidInput;
 }
 
-IReader::~IReader() {}
+} // namespace android::hardware::gnss::V2_0::renesas

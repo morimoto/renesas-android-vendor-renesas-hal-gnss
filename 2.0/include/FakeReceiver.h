@@ -15,9 +15,11 @@
  */
 #pragma once
 
-#include "include/IGnssReceiver.h"
+#include "include/GnssReceiver.h"
 
-class FakeReceiver : public IGnssReceiver {
+namespace android::hardware::gnss::V2_0::renesas {
+
+class FakeReceiver : public GnssReceiver {
 public:
     /*!
      * \brief FakeReceiver
@@ -79,28 +81,9 @@ public:
     RError GetProductName(std::string& out) override;
 
     /*!
-     * \brief GetPath
-     * \return
-     */
-    RError GetPath(std::string& out) override;
-
-    /*!
-     * \brief GetBaudRate
-     * \return
-     */
-    uint32_t GetBaudRate() override;
-
-    /*!
      * \brief GetSupportedProtocols
      */
     void GetSupportedProtocols(std::vector<SupportedProtocol>&) override;
-
-    /*!
-     * \brief SetBaudRate
-     * \param baudrate
-     * \return
-     */
-    RError SetBaudRate(const uint32_t& baudrate) override;
 
     /*!
      * \brief SetFwVersion
@@ -151,8 +134,7 @@ private:
 
     std::string mVendorName = "Fake";
     std::string mProductName = "Fake";
-    std::string mPath;
     std::string mFirmwareVersion = "0.0";
-
-    uint32_t mBaudRate = 0;
 };
+
+} // android::hardware::gnss::V2_0::renesas

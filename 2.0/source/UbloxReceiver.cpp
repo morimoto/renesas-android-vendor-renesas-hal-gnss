@@ -22,6 +22,12 @@
 #include <type_traits>
 #include "include/UbloxReceiver.h"
 
+#include "include/GnssTransportTTY.h"
+
+namespace android::hardware::gnss::V2_0::renesas {
+
+static constexpr uint32_t defaultBaudRate = 9600;
+
 void UbloxReceiver::SetSupportedProtocols() {
     ALOGV("%s", __func__);
     mProtocolList.push_back(SupportedProtocol::UbxBinaryProtocol);
@@ -29,22 +35,12 @@ void UbloxReceiver::SetSupportedProtocols() {
 }
 
 UbloxReceiver::UbloxReceiver(uint16_t vendorId, uint16_t productId,
-                             const GnssReceiverType& type) :
-    mReceiverType(type),
-    mVendorId(vendorId),
-    mProductId(productId) {
+                             const std::string& path, const GnssReceiverType& type) :
+    UbloxReceiver(path, type) {
+    //Please implement common functionality using common constructor
+    mVendorId = vendorId;
+    mProductId = productId;
     ALOGV("%s", __func__);
-    SetSupportedProtocols();
-}
-
-UbloxReceiver::UbloxReceiver(uint16_t vendorId, uint16_t productId,
-                             std::string& path, const GnssReceiverType& type) :
-    mReceiverType(type),
-    mVendorId(vendorId),
-    mProductId(productId),
-    mTtyPath(path) {
-    ALOGV("%s", __func__);
-    SetSupportedProtocols();
 }
 
 UbloxReceiver::~UbloxReceiver()
@@ -101,17 +97,6 @@ RError UbloxReceiver::GetProductName(std::string& out) {
     }
 
     out = mProductName;
-    return RError::Success;
-}
-
-RError UbloxReceiver::GetPath(std::string& out) {
-    ALOGV("%s", __func__);
-
-    if (mTtyPath.empty()) {
-        return RError::Unknown;
-    }
-
-    out = mTtyPath;
     return RError::Success;
 }
 
@@ -172,10 +157,16 @@ RError UbloxReceiver::SetVendor() {
 
 UbloxReceiver::UbloxReceiver(const std::string& path,
                              const GnssReceiverType& type) :
+    GnssReceiverTTY(new GnssTransportTTY(path)),
     mReceiverType(type),
     mTtyPath(path) {
     ALOGV("%s", __func__);
     SetSupportedProtocols();
+    SetBaudRate(defaultBaudRate);
+
+    if (GnssReceiverType::OnboardChip == mReceiverType) {
+        GetTransportTTY()->SetOpenReceiverWithReset(true);
+    }
 }
 
 RError UbloxReceiver::SetBaudRate(const uint32_t& baudrate) {
@@ -186,7 +177,8 @@ RError UbloxReceiver::SetBaudRate(const uint32_t& baudrate) {
     }
 
     mLineBaudRate = baudrate;
-    return RError::Success;
+    return TError::Success == GetTransportTTY()->SetBaudRate(baudrate) ?
+           RError::Success : RError::NotSupported;
 }
 
 RError UbloxReceiver::SetFwVersion(const double& version) {
@@ -240,3 +232,5 @@ SWVersion UbloxReceiver::GetSwVersion() {
     ALOGV("%s", __func__);
     return mSwVersion;
 }
+
+} // namespace android::hardware::gnss::V2_0::renesas

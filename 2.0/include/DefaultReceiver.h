@@ -15,23 +15,17 @@
  */
 #pragma once
 
-#include "include/IGnssReceiver.h"
+#include "include/GnssReceiverTTY.h"
 
-class DefaultReceiver : public IGnssReceiver {
+namespace android::hardware::gnss::V2_0::renesas {
+
+class DefaultReceiver : public GnssReceiverTTY {
 public:
     /*!
      * \brief DefaultReceiver
      * \param path
      */
     DefaultReceiver(const std::string& path, const GnssReceiverType& type);
-
-    /*!
-     * \brief DefaultReceiver
-     * \param vendorId
-     * \param productId
-     */
-    DefaultReceiver(uint16_t vendorId, uint16_t productId,
-                    const GnssReceiverType& type);
 
     /*!
      * \brief DefaultReceiver
@@ -96,12 +90,6 @@ public:
     RError GetProductName(std::string& out) override;
 
     /*!
-     * \brief GetPath
-     * \return
-     */
-    RError GetPath(std::string& out) override;
-
-    /*!
      * \brief GetSupportedProtocols
      * \param out
      */
@@ -149,11 +137,6 @@ public:
 
 protected:
     /*!
-     * \brief DefaultReceiver
-     */
-    DefaultReceiver() = default;
-
-    /*!
      * \brief SetVendor
      * \return
      */
@@ -182,3 +165,5 @@ private:
     std::string mFirmwareVersion;
     SupportedProtocol mProtocol = SupportedProtocol::NMEA0183;
 };
+
+} // namespace android::hardware::gnss::V2_0::renesas

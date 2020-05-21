@@ -19,13 +19,14 @@
 #include "include/GnssInfoProvider.h"
 #include "include/UbloxMsgHandler.h"
 #include "include/NmeaMsgHandler.h"
-#include "include/GnssTransport.h"
 #include "include/IGnssReceiver.h"
 #include "include/DeviceScanner.h"
 #include "include/Configurator.h"
-#include "include/TtyReader.h"
+#include "include/IReader.h"
 #include "include/GnssMeasurement.h"
-class DeviceScanner;
+
+namespace android::hardware::gnss::V2_0::renesas {
+
 enum class GMError : uint8_t {
     SUCCESS,
     INTERNAL,
@@ -43,7 +44,7 @@ enum class GnssReceiverStatus : uint8_t {
     READY = CONFIG_DONE,
 };
 
-namespace android::hardware::gnss::V2_0::renesas {
+class DeviceScanner;
 class GnssImpl;
 
 class GeneralManager {
@@ -145,8 +146,7 @@ private:
     std::unique_ptr<DeviceScanner> mDeviceScanner;
     std::shared_ptr<IGnssReceiver> mReceiver;
     std::unique_ptr<IReader> mReader;
-    std::unique_ptr<android::hardware::gnss::V2_0::renesas::ILocationProvider>
-    mLocationProvider;
+    std::unique_ptr<ILocationProvider> mLocationProvider;
     std::unique_ptr<GnssInfoProvider> mSvInfoProvider;
     sp<GnssMeasurement> mGnssMeasurement;
     std::unique_ptr<UbxMsgHandler> mUbxMsgHandler;
@@ -161,4 +161,5 @@ private:
     std::mutex mLock;
     bool mIsRun;
 };
-}
+
+} // android::hardware::gnss::V2_0::renesas

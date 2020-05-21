@@ -28,6 +28,10 @@ const std::string gsvHeader = "GSV";
 const std::string rmcHeader = "RMC";
 const std::string pubx00Header = "PUBX,00";
 
+const char mNmeaBeginParcel = '$';
+const char mNmeaEndParcelCarriageReturn = '\r';
+const char mNmeaEndParcelNewLine = '\n';
+
 enum class NPError : uint8_t {
     Success,
     InvalidData,

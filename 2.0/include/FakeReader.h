@@ -21,6 +21,8 @@
 
 #include "include/IReader.h"
 
+namespace android::hardware::gnss::V2_0::renesas {
+
 class FakeReader : public IReader {
 public:
     FakeReader() = default;
@@ -29,7 +31,7 @@ public:
      * \brief FakeReader
      * \param transport
      */
-    FakeReader(Transport& transport);
+    FakeReader(std::shared_ptr<Transport> transport);
 
     ~FakeReader() override;
     /*!
@@ -95,9 +97,10 @@ private:
     std::vector<fakeLocationPoint_t> mFakeLocationPoints;
     std::vector<std::string> mRawLocationInput;
     cbPtr mDeathNotificationCallback = nullptr;
-    std::fstream mFile;
     std::thread mReadingLoop;
     std::atomic<bool> mExitThread;
-    Transport& mTransport;
     std::mutex mLock;
+    std::shared_ptr<Transport> mTransport;
 };
+
+} // namespace android::hardware::gnss::V2_0::renesas

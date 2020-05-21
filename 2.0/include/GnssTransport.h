@@ -20,19 +20,15 @@
 #include <fstream>
 #include <mutex>
 #include <array>
+#include <vector>
 
-#include "include/IGnssReceiver.h"
+namespace android::hardware::gnss::V2_0::renesas {
 
 enum class Endian : uint8_t {
     Little,
     Big,
     Unset,
 };
-
-static constexpr uint32_t defaultBaudRate = 9600;
-static constexpr uint32_t badBaudRate = 0;
-static constexpr int closedFd = -1;
-static constexpr size_t fakeLineMaxSize = 128;
 
 enum class TError : uint8_t {
     Success,
@@ -45,28 +41,18 @@ enum class TError : uint8_t {
 
 class Transport {
 public:
-    /*!
-     * \brief GetInstance
-     * \param receiver
-     * \return
-     */
-    static Transport& GetInstance(const
-            std::shared_ptr<IGnssReceiver>& receiver) {
-        static Transport instance(receiver);
-        return instance;
-    }
 
     /*!
      * \brief Transport - destructor
      */
-    ~Transport();
+    virtual ~Transport();
 
     /*!
-     * \brief ResetTransport
+     * \brief Reset
      * \param receiver
      * \return
      */
-    TError ResetTransport(const std::shared_ptr<IGnssReceiver>& receiver);
+    virtual TError Reset();
 
     /*!
      * \brief Read
@@ -88,7 +74,7 @@ public:
      * \brief GetTransportState
      * \return
      */
-    TError GetTransportState();
+    virtual TError GetTransportState();
 
     /*!
      * \brief Transport::GetEndianType
@@ -97,60 +83,41 @@ public:
     Endian GetEndianType() const;
 
     /*!
-     * \brief Transport::ResetDevice
-     * \return
+     * \brief Get TTY path for transport
+     * \return path string
      */
-    TError ResetGnssReceiver();
-
-    /*!
-     * \brief Transport::SetTtyBaudrate
-     * \return
-     */
-    TError SetTtyBaudrate(uint32_t baudrate);
-
-    /*!
-     * \brief Transport::GetTtyBaudrate
-     * \return
-     */
-    uint32_t GetTtyBaudrate();
-
+    std::string GetPath() const;
 protected:
     /*!
      * \brief Open
      * \return
      */
-    TError Open(GnssReceiverType recType);
-
-    /*!
-     * \brief OpenFakeFile
-     * \return
-     */
-    TError OpenFakeFile();
-
-    /*!
-     * \brief OpenTTY
-     * \return
-     */
-    TError OpenTTY();
+    virtual TError Open() = 0;
 
     /*!
     * \brief ReadByte
     * \param errCode
     * \return
     */
-    //    uint8_t ReadByte(TError& errCode);
-    char ReadByte(TError& errCode);
+    virtual char ReadByte(TError& errCode) = 0;
+
+    /*!
+    * \brief Write data to transport
+    * \param toWrite vector of data to write
+    * \return
+    */
+    virtual TError WriteData(const std::vector<uint8_t> &toWrite) = 0;
 
     /*!
      * \brief Close
      */
-    TError Close();
+    virtual TError Close() = 0;
 
     /*!
-     * \brief SetUpLine
+     * \brief SetUp
      * \return
      */
-    TError SetUpLine();
+    virtual TError SetUp();
 
     /*!
      * \brief SetEndianness
@@ -167,39 +134,28 @@ protected:
     template <std::size_t size>
     TError AddCheckSum(const std::array<uint8_t, size>& payload,
                        std::vector<uint8_t>& out);
+    Transport(const std::string &filePath);
 
+    std::mutex readLock, writeLock;
 private:
-    Transport() = delete;
-    Transport(const std::shared_ptr<IGnssReceiver>& receiver);
     Transport(Transport const&) = delete;
     Transport& operator=(Transport const&) = delete;
-    std::string mPath;
-    uint32_t mBaudRate = badBaudRate;
+
+    std::string mFilePath;
     TError mState = TError::TransportNotReady;
-    int mFd = closedFd;
-    std::fstream fakeStream;
-    std::mutex readWriteLock;
     Endian mEndianType = Endian::Unset;
-    GnssReceiverType mReceiverType;
-    const uint8_t mSync1 = 0xB5;
-    const uint8_t mSync2 = 0x62;
+
+    constexpr static uint8_t mSync1 = 0xB5;
+    constexpr static uint8_t mSync2 = 0x62;
 };
 
 template <typename T>
 TError Transport::Read(std::vector<T>& out) {
-    std::lock_guard<std::mutex> lock(readWriteLock);
+    std::lock_guard<std::mutex> lock(readLock);
     TError result = TError::FailedToRead;
 
     if constexpr (std::is_same_v<char, T>) {
         out.push_back(ReadByte(result));
-    } else if constexpr (std::is_same_v<std::string, T>) {
-        std::array<char, fakeLineMaxSize> line;
-        fakeStream.getline(line.data(), line.size());
-
-        if (!fakeStream.fail()) {
-            result = TError::Success;
-            out.push_back({line.data()});
-        }
     }
 
     return result;
@@ -223,7 +179,6 @@ TError Transport::AddCheckSum(const std::array<uint8_t, size>& payload,
 
 template <std::size_t size>
 TError Transport::Write(const std::array<uint8_t, size>& in) {
-    std::lock_guard<std::mutex> lock(readWriteLock);
     std::vector<uint8_t> toWrite;
     toWrite.push_back(mSync1);
     toWrite.push_back(mSync2);
@@ -233,17 +188,8 @@ TError Transport::Write(const std::array<uint8_t, size>& in) {
     }
 
     AddCheckSum(in, toWrite);
-
-    if (closedFd < mFd) {
-        ALOGV("%s, going to write", __func__);
-        ssize_t ret = ::write(mFd, toWrite.data(), toWrite.size());
-
-        if (ret == static_cast<ssize_t>(toWrite.size())) {
-            ALOGV("%s, success", __func__);
-            return TError::Success;
-        }
-    }
-
-    ALOGE("%s, failed_to_write", __func__);
-    return TError::FailedToWrite;
+    std::lock_guard<std::mutex> lock(writeLock);
+    return WriteData(toWrite);
 }
+
+} // namespace android::hardware::gnss::V2_0::renesas

@@ -25,6 +25,7 @@
 
 #include "include/MessageQueue.h"
 #include "include/Configurator.h"
+#include "include/UbloxReceiver.h"
 
 #ifdef BIG_ENDIAN_CPU
 static inline uint32_t cpu_to_le32(uint32_t value) {
@@ -101,7 +102,11 @@ CError Configurator::ConfigUbx() {
         return CError::InternalError;
     }
 
-    if (CError::Success != UbxChangeBaudRate()){
+    if (GnssVendor::Ublox == mReceiver->GetVendorId()) {
+        mUbxReceiver = std::static_pointer_cast<UbloxReceiver>(mReceiver);
+    }
+
+    if (CError::Success != UbxChangeBaudRate()) {
         return CError::InternalError;
     }
 
@@ -239,13 +244,15 @@ CError Configurator::UbxSetSpeed(uint8_t port, uint32_t speed) {
     const uint8_t NMEA_PROTOCOL_MASK = 0x02;
     payload_buf[12] = NMEA_PROTOCOL_MASK | UBX_PROTOCOL_MASK;
     payload_buf[14] = NMEA_PROTOCOL_MASK | UBX_PROTOCOL_MASK;
-    auto res = mTransport.Write<msgUbloxCfgPrt.size()>(msgUbloxCfgPrt);
+    auto res = mReceiver->GetTransport()->Write<msgUbloxCfgPrt.size()>
+               (msgUbloxCfgPrt);
 
     if (TError::Success != res) {
         return CError::InternalError;
     }
 
-    if (TError::TransportReady != mTransport.SetTtyBaudrate(speed)) {
+    if (TError::TransportReady !=
+        mUbxReceiver->GetTransportTTY()->SetBaudRate(speed)) {
         ALOGE("Can not set tty baudrate to %d!\n", speed);
         return CError::InternalError;
     }
@@ -255,20 +262,22 @@ CError Configurator::UbxSetSpeed(uint8_t port, uint32_t speed) {
         return CError::InternalError;
     }
 
-    mReceiver->SetBaudRate(speed);
+    mUbxReceiver->GetTransportTTY()->SetBaudRate(speed);
     return CError::Success;
 }
+
 CError Configurator::UbxChangeBaudRate() {
     uint32_t gnssBaudrate = property_get_int32(propGnssBaudRate.c_str(),
                                                gnssDefaultRate);
 
-    if (mTransport.GetTtyBaudrate() != gnssBaudrate) {
+    if (mUbxReceiver->GetTransportTTY()->GetBaudRate() != gnssBaudrate) {
         const uint8_t PortID = 1;
 
         if (CError::Success != UbxSetSpeed(PortID, gnssBaudrate)) {
             ALOGE("Can not set Gnss port baudrate to %d!\n", gnssBaudrate);
             return CError::InternalError;
         }
+
         ALOGD("Set gnss baudrate %u - success\n", gnssBaudrate);
     }
 
@@ -277,7 +286,7 @@ CError Configurator::UbxChangeBaudRate() {
 
 CError Configurator::PollUbxMonVer() {
     ALOGV("%s", __func__);
-    auto res = mTransport.Write<msgPollVerLen>(msgPollMonVer);
+    auto res = mReceiver->GetTransport()->Write<msgPollVerLen>(msgPollMonVer);
 
     if (TError::Success != res) {
         return CError::InternalError;
@@ -324,7 +333,7 @@ CError Configurator::UbxCfgRst(uint8_t resetMode) {
 
     // offset 2 has resetMode
     cfgRstReset[ubxCfgHeaderLen + 2] = resetMode;
-    auto res = mTransport.Write<cfgResetLen>(cfgRstReset);
+    auto res = mReceiver->GetTransport()->Write<cfgResetLen>(cfgRstReset);
 
     if (TError::Success != res) {
         return CError::InternalError;
@@ -343,14 +352,14 @@ CError Configurator::UbxSetMessageRate(const UbxClass& _class,
     ALOGV("%s", __func__);
     uint8_t reqClass = static_cast<uint8_t>(_class);
     uint8_t reqId = static_cast<uint8_t>(_id);
-    //TODO(g.chabukiani): check the reason of setting rate 
-    //in specific ports (0,1,3,4) of 6
+    // TODO(g.chabukiani): check the reason of setting rate
+    // in specific ports (0,1,3,4) of 6
     std::array<uint8_t, cfgSetRateLen> cfgSetRate = {
         0x06, 0x01, 0x08, 0x00, reqClass, reqId, rate, rate,
         0x00, rate, rate, 0x00
     };
 
-    if (auto res = mTransport.Write<cfgSetRateLen>(cfgSetRate);
+    if (auto res = mReceiver->GetTransport()->Write<cfgSetRateLen>(cfgSetRate);
         TError::Success != res) {
         return CError::InternalError;
     }
@@ -359,8 +368,7 @@ CError Configurator::UbxSetMessageRate(const UbxClass& _class,
 }
 
 Configurator::Configurator(const std::shared_ptr<IGnssReceiver>& receiver) :
-    mReceiver(receiver),
-    mTransport(Transport::GetInstance(mReceiver)) {
+    mReceiver(receiver) {
     ALOGV("%s", __func__);
 }
 

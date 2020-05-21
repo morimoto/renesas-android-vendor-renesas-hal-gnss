@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 GlobalLogic
+ * Copyright (C) 2020 GlobalLogic
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,39 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef GNSSTRANSPORTFAKE_H
+#define GNSSTRANSPORTFAKE_H
 
 #include "include/GnssTransport.h"
 
 namespace android::hardware::gnss::V2_0::renesas {
 
-enum class RDError : uint8_t {
-    Success,
-    TransportError,
-    InvalidInput,
-    InternalError,
-    Capturing,
-    Reset,
-};
-
-typedef struct FakeLocationPoints {
-    double latitude;
-    double longitude;
-    float speed;
-} fakeLocationPoint_t;
-
-//TODO(g.chabukiani): change return type,
-//specify it with specified callback class/function
-typedef int (*cbPtr)();
-
-
-class IReader {
+class GnssTransportFake : public Transport {
 public:
-    virtual ~IReader() {};
-
-    virtual RDError Start() = 0;
-    virtual RDError Stop() = 0;
-    virtual RDError SetUpNotificationCallback(cbPtr notificationCb) = 0;
+    GnssTransportFake(const std::string &dataFilePath);
+    /*!
+     * \brief Open
+     * \return
+     */
+    TError Open() override;
+    TError Close() override;
+    TError WriteData(const std::vector<uint8_t> &toWrite) override;
+    char ReadByte(TError& errCode) override;
+protected:
+    std::ifstream fakeStream;
 };
 
 } // namespace android::hardware::gnss::V2_0::renesas
+
+#endif // GNSSTRANSPORTFAKE_H

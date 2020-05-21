@@ -17,179 +17,21 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasHalTransport"
 
-#include <log/log.h>
-#include <termios.h>
-#include <fcntl.h>
-#include <libgpio.h>
 #include "include/GnssTransport.h"
 
-char Transport::ReadByte(TError& errCode) {
-    char byte = 0;
-    errCode = TError::FailedToRead;
+#include <log/log.h>
 
-    if (closedFd < mFd) {
-        ssize_t ret = ::read(mFd, &byte, sizeof(byte));
+namespace android::hardware::gnss::V2_0::renesas {
 
-        if (ret == static_cast<ssize_t>(sizeof(byte))) {
-            errCode = TError::Success;
-        }
-    }
-
-    return byte;
-}
-
-TError Transport::Open(GnssReceiverType recType) {
+TError Transport::SetUp() {
     ALOGV("%s", __func__);
-
-    if (GnssReceiverType::FakeReceiver == recType) {
-        return OpenFakeFile();
-    }
-
-    return OpenTTY();
-}
-
-TError Transport::OpenFakeFile() {
     return TError::TransportReady;
 }
 
-TError Transport::ResetGnssReceiver() {
-    const int delayOff = 200000;
-    const int delayOn = 1000000;
-    int ret = libgpio_set_value(GPS_RST_CHIP, GPS_RST_LINE, OFF);
-
-    if (!ret) {
-        usleep(delayOff);
-        ret = libgpio_set_value(GPS_RST_CHIP, GPS_RST_LINE, ON);
-
-        if (!ret) {
-            usleep(delayOn);
-        }
-    }
-
-    return ret < 0 ? TError::InternalError : TError::Success;
-}
-
-TError Transport::OpenTTY() {
+TError Transport::Reset() {
     ALOGV("%s", __func__);
-    std::lock_guard<std::mutex> lock(readWriteLock);
-    ALOGV("%s, %s", __func__, mPath.c_str());
-
-    if (GnssReceiverType::OnboardChip == mReceiverType) {
-        /*In case of SKKF, we may change the default baud rate,
-        * so when HAL is restarted without Power off, we need to
-        * reset device to make sure it operates at tty_default_rate
-        */
-        auto ret = ResetGnssReceiver();
-        if (TError::Success != ret) {
-            ALOGW("Can not reset GNSS device, this may cause further malfunction!\n");
-        }
-    }
-    do {
-        mFd = ::open(mPath.c_str(), O_RDWR | O_NOCTTY);
-    } while (mFd <= closedFd && errno == EINTR);
-
-    if (closedFd >= mFd) {
-        ALOGE("Could not open TTY device");
-        return TError::TransportNotReady;
-    }
-
-    return SetUpLine();
-}
-
-TError Transport::Close() {
-    ALOGV("%s", __func__);
-    std::lock_guard<std::mutex> lock(readWriteLock);
-
-    if (closedFd != mFd) {
-        ::close(mFd);
-        mFd = closedFd;
-    }
-
-    return TError::TransportNotReady;
-}
-
-TError Transport::SetUpLine() {
-    // Setup serial port
-    ALOGI("%s, baudrate: %u", __func__, mBaudRate);
-    struct termios  ios;
-
-    if (tcdrain(mFd)) {
-        ALOGW("tcdrain has failed! This is not fatal, but can result in further errors\n");
-    }
-
-    ::tcgetattr(mFd, &ios);
-    ios.c_cflag  = CS8 | CLOCAL | CREAD;
-    ios.c_iflag  = IGNPAR;
-    ios.c_oflag  = 0;
-    ios.c_lflag  = 0;  // disable ECHO, ICANON, etc...
-
-    // Set baudrate
-    switch (mBaudRate) {
-    case 2400: {
-        ios.c_cflag |= B2400;
-        break;
-    }
-
-    case 4800: {
-        ios.c_cflag |= B4800;
-        break;
-    }
-
-    case 9600: {
-        ios.c_cflag |= B9600;
-        break;
-    }
-
-    case 19200: {
-        ios.c_cflag |= B19200;
-        break;
-    }
-
-    case 38400: {
-        ios.c_cflag |= B38400;
-        break;
-    }
-
-    case 57600: {
-        ios.c_cflag |= B57600;
-        break;
-    }
-
-    case 115200: {
-        ios.c_cflag |= B115200;
-        break;
-    }
-
-    default: {
-        ios.c_cflag |= B9600;
-        ALOGW("Unsupported baud rate %d.. setting default 9600", mBaudRate);
-    }
-    }
-
-    if (::tcsetattr(mFd, TCSANOW, &ios)) {
-        return TError::TransportNotReady;
-    }
-
-    return TError::TransportReady;
-}
-
-TError Transport::ResetTransport(const std::shared_ptr<IGnssReceiver>&
-                                 receiver) {
-    ALOGV("%s", __func__);
-    Close();
-
-    if (nullptr == receiver) {
-        mPath.clear();
-        mBaudRate = badBaudRate;
-        ALOGW("Failed to reset transport with null receiver");
-        return TError::TransportNotReady;
-    } else {
-        receiver->GetPath(mPath);
-        mBaudRate = receiver->GetBaudRate();
-        mReceiverType = receiver->GetReceiverType();
-    }
-
-    return Open(mReceiverType);
+    mState = Close();
+    return Open();
 }
 
 TError Transport::GetTransportState() {
@@ -197,18 +39,14 @@ TError Transport::GetTransportState() {
     return mState;
 }
 
-Transport::Transport(const std::shared_ptr<IGnssReceiver>& receiver) {
+Transport::Transport(const std::string &filePath):
+    mFilePath(filePath) {
     ALOGV("%s", __func__);
     SetEndianness();
-
-    if (TError::TransportReady != ResetTransport(receiver)) {
-        ALOGE("Transport not valid");
-    }
 }
 
 Transport::~Transport() {
     ALOGV("%s", __func__);
-    Close();
 }
 
 TError Transport::SetEndianness() {
@@ -231,13 +69,8 @@ Endian Transport::GetEndianType() const {
     return mEndianType;
 }
 
-TError Transport::SetTtyBaudrate(uint32_t baudrate) {
-    std::lock_guard<std::mutex> lock(readWriteLock);
-
-    mBaudRate = baudrate;
-    return SetUpLine();
+std::string Transport::GetPath() const {
+    return mFilePath;
 }
 
-uint32_t Transport::GetTtyBaudrate(){
-    return mBaudRate;
-}
+} // namespace android::hardware::gnss::V2_0::renesas

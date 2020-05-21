@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#define LOG_NDEBUG 1
+#define LOG_TAG "GnssRenesasFakeLocationProvider"
+
 #include "include/FakeLocationProvider.h"
 
 namespace android::hardware::gnss::V2_0::renesas {

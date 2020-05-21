@@ -23,7 +23,6 @@
 #include "include/IGnssReceiver.h"
 #include <usb-scanner/UsbScanner.h>
 
-#include "include/GeneralManager.h"
 namespace android::hardware::gnss::V2_0::renesas {
 class GeneralManager;
 

@@ -59,6 +59,8 @@ enum CfgIndex : size_t {
     COUNT = 4
 };
 
+class UbloxReceiver;
+
 class Configurator {
 public:
     Configurator(const std::shared_ptr<IGnssReceiver>& receiver);
@@ -128,15 +130,18 @@ protected:
 private:
     typedef CError (Configurator::*cfgStepPtr)();
     static const std::vector<std::vector<cfgStepPtr>> mConfigs;
+
     std::shared_ptr<IGnssReceiver> mReceiver;
-    Transport& mTransport;
+    // Sub-class of mReceiver as U-Blox receiver
+    std::shared_ptr<UbloxReceiver> mUbxReceiver;
+
     std::mutex mLock;
 
     template <std::size_t size>
     CError UbxSendRepeated(const std::array<uint8_t, size> msg,
                 UbxClass msgClass, UbxId msgId) {
         for (auto i = 0; i < maxAckRetries; ++i) {
-            if (auto res = mTransport.Write<size>(msg);
+            if (auto res = mReceiver->GetTransport()->Write<size>(msg);
                 TError::Success != res) {
                 return CError::InternalError;
             }

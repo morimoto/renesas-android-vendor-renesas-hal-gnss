@@ -19,10 +19,13 @@
 #include <atomic>
 
 #include "include/IReader.h"
+#include "include/IGnssReceiver.h"
+
+using namespace android::hardware::gnss::V2_0::renesas;
 
 class TtyReader : public IReader {
 public:
-    TtyReader(Transport& transport);
+    TtyReader(std::shared_ptr<Transport> transport);
     ~TtyReader() override;
 
     RDError Start() override;
@@ -34,7 +37,6 @@ protected:
     RDError HandleInput(const char& ch, SupportedProtocol& protocol);
     void ResetReader();
     RDError CaptureParcel(const char& ch, SupportedProtocol& protocol);
-
 private:
     enum class ReaderState : uint8_t {
         WAITING,
@@ -48,10 +50,6 @@ private:
         uint16_t lenUint;
     };
 
-    const char mNmeaBeginParcel = '$';
-    const char mNmeaEndParcelCarriageReturn = '\r';
-    const char mNmeaEndParcelNewLine = '\n';
-
     const uint8_t mLittleEndianFirsByteOffset = 0u;
     const uint8_t mLittleEndianSecondByteOffset = 1u;
     const uint8_t mBigEndianFistByteOffset = 1u;
@@ -59,12 +57,11 @@ private:
 
     cbPtr mDeathNotificationCallback;
     std::thread mReadingLoop;
-    Transport& mTransport;
+    std::shared_ptr<Transport> mTransport;
     std::atomic<bool> mExitThread;
 
     UbxPayloadLen mUbxPayloadLen = {};
     ReaderState mReaderState = ReaderState::WAITING;
     size_t mReaderUbxParcelOffset = 0u;
     Endian mEndianType = Endian::Unset;
-    bool mIsLittleEndian = true;
 };

@@ -19,6 +19,10 @@
 #include <vector>
 #include <unistd.h>
 
+#include "include/GnssTransport.h"
+
+namespace android::hardware::gnss::V2_0::renesas {
+
 enum class RError : uint8_t {
     Success,
     InternalError,
@@ -139,30 +143,11 @@ public:
     virtual RError GetProductName(std::string& out) = 0;
 
     /*!
-     * \brief GetPath
-     * \return
-     */
-    virtual RError GetPath(std::string& out) = 0;
-
-    /*!
      * \brief GetSupportedProtocols
      * \param out
      */
     virtual void
     GetSupportedProtocols(std::vector<SupportedProtocol>& out) = 0;
-
-    /*!
-     * \brief GetBaudRate
-     * \return
-     */
-    virtual uint32_t GetBaudRate() = 0;
-
-    /*!
-     * \brief SetBaudRate
-     * \param baudrate
-     * \return
-     */
-    virtual RError SetBaudRate(const uint32_t& baudrate) = 0;
 
     /*!
      * \brief SetFwVersion
@@ -191,4 +176,8 @@ public:
      * \return
      */
     virtual SWVersion GetSwVersion() = 0;
+
+    virtual std::shared_ptr<Transport> GetTransport() = 0;
 };
+
+} // namespace android::hardware::gnss::V2_0::renesas

@@ -16,8 +16,12 @@
 
 #include "include/FakeReceiver.h"
 
+#include "include/GnssTransportFake.h"
+
+namespace android::hardware::gnss::V2_0::renesas{
+
 FakeReceiver::FakeReceiver(const std::string& path) :
-    mPath(path) {
+    GnssReceiver(new GnssTransportFake(path)) {
 }
 
 GnssReceiverType FakeReceiver::GetReceiverType() {
@@ -67,27 +71,8 @@ RError FakeReceiver::GetProductName(std::string& out) {
     return RError::Success;
 }
 
-RError FakeReceiver::GetPath(std::string& out) {
-    if (mPath.empty()) {
-        return RError::Unknown;
-    }
-
-    out = mPath;
-    return RError::Success;
-}
-
 void FakeReceiver::GetSupportedProtocols(std::vector<SupportedProtocol>& out) {
     out.push_back(mProtocol);
-}
-
-
-uint32_t FakeReceiver::GetBaudRate() {
-    return mBaudRate;
-}
-
-RError FakeReceiver::SetBaudRate(const uint32_t& baudrate) {
-    mBaudRate = baudrate;
-    return RError::Success;
 }
 
 RError FakeReceiver::SetFwVersion(const double& version) {
@@ -108,3 +93,5 @@ RError FakeReceiver::SetSbasStatus([[maybe_unused]] const
 SWVersion FakeReceiver::GetSwVersion() {
     return mSwVersion;
 }
+
+} // namespace android::hardware::gnss::V2_0::renesas

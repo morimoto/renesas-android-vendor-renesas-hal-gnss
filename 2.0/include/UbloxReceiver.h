@@ -17,7 +17,9 @@
 
 #include <cmath>
 
-#include "include/IGnssReceiver.h"
+#include "include/GnssReceiverTTY.h"
+
+namespace android::hardware::gnss::V2_0::renesas {
 
 enum class ProductId : uint16_t {
     Ublox4 = 0x01a4,
@@ -27,23 +29,15 @@ enum class ProductId : uint16_t {
     Ublox8 = 0x01a8,
 };
 
-class UbloxReceiver : public IGnssReceiver {
+class UbloxReceiver : public GnssReceiverTTY {
 public:
-    /*!
-     * \brief UbloxReceiver
-     * \param vendorId
-     * \param productId
-     */
-    UbloxReceiver(uint16_t vendorId, uint16_t productId,
-                  const GnssReceiverType& type);
-
     /*!
      * \brief UbloxReceiver
      * \param vendorId
      * \param productId
      * \param path
      */
-    UbloxReceiver(uint16_t vendorId, uint16_t productId, std::string& path,
+    UbloxReceiver(uint16_t vendorId, uint16_t productId, const std::string& path,
                   const GnssReceiverType& type);
 
     UbloxReceiver(const std::string& path, const GnssReceiverType& type);
@@ -102,12 +96,6 @@ public:
     RError GetProductName(std::string& out) override;
 
     /*!
-     * \brief GetPath
-     * \return
-     */
-    RError GetPath(std::string& out) override;
-
-    /*!
      * \brief GetSupportedProtocols
      */
     void GetSupportedProtocols(std::vector<SupportedProtocol>& out) override;
@@ -135,11 +123,6 @@ public:
     SWVersion GetSwVersion() override;
 
 protected:
-    /*!
-     * \brief UbloxReceiver
-     */
-    UbloxReceiver() = default;
-
     /*!
      * \brief SetSupportedProtocols
      */
@@ -180,3 +163,5 @@ private:
     SWVersion mSwVersion = SWVersion::Unknown;
     std::vector<SupportedProtocol> mProtocolList;
 };
+
+} // namespace android::hardware::gnss::V2_0::renesas

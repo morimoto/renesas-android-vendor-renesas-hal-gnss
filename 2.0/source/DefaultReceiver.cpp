@@ -16,21 +16,19 @@
 #define LOG_TAG "GnssRenesasHalDefaultReceiver"
 #define LOG_NDEBUG 1
 
+#include "include/DefaultReceiver.h"
+
 #include <type_traits>
 #include <log/log.h>
-#include "include/DefaultReceiver.h"
+
+#include "include/GnssTransportTTY.h"
+
+namespace android::hardware::gnss::V2_0::renesas {
 
 DefaultReceiver::DefaultReceiver(const std::string& path,
                                  const GnssReceiverType& type) :
+    GnssReceiverTTY(new GnssTransportTTY(path)),
     mReceiverType(type), mTtyPath(path)  {
-    ALOGV("%s", __func__);
-}
-
-DefaultReceiver::DefaultReceiver(uint16_t vendorId, uint16_t productId,
-                                 const GnssReceiverType& type) :
-    mReceiverType(type),
-    mVendorId(vendorId),
-    mProductId(productId) {
     ALOGV("%s", __func__);
 }
 
@@ -38,6 +36,7 @@ DefaultReceiver::DefaultReceiver(uint16_t vendorId,
                                  uint16_t productId,
                                  const std::string& path,
                                  const GnssReceiverType& type) :
+    GnssReceiverTTY(new GnssTransportTTY(path)),
     mReceiverType(type),
     mVendorId(vendorId),
     mProductId(productId),
@@ -103,17 +102,6 @@ RError DefaultReceiver::GetProductName(std::string& out) {
     }
 
     out = mProductName;
-    return RError::Success;
-}
-
-RError DefaultReceiver::GetPath(std::string& out) {
-    ALOGV("%s", __func__);
-
-    if (mTtyPath.empty()) {
-        return RError::Unknown;
-    }
-
-    out = mTtyPath;
     return RError::Success;
 }
 
@@ -184,3 +172,5 @@ SWVersion DefaultReceiver::GetSwVersion() {
     ALOGV("%s", __func__);
     return mSwVersion;
 }
+
+} // namespace android::hardware::gnss::V2_0::renesas

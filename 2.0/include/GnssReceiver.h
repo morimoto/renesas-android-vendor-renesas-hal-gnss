@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 GlobalLogic
+ * Copyright (C) 2020 GlobalLogic
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,39 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+#ifndef IGnssReceiver_H
+#define IGnssReceiver_H
 
-#include "include/GnssTransport.h"
+#include "include/IGnssReceiver.h"
 
 namespace android::hardware::gnss::V2_0::renesas {
 
-enum class RDError : uint8_t {
-    Success,
-    TransportError,
-    InvalidInput,
-    InternalError,
-    Capturing,
-    Reset,
-};
-
-typedef struct FakeLocationPoints {
-    double latitude;
-    double longitude;
-    float speed;
-} fakeLocationPoint_t;
-
-//TODO(g.chabukiani): change return type,
-//specify it with specified callback class/function
-typedef int (*cbPtr)();
-
-
-class IReader {
+class GnssReceiver : public IGnssReceiver {
 public:
-    virtual ~IReader() {};
-
-    virtual RDError Start() = 0;
-    virtual RDError Stop() = 0;
-    virtual RDError SetUpNotificationCallback(cbPtr notificationCb) = 0;
+    GnssReceiver(Transport* transport): mTransport(transport) {}
+    virtual std::shared_ptr<Transport> GetTransport() override {
+        return mTransport;
+    }
+private:
+    GnssReceiver(const GnssReceiver&) = delete;
+    std::shared_ptr<Transport> mTransport;
 };
 
 } // namespace android::hardware::gnss::V2_0::renesas
+
+#endif // IGnssReceiver_H
