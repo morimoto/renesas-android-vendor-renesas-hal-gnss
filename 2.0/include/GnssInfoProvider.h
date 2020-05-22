@@ -28,6 +28,8 @@ using GnssCallback_1_1
     = ::android::sp<::android::hardware::gnss::V1_1::IGnssCallback>;
 using GnssCallback_2_0
     = ::android::sp<::android::hardware::gnss::V2_0::IGnssCallback>;
+using GnssSvStatus_1_0
+    = ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvStatus;
 
 class GnssInfoProvider {
 public:
@@ -45,8 +47,7 @@ protected:
 private:
     GnssInfoProvider(GnssInfoProvider&) = delete;
     GnssInfoProvider& operator=(const GnssInfoProvider&) = delete;
-    ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvStatus
-        SvInfoV2_0T0_V1_1(SvInfoList v2_0);
+    GnssSvStatus_1_0 SvInfoV2_0To_V1_1(SvInfoList v2_0);
 
     GnssCallback_1_1 mGnssCallback_1_1;
     GnssCallback_2_0 mGnssCallback_2_0;

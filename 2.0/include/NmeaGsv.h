@@ -94,7 +94,7 @@ private:
 
     NmeaVersion mCurrentProtocol = NmeaVersion::NMEAv23;
     bool mIsValid = false;
-    parcel_t mParcel;
+    parcel_t mParcel = {};
 };
 
 template <typename T>
@@ -193,7 +193,7 @@ template <typename T>
 NPError NmeaGsv<T>::ParseSingleBlock(const std::vector<std::string>& in) {
     const size_t cmpSize = 3;
     const size_t position = 0;
-    mParcel.svFlag |= static_cast<uint8_t>(GnssSvFlags::HAS_ALMANAC_DATA)
+    mParcel.svFlag = static_cast<uint8_t>(GnssSvFlags::HAS_ALMANAC_DATA)
                     | static_cast<uint8_t>(GnssSvFlags::HAS_CARRIER_FREQUENCY);
 
     if (in[GsvOfst::gnssId].compare(position, cmpSize, "$GP") == 0) {

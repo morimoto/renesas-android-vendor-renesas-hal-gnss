@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 #define LOG_NDEBUG 1
-#define LOG_TAG "GnssRenesasSvInfoBuilder"
+#define LOG_TAG "GnssRenesasInfoBuilder"
 #include <log/log.h>
 
 #include <chrono>
+#if !LOG_NDEBUG
+#include <iomanip>
+#endif
 
 #include "include/GnssInfoBuilder.h"
 
@@ -26,6 +29,26 @@ using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using GnssSvInfo = ::android::hardware::gnss::V2_0::IGnssCallback::GnssSvInfo;
 using ::android::hardware::gnss::V2_0::GnssConstellationType;
+
+#if !LOG_NDEBUG
+[[maybe_unused]]
+void PrintSvList(const std::vector<GnssSvInfo>& svlist,
+                                         const uint8_t constellation) {
+    std::stringstream ss;
+
+    for (const auto& sv : svlist) {
+        ss << std::dec << sv.v1_0.svid << "[";
+        ss << static_cast<uint16_t>(sv.constellation) << ", ";
+        ss << static_cast<uint16_t>(sv.v1_0.constellation) << ", ";
+        ss << sv.v1_0.cN0Dbhz << ", ";
+        ss << sv.v1_0.elevationDegrees << ", ";
+        ss << sv.v1_0.azimuthDegrees << ", ";
+        ss << std::hex << std::showbase << static_cast<uint16_t>(sv.v1_0.svFlag) << "], ";
+    }
+
+    ALOGV("constellation: %hhu, buffer: %s", constellation, ss.str().c_str());
+}
+#endif
 
 namespace android::hardware::gnss::V2_0::renesas {
 
@@ -170,10 +193,11 @@ IBError GnssInfoBuilder::Build(SvInfoList& outList) {
             outList.push_back(mSatellites[satType][satNum]);
             if (++svCount >= static_cast<unsigned int>(V1_0::GnssMax::SVS_COUNT)) {
                 satType = static_cast<int>(NmeaConstellationId::COUNT);
-                satNum = mSatellites[satType].size();
+                break;
             }
         }
     }
+
     ALOGV("GPS SV: GPS/SBAS/QZSS:%lu GLONASS:%lu GALILEO:%lu BEIDOU:%lu UNKNOWN:%lu total:%u",
         mSatellites[0].size(), mSatellites[1].size(), mSatellites[2].size(), mSatellites[3].size(),
         mSatellites[4].size(), svCount);
