@@ -251,8 +251,7 @@ CError Configurator::UbxSetSpeed(uint8_t port, uint32_t speed) {
         return CError::InternalError;
     }
 
-    if (TError::TransportReady !=
-        mUbxReceiver->GetTransportTTY()->SetBaudRate(speed)) {
+    if (RError::Success != mUbxReceiver->SetBaudRate(speed)) {
         ALOGE("Can not set tty baudrate to %d!\n", speed);
         return CError::InternalError;
     }
@@ -262,7 +261,6 @@ CError Configurator::UbxSetSpeed(uint8_t port, uint32_t speed) {
         return CError::InternalError;
     }
 
-    mUbxReceiver->GetTransportTTY()->SetBaudRate(speed);
     return CError::Success;
 }
 

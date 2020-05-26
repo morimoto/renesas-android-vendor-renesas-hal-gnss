@@ -177,8 +177,8 @@ RError UbloxReceiver::SetBaudRate(const uint32_t& baudrate) {
     }
 
     mLineBaudRate = baudrate;
-    return TError::Success == GetTransportTTY()->SetBaudRate(baudrate) ?
-           RError::Success : RError::NotSupported;
+    return TError::TransportReady == GetTransportTTY()->SetBaudRate(baudrate) ?
+           RError::Success : RError::InternalError;
 }
 
 RError UbloxReceiver::SetFwVersion(const double& version) {

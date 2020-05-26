@@ -36,10 +36,7 @@ public:
      * \param baudrate
      * \return
      */
-    virtual TError SetBaudRate(const uint32_t& baudrate) {
-        mBaudRate = baudrate;
-        return SetUp();
-    }
+    virtual TError SetBaudRate(const uint32_t& baudrate);
 
     /*!
      * \brief Allow to reset GNSS-receiver power

@@ -31,6 +31,11 @@ GnssTransportTTY::GnssTransportTTY(const std::string &filePath):
     Transport(filePath), mBaudRate(badBaudRate), mFd(closedFd) {
 }
 
+TError GnssTransportTTY::SetBaudRate(const uint32_t& baudrate) {
+    mBaudRate = baudrate;
+    return (closedFd >= mFd) ? TError::TransportReady : SetUp();
+}
+
 TError GnssTransportTTY::SetUp() {
     // Setup serial port
     ALOGI("%s, baudrate: %u", __func__, mBaudRate);
