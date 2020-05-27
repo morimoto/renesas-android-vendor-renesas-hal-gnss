@@ -68,7 +68,7 @@ private:
 public:
     // Methods from ::android::hardware::gnss::V1_0::IGnss follow.
     Return<bool> setCallback(const
-        sp<::android::hardware::gnss::V1_0::IGnssCallback>& callback) override;
+        sp<::android::hardware::gnss::V1_0::IGnssCallback>& cb) override;
     Return<bool> injectTime(int64_t timeMs, int64_t timeReferenceMs,
                             int32_t uncertaintyMs) override;
     Return<bool> injectLocation(double latitudeDegrees, double longitudeDegrees,

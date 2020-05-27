@@ -51,6 +51,9 @@ void MeasurementProvider::Provide() {
         auto error = mBuilder->Build(data);
 
         if (mEnabled && error == MBError::SUCCESS) {
+            if (mGnssMeasurementsCbIface_1_0) {
+                mGnssMeasurementsCbIface_1_0->GnssMeasurementCb(DataV2_0ToDataV1_0(*data));
+            }
             if (mGnssMeasurementsCbIface_1_1) {
                 mGnssMeasurementsCbIface_1_1->gnssMeasurementCb(DataV2_0ToDataV1_1(*data));
             }
@@ -65,6 +68,10 @@ void MeasurementProvider::Provide() {
     }
 }
 
+void MeasurementProvider::setMeasxCallback_1_0(IGnssMeasxCb_1_0 measxCb) {
+    mGnssMeasurementsCbIface_1_0 = measxCb;
+}
+
 void MeasurementProvider::setMeasxCallback_1_1(IGnssMeasxCb_1_1 measxCb) {
     mGnssMeasurementsCbIface_1_1 = measxCb;
 }
@@ -77,14 +84,24 @@ void MeasurementProvider::setEnabled(bool isEnabled) {
     mEnabled = isEnabled;
 }
 
-GnssData_1_1    MeasurementProvider::DataV2_0ToDataV1_1(const GnssData_2_0& v2_0) {
-    auto v1_1 = new GnssData_1_1();
-    v1_1->measurements.resize(v2_0.measurements.size());
-    for (size_t i = 0; i < v2_0.measurements.size(); i++) {
-        v1_1->measurements[i] = v2_0.measurements[i].v1_1;
+GnssData_1_0    MeasurementProvider::DataV2_0ToDataV1_0(const GnssData_2_0& data_2_0) {
+    GnssData_1_0 data_1_0;
+    data_1_0.measurementCount = data_2_0.measurements.size();
+    for (size_t i = 0; i < data_2_0.measurements.size(); i++) {
+        data_1_0.measurements[i] = data_2_0.measurements[i].v1_1.v1_0;
     }
-    v1_1->clock = v2_0.clock;
-    return *v1_1;
+    data_1_0.clock = data_2_0.clock;
+    return data_1_0;
+}
+
+GnssData_1_1    MeasurementProvider::DataV2_0ToDataV1_1(const GnssData_2_0& data_2_0) {
+    GnssData_1_1 data_1_1;
+    data_1_1.measurements.resize(data_2_0.measurements.size());
+    for (size_t i = 0; i < data_2_0.measurements.size(); i++) {
+        data_1_1.measurements[i] = data_2_0.measurements[i].v1_1;
+    }
+    data_1_1.clock = data_2_0.clock;
+    return data_1_1;
 }
 
 }

@@ -53,6 +53,10 @@ void LocationProviderBase::SetUpdateInterval(uint32_t newInterval) {
     mUpdateIntervalUs = newInterval;
 }
 
+void LocationProviderBase::setCallback_1_0(GnssCallback_1_0& cb) {
+    mGnssCallback_1_0 = cb;
+}
+
 void LocationProviderBase::setCallback_1_1(GnssCallback_1_1& cb) {
     mGnssCallback_1_1 = cb;
 }

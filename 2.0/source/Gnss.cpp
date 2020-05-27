@@ -29,11 +29,15 @@ namespace renesas {
     return ::android::OK;
 }
 
-Return<bool> GnssImpl::setCallback([[maybe_unused]] const
-                        sp<::android::hardware::gnss::V1_0::IGnssCallback>&
-                        callback) {
-    // TODO implement
-    return true;
+Return<bool> GnssImpl::setCallback(const
+            sp<::android::hardware::gnss::V1_0::IGnssCallback>& cb) {
+    ALOGV("%s", __PRETTY_FUNCTION__);
+
+    if (mGeneralManager) {
+        return (GMError::SUCCESS == mGeneralManager->SetCallbackV1_0(cb));
+    }
+
+    return false;
 }
 
 Return<bool> GnssImpl::start() {
@@ -127,8 +131,12 @@ GnssImpl::getExtensionGnssNi() {
 
 Return<sp<::android::hardware::gnss::V1_0::IGnssMeasurement>>
 GnssImpl::getExtensionGnssMeasurement() {
-    // TODO implement
-    return ::android::sp<::android::hardware::gnss::V1_0::IGnssMeasurement> {};
+    if (!mGeneralManager) {
+        ALOGE("%s: No general manager!", __func__);
+        return nullptr;
+    }
+
+    return mGeneralManager->getExtensionGnssMeasurement_v2_0(); {};
 }
 
 Return<sp<::android::hardware::gnss::V1_0::IGnssNavigationMessage>>

@@ -154,28 +154,25 @@ void GeneralManager::RunConfig() {
     mReceiverStatus = GnssReceiverStatus::CONFIG_DONE;
 }
 
-GMError GeneralManager::SetCallbackV1_1(const GnssCbPtr_1_1& cb) {
-    if (!cb) {
-        ALOGE("%s: Callback is null", __func__);
+GMError GeneralManager::SetCallbackV1_0(const GnssCbPtr_1_0& cb) {
+    if (GMError::SUCCESS != FillCallback(cb, mGnssCallback_1_0)) {
         return GMError::FAIL;
     }
 
-    if (mReceiverStatus == GnssReceiverStatus::WAIT_FOR_RECEIVER) {
-        auto err = Run();
-        if (err != android::OK || mReceiverStatus == GnssReceiverStatus::WAIT_FOR_RECEIVER) {
-            ALOGE("%s: No GNSS receiver, ignoring callback", __func__);
-            return GMError::FAIL;
-        }
+    mLocationProvider->setCallback_1_0(mGnssCallback_1_0);
+
+    if (GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
+        mSvInfoProvider->setCallback_1_0(mGnssCallback_1_0);
     }
 
-    mGnssCallback_1_1 = cb;
-    mGnssCallback_1_1->gnssSetCapabilitesCb(
-                    IGnssCallback::Capabilities::GEOFENCING |
-                    IGnssCallback::Capabilities::NAV_MESSAGES |
-                    IGnssCallback::Capabilities::MEASUREMENTS);
-    mGnssCallback_1_1->gnssSetSystemInfoCb(
-                {static_cast<uint16_t>(mReceiver->GetYearOfHw())});
-    mGnssCallback_1_1->gnssStatusCb(IGnssCallback::GnssStatusValue::NONE);
+    return GMError::SUCCESS;
+}
+
+GMError GeneralManager::SetCallbackV1_1(const GnssCbPtr_1_1& cb) {
+    if (GMError::SUCCESS != FillCallback(cb, mGnssCallback_1_1)) {
+        return GMError::FAIL;
+    }
+
     auto gnssName = "Renesas GNSS Implementation v1.1";
     mGnssCallback_1_1->gnssNameCb(gnssName);
 
@@ -189,27 +186,10 @@ GMError GeneralManager::SetCallbackV1_1(const GnssCbPtr_1_1& cb) {
 }
 
 GMError GeneralManager::SetCallbackV2_0(const GnssCbPtr_2_0& cb) {
-    if (!cb) {
-        ALOGE("%s: Callback is null", __func__);
+    if (GMError::SUCCESS != FillCallback(cb, mGnssCallback_2_0)) {
         return GMError::FAIL;
     }
 
-    if (mReceiverStatus == GnssReceiverStatus::WAIT_FOR_RECEIVER) {
-        auto err = Run();
-        if (err != android::OK || mReceiverStatus == GnssReceiverStatus::WAIT_FOR_RECEIVER) {
-            ALOGE("%s: No GNSS receiver, ignoring callback", __func__);
-            return GMError::FAIL;
-        }
-    }
-
-    mGnssCallback_2_0 = cb;
-    mGnssCallback_2_0->gnssSetCapabilitesCb(
-                    IGnssCallback::Capabilities::GEOFENCING |
-                    IGnssCallback::Capabilities::NAV_MESSAGES |
-                    IGnssCallback::Capabilities::MEASUREMENTS);
-    mGnssCallback_2_0->gnssSetSystemInfoCb(
-                {static_cast<uint16_t>(mReceiver->GetYearOfHw())});
-    mGnssCallback_2_0->gnssStatusCb(IGnssCallback::GnssStatusValue::NONE);
     auto gnssName = "Renesas GNSS Implementation v2.0";
     mGnssCallback_2_0->gnssNameCb(gnssName);
 
@@ -229,6 +209,10 @@ GMError GeneralManager::CleanUpCb() {
 
     if (mSvInfoProvider) {
         mSvInfoProvider->SetEnabled(false);
+    }
+
+    if (mGnssCallback_1_0) {
+        mGnssCallback_1_0.clear();
     }
 
     if (mGnssCallback_1_1) {
@@ -273,6 +257,9 @@ GMError GeneralManager::GnssStart() {
         mSvInfoProvider->SetEnabled(true);
     }
 
+    if (mGnssCallback_1_0) {
+        mGnssCallback_1_0->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_BEGIN);
+    }
     if (mGnssCallback_1_1) {
         mGnssCallback_1_1->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_BEGIN);
     }
@@ -291,6 +278,9 @@ GMError GeneralManager::GnssStop() {
     }
     if (mSvInfoProvider) {
         mSvInfoProvider->SetEnabled(false);
+    }
+    if (mGnssCallback_1_0) {
+        mGnssCallback_1_0->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_END);
     }
     if (mGnssCallback_1_1) {
         mGnssCallback_1_1->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_END);

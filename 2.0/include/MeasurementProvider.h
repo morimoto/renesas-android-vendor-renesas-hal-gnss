@@ -21,8 +21,10 @@
 
 namespace android::hardware::gnss::V2_0::renesas {
 
+using IGnssMeasxCb_1_0 = ::android::sp<android::hardware::gnss::V1_0::IGnssMeasurementCallback>;
 using IGnssMeasxCb_1_1 = ::android::sp<android::hardware::gnss::V1_1::IGnssMeasurementCallback>;
 using IGnssMeasxCb_2_0 = ::android::sp<IGnssMeasurementCallback>;
+using GnssData_1_0 = android::hardware::gnss::V1_0::IGnssMeasurementCallback::GnssData;
 using GnssData_1_1 = android::hardware::gnss::V1_1::IGnssMeasurementCallback::GnssData;
 using GnssData_2_0 = IGnssMeasurementCallback::GnssData;
 
@@ -33,6 +35,7 @@ public:
 
     void StartProviding();
     void StopProviding();
+    void setMeasxCallback_1_0(IGnssMeasxCb_1_0 measxCb);
     void setMeasxCallback_1_1(IGnssMeasxCb_1_1 measxCb);
     void setMeasxCallback_2_0(IGnssMeasxCb_2_0 measxCb);
     void setEnabled(bool isEnabled);
@@ -41,11 +44,13 @@ private:
     MeasurementProvider(MeasurementProvider&) = delete;
     MeasurementProvider& operator=(const MeasurementProvider&) = delete;
     void Provide();
+    GnssData_1_0  DataV2_0ToDataV1_0(const GnssData& v2_0);
     GnssData_1_1  DataV2_0ToDataV1_1(const GnssData& v2_0);
 
     std::unique_ptr<MeasurementBuilder> mBuilder;
     std::thread mGnssMeasurementsCallbackThread;
     std::atomic<bool> mThreadExit;
+    IGnssMeasxCb_1_0 mGnssMeasurementsCbIface_1_0;
     IGnssMeasxCb_1_1 mGnssMeasurementsCbIface_1_1;
     IGnssMeasxCb_2_0 mGnssMeasurementsCbIface_2_0;
     std::mutex mCallbackMutex;

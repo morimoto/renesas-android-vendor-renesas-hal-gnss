@@ -98,8 +98,16 @@ size_t pt_idx = 0;
 
         if (mEnabled && error == FLBError::SUCCESS) {
             while (!data.empty()) {
+                if (mGnssCallback_1_0) {
+                    ALOGV("%s, Provide fake location callback_1_0", __func__);
+                    auto ret = mGnssCallback_1_0->gnssLocationCb(data.front().v1_0);
+
+                    if (!ret.isOk()) {
+                        ALOGE("%s: Unable to invoke gnssLocationCb_1_0", __func__);
+                    }
+                }
                 if (mGnssCallback_1_1) {
-                    ALOGV("%s, Provide fake location callback", __func__);
+                    ALOGV("%s, Provide fake location callback_1_1", __func__);
                     auto ret = mGnssCallback_1_1->gnssLocationCb(data.front().v1_0);
 
                     if (!ret.isOk()) {
@@ -107,7 +115,7 @@ size_t pt_idx = 0;
                     }
                 }
                 if (mGnssCallback_2_0) {
-                    ALOGV("%s, Provide fake location callback", __func__);
+                    ALOGV("%s, Provide fake location callback_2_0", __func__);
                     auto ret = mGnssCallback_2_0->gnssLocationCb_2_0(data.front());
 
                     if (!ret.isOk()) {

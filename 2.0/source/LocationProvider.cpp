@@ -36,8 +36,16 @@ void LocationProvider::Provide() {
 
         if (mEnabled && syncInstance.Ready()) {
             if (error == LBError::SUCCESS) {
+                if (mGnssCallback_1_0) {
+                    ALOGV("%s, Provide location callback_1_0", __PRETTY_FUNCTION__);
+                    auto ret = mGnssCallback_1_0->gnssLocationCb(data.v1_0);
+
+                    if (!ret.isOk()) {
+                        ALOGE("%s: Unable to invoke gnssLocationCb_1_0", __func__);
+                    }
+                }
                 if (mGnssCallback_1_1) {
-                    ALOGV("%s, Provide location callback", __PRETTY_FUNCTION__);
+                    ALOGV("%s, Provide location callback_1_1", __PRETTY_FUNCTION__);
                     auto ret = mGnssCallback_1_1->gnssLocationCb(data.v1_0);
 
                     if (!ret.isOk()) {
@@ -45,7 +53,7 @@ void LocationProvider::Provide() {
                     }
                 }
                 if (mGnssCallback_2_0) {
-                    ALOGV("%s, Provide location callback", __PRETTY_FUNCTION__);
+                    ALOGV("%s, Provide location callback_2_0", __PRETTY_FUNCTION__);
                     auto ret = mGnssCallback_2_0->gnssLocationCb_2_0(data);
 
                     if (!ret.isOk()) {

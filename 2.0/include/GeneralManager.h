@@ -49,11 +49,11 @@ class GnssImpl;
 
 class GeneralManager {
 public:
+    using GnssCbPtr_1_0 = android::sp<android::hardware::gnss::V1_0::IGnssCallback>;
     using GnssCbPtr_1_1 = android::sp<android::hardware::gnss::V1_1::IGnssCallback>;
     using GnssCbPtr_2_0 = android::sp<android::hardware::gnss::V2_0::IGnssCallback>;
     using GnssHalImpl = android::hardware::gnss::V2_0::renesas::GnssImpl;
-    using IGnssMeasurement_1_1 = android::hardware::gnss::V2_0::IGnssMeasurement;
-    using IGnssMeasurement_2_0 = android::hardware::gnss::V2_0::IGnssMeasurement;
+
     /*!
      * \brief GeneralManager
      * \param gnssHal
@@ -66,6 +66,13 @@ public:
      * \return
      */
     android::status_t Run();
+
+    /*!
+     * \brief SetCallbackV1_0
+     * \param cb
+     * \return
+     */
+    GMError SetCallbackV1_0(const GnssCbPtr_1_0& cb);
 
     /*!
      * \brief SetCallbackV1_1
@@ -139,6 +146,7 @@ private:
     void UpdateReceiverInfo();
     void RunConfig();
 
+    GnssCbPtr_1_0 mGnssCallback_1_0;
     GnssCbPtr_1_1 mGnssCallback_1_1;
     GnssCbPtr_2_0 mGnssCallback_2_0;
     std::shared_ptr<android::hardware::gnss::V2_0::renesas::GnssImpl> mGnssImpl;
@@ -160,6 +168,34 @@ private:
     std::condition_variable mReceiverCv;
     std::mutex mLock;
     bool mIsRun;
+
+    template <typename CbPtr>
+    GMError FillCallback(const CbPtr& inputCallback, CbPtr& callback) {
+        if (!inputCallback) {
+            ALOGE("%s: Callback is null", __func__);
+            return GMError::FAIL;
+        }
+
+        if (mReceiverStatus == GnssReceiverStatus::WAIT_FOR_RECEIVER) {
+            auto err = Run();
+            if (err != android::OK || mReceiverStatus == GnssReceiverStatus::WAIT_FOR_RECEIVER) {
+                ALOGE("%s: No GNSS receiver, ignoring callback", __func__);
+                return GMError::FAIL;
+            }
+        }
+
+        callback = inputCallback;
+        callback->gnssSetCapabilitesCb(
+                        IGnssCallback::Capabilities::GEOFENCING |
+                        IGnssCallback::Capabilities::NAV_MESSAGES |
+                        IGnssCallback::Capabilities::MEASUREMENTS);
+        callback->gnssSetSystemInfoCb(
+                    {static_cast<uint16_t>(mReceiver->GetYearOfHw())});
+        callback->gnssStatusCb(IGnssCallback::GnssStatusValue::NONE);
+
+        return GMError::SUCCESS;
+    }
+
 };
 
 } // android::hardware::gnss::V2_0::renesas

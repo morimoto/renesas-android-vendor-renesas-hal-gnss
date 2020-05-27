@@ -18,6 +18,8 @@
 #include <android/hardware/gnss/2.0/IGnssCallback.h>
 
 namespace android::hardware::gnss::V2_0::renesas {
+using GnssCallback_1_0
+    = ::android::sp<::android::hardware::gnss::V1_0::IGnssCallback>;
 using GnssCallback_1_1
     = ::android::sp<::android::hardware::gnss::V1_1::IGnssCallback>;
 using GnssCallback_2_0
@@ -45,6 +47,8 @@ public:
      * \brief StopProviding
      */
     virtual LPError StopProviding() = 0;
+
+    virtual void setCallback_1_0(GnssCallback_1_0& cb) = 0;
 
     virtual void setCallback_1_1(GnssCallback_1_1& cb) = 0;
 

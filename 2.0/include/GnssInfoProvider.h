@@ -24,6 +24,8 @@
 
 namespace android::hardware::gnss::V2_0::renesas {
 
+using GnssCallback_1_0
+    = ::android::sp<::android::hardware::gnss::V1_0::IGnssCallback>;
 using GnssCallback_1_1
     = ::android::sp<::android::hardware::gnss::V1_1::IGnssCallback>;
 using GnssCallback_2_0
@@ -38,6 +40,7 @@ public:
 
     void StartProviding();
     void StopProviding();
+    void setCallback_1_0(GnssCallback_1_0& cb);
     void setCallback_1_1(GnssCallback_1_1& cb);
     void setCallback_2_0(GnssCallback_2_0& cb);
     void SetUpdateInterval(uint32_t newInterval);
@@ -47,8 +50,10 @@ protected:
 private:
     GnssInfoProvider(GnssInfoProvider&) = delete;
     GnssInfoProvider& operator=(const GnssInfoProvider&) = delete;
-    GnssSvStatus_1_0 SvInfoV2_0To_V1_1(SvInfoList v2_0);
+    ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvStatus
+        SvInfoV2_0To_V1_0(SvInfoList v2_0);
 
+    GnssCallback_1_0 mGnssCallback_1_0;
     GnssCallback_1_1 mGnssCallback_1_1;
     GnssCallback_2_0 mGnssCallback_2_0;
     uint32_t mUpdateIntervalUs;

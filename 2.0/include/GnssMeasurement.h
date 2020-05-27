@@ -25,6 +25,8 @@
 
 namespace android::hardware::gnss::V2_0::renesas {
 
+using IGnssMeasurementCallback_1_0
+    = android::hardware::gnss::V1_0::IGnssMeasurementCallback;
 using IGnssMeasurementCallback_1_1
     = android::hardware::gnss::V1_1::IGnssMeasurementCallback;
 using IGnssMeasurementCallback_2_0 = IGnssMeasurementCallback;
@@ -64,6 +66,7 @@ public:
 
 private:
     std::unique_ptr<MeasurementProvider> mProvider;
+    sp<IGnssMeasurementCallback_1_0> mGnssMeasurementsCbIface_1_0;
     sp<IGnssMeasurementCallback_1_1> mGnssMeasurementsCbIface_1_1;
     sp<IGnssMeasurementCallback_2_0> mGnssMeasurementsCbIface_2_0;
 };

@@ -37,13 +37,36 @@ GnssMeasurement::~GnssMeasurement() {
 
 Return<GnssMeasurementStatus>
 GnssMeasurement::setCallback(const
-        sp<::android::hardware::gnss::V1_0::IGnssMeasurementCallback>&) {
-    // TODO implement
-    return GnssMeasurementStatus {};
+        sp<::android::hardware::gnss::V1_0::IGnssMeasurementCallback>& callback) {
+
+    ALOGE("%s", __func__);
+
+    if (mGnssMeasurementsCbIface_1_0 != nullptr) {
+        ALOGV("%s: GnssMeasurementCallback already inited", __func__);
+        return GnssMeasurementStatus::ERROR_ALREADY_INIT;
+    }
+
+    mGnssMeasurementsCbIface_1_0 = callback;
+
+    if (callback != nullptr) {
+        auto& syncInstance = GnssMeasurementSync::GetInstance();
+        syncInstance.SetEventsToWait(gnssMeasxExpectedBeforeLocation);
+
+        if (!mProvider) {
+            mProvider = std::make_unique<MeasurementProvider>();
+            mProvider->StartProviding();
+        }
+
+        mProvider->setMeasxCallback_1_0(mGnssMeasurementsCbIface_1_0);
+        mProvider->setEnabled(true);
+    }
+
+    return GnssMeasurementStatus::SUCCESS;
 }
 
 Return<void> GnssMeasurement::close() {
-    if (mGnssMeasurementsCbIface_1_1 == nullptr
+    if (mGnssMeasurementsCbIface_1_0 == nullptr
+        && mGnssMeasurementsCbIface_1_1 == nullptr
         && mGnssMeasurementsCbIface_2_0 == nullptr) {
         return Void();
     }
@@ -53,9 +76,9 @@ Return<void> GnssMeasurement::close() {
 
     if (nullptr != mProvider) {
         mProvider->setEnabled(false);
-        // mProvider->StopProviding();
     }
 
+    mGnssMeasurementsCbIface_1_0 = nullptr;
     mGnssMeasurementsCbIface_1_1 = nullptr;
     mGnssMeasurementsCbIface_2_0 = nullptr;
     return Void();
@@ -69,7 +92,7 @@ GnssMeasurement::setCallback_1_1(const
     ALOGV("%s", __func__);
 
     if (mGnssMeasurementsCbIface_1_1 != nullptr) {
-        ALOGE("%s: GnssMeasurementCallback already init", __func__);
+        ALOGE("%s: GnssMeasurementCallback already inited", __func__);
         return GnssMeasurementStatus::ERROR_ALREADY_INIT;
     }
 
@@ -84,14 +107,11 @@ GnssMeasurement::setCallback_1_1(const
         syncInstance.SetEventsToWait(gnssMeasxExpectedBeforeLocation);
 
         if (!mProvider) {
-            mProvider =
-            std::make_unique<MeasurementProvider>();
+            mProvider = std::make_unique<MeasurementProvider>();
             mProvider->StartProviding();
-            mProvider->setMeasxCallback_1_1(mGnssMeasurementsCbIface_1_1);
-        } else {
-            mProvider->setMeasxCallback_1_1(mGnssMeasurementsCbIface_1_1);
         }
 
+        mProvider->setMeasxCallback_1_1(mGnssMeasurementsCbIface_1_1);
         mProvider->setEnabled(true);
     }
 
@@ -105,7 +125,7 @@ GnssMeasurement::setCallback_2_0(const
     ALOGV("%s", __func__);
 
     if (mGnssMeasurementsCbIface_2_0 != nullptr) {
-        ALOGE("%s: GnssMeasurementCallback already init", __func__);
+        ALOGE("%s: GnssMeasurementCallback already inited", __func__);
         return GnssMeasurementStatus::ERROR_ALREADY_INIT;
     }
 
@@ -120,14 +140,11 @@ GnssMeasurement::setCallback_2_0(const
         syncInstance.SetEventsToWait(gnssMeasxExpectedBeforeLocation);
 
         if (!mProvider) {
-            mProvider =
-            std::make_unique<MeasurementProvider>();
+            mProvider = std::make_unique<MeasurementProvider>();
             mProvider->StartProviding();
-            mProvider->setMeasxCallback_2_0(mGnssMeasurementsCbIface_2_0);
-        } else {
-            mProvider->setMeasxCallback_2_0(mGnssMeasurementsCbIface_2_0);
         }
 
+        mProvider->setMeasxCallback_2_0(mGnssMeasurementsCbIface_2_0);
         mProvider->setEnabled(true);
     }
 
