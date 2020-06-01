@@ -71,6 +71,7 @@ private:
                 mRmcPartsAmount = {13, 14, 14};
     constexpr static const float knotToKmph = 1.852f; //knots to km per hour
     constexpr static const float mpsToKmph = 3.6f; //km/h to m/h
+    constexpr static const unsigned int secsPerHour = 3600; // seconds per hour
     static const NmeaMsgType mType = NmeaMsgType::RMC;
     static const int minutesPerDegree = 60;
     static const std::string statusActive;
@@ -185,6 +186,12 @@ NPError NmeaRmc<T>::SetTime(const std::string& date, const std::string& time) {
     }
 
     tm t;
+
+    // Calc real UTC offset from localtime
+    time_t lt = std::time(nullptr);
+    localtime_r(&lt, &t);
+    long int utc_offset = t.tm_gmtoff - t.tm_isdst * secsPerHour;
+
     memset(&t, 0, sizeof(struct tm));
     // UTC fix time
     sscanf(time.c_str(), "%02u%02u%02u", &t.tm_hour, &t.tm_min, &t.tm_sec);
@@ -196,7 +203,7 @@ NPError NmeaRmc<T>::SetTime(const std::string& date, const std::string& time) {
     t.tm_year += 100;
     // timestamp of the event in milliseconds, mktime(&t) returns seconds,
     // therefore we need to convert
-    mParcel.time = mktime(&t) * 1000;
+    mParcel.time = (mktime(&t) + utc_offset) * 1000;
     return NPError::Success;
 }
 
