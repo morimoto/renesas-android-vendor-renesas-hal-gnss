@@ -16,6 +16,7 @@
 #pragma once
 
 #include "include/NmeaParserCommon.h"
+using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 
 //TODO(g.chabukiani): add doxygen, check all over the project
 template <typename T>
@@ -39,9 +40,11 @@ protected:
 private:
     typedef struct Parcel {
         double altitude;
+        double hdop;
     } parcel_t;
 
     enum GgaOfst : size_t {
+        Hdop     = 8,
         Altitude = 9,
     };
 
@@ -55,6 +58,7 @@ private:
     NmeaVersion mCurrentProtocol = NmeaVersion::NMEAv23;
     bool mIsValid = false;
     parcel_t mParcel;
+    uint16_t mFlags = 0u;
 };
 
 template <typename T>
@@ -108,15 +112,24 @@ bool NmeaGga<T>::IsValid() {
 
 template <typename T>
 NPError NmeaGga<T>::ParseCommon(std::vector<std::string>& gga) {
-    if (gga.size() !=  mGgaPartsAmount[mCurrentProtocol]) {
+    if (gga.size() != mGgaPartsAmount[mCurrentProtocol]) {
         return NPError::IncompletePacket;
     }
 
-    if ( 0 >= gga[GgaOfst::Altitude].length()) {
+    if (0 >= gga[GgaOfst::Altitude].length()) {
         return NPError::InvalidData;
     }
 
-    mParcel.altitude = atof(gga[9].c_str());
+    mParcel.altitude = atof(gga[GgaOfst::Altitude].c_str());
+    mFlags |= GnssLocationFlags::HAS_ALTITUDE;
+
+    if (0 >= gga[GgaOfst::Hdop].length()) {
+        return NPError::InvalidData;
+    }
+
+    mParcel.hdop = std::stof(gga[GgaOfst::Hdop]);
+    mFlags |= GnssLocationFlags::HAS_HORIZONTAL_ACCURACY;
+
     return ValidateParcel();
 }
 

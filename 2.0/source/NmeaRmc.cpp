@@ -18,7 +18,6 @@
 #include <android/hardware/gnss/1.0/types.h>
 #include <android/hardware/gnss/2.0/types.h>
 
-using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 using LocationData_v1 = android::hardware::gnss::V1_0::GnssLocation;
 using LocationData_v2 = android::hardware::gnss::V2_0::GnssLocation;
 
@@ -28,8 +27,7 @@ NPError NmeaRmc<LocationOutType>::GetData(LocationOutType out) {
         return NPError::InvalidData;
     }
 
-    mFlags |= GnssLocationFlags::HAS_LAT_LONG;
-    out.v1_0.gnssLocationFlags |= mFlags;
+    out.v1_0.gnssLocationFlags = mFlags;
     out.v1_0.timestamp = mParcel.time;
     out.v1_0.latitudeDegrees = mParcel.lat;
     out.v1_0.longitudeDegrees = mParcel.lon;
@@ -47,8 +45,7 @@ NPError NmeaRmc<LocationData_v1*>::GetData(LocationData_v1* out) {
         return NPError::InvalidData;
     }
 
-    mFlags |= GnssLocationFlags::HAS_LAT_LONG;
-    out->gnssLocationFlags |= mFlags & std::numeric_limits<uint16_t>::max();
+    out->gnssLocationFlags = mFlags & std::numeric_limits<uint16_t>::max();
     out->timestamp = mParcel.time;
     out->latitudeDegrees = mParcel.lat;
     out->longitudeDegrees = mParcel.lon;

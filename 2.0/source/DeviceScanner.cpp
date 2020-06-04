@@ -123,6 +123,7 @@ void DeviceScanner::InsertNewReceiver(const std::string& path, DevId devId) {
             }
             break;
         }
+
         default: {
             break;
         }
@@ -206,7 +207,6 @@ DSError DeviceScanner::Scan() {
     return DSError::Success;
 }
 
-//TODO(g.chabukiani): set some nessessary params, such as baud rate etc.
 DSError DeviceScanner::CreateUbxReceiver(const std::string& path,
         const GnssReceiverType& type, const Priority& priority) {
     ALOGV("%s", __func__);
@@ -214,8 +214,6 @@ DSError DeviceScanner::CreateUbxReceiver(const std::string& path,
                                                 (path, type);
     receiver_t receiver = {ubReceiver, priority};
     size_t emptyLen = mDefaultPropertyValue.length();
-    ubReceiver->SetBaudRate(static_cast<uint32_t>
-                            (mSettings.requestedBaudrate));
 
     if (mSettings.secmajor.length() > emptyLen) {
         receiver.receiver->SetSecondMajorConstellation(mSettings.secmajor);
@@ -235,8 +233,8 @@ DSError DeviceScanner::CreateDefaultReceiver(const std::string& path,
     std::shared_ptr<DefaultReceiver> dfReceiver = std::make_shared<DefaultReceiver>
                                                   (path, type);
     receiver_t receiver = {dfReceiver, priority};
-    dfReceiver->SetBaudRate(static_cast<uint32_t>
-                            (mSettings.requestedBaudrate));
+
+    dfReceiver->SetBaudRate(static_cast<uint32_t>(mSettings.requestedBaudrate));
     mReceivers.push(receiver);
     return DSError::Success;
 }
@@ -272,18 +270,9 @@ DSError DeviceScanner::ProcessPredefinedSettings() {
 
     if (mSettings.ttyPath.length() > mDefaultPropertyValue.length()
         && CheckTtyPath(mSettings.ttyPath)) {
-        if (mSkKfUbloxTtyPath == mSettings.ttyPath && IsKingfisher()) {
-            return CreateUbxReceiver(mSkKfUbloxTtyPath,
-                    GnssReceiverType::OnboardChip, Priority::Requested);
-        } else if (mSalvatorUbloxTtyPath == mSettings.ttyPath) {
-            return CreateUbxReceiver(mSalvatorUbloxTtyPath,
-                    GnssReceiverType::UsbDongle, Priority::Requested);
-        } else if (mSalvatorOtherTtyPath == mSettings.ttyPath) {
-            return CreateDefaultReceiver(mSalvatorOtherTtyPath,
-                    GnssReceiverType::UsbDongle, Priority::Requested);
-        } else  {
-            return DSError::UnsupportedReceiver;
-        }
+        return CreateDefaultReceiver(mSettings.ttyPath,
+                                     GnssReceiverType::UsbDongle,
+                                     Priority::Requested);
     }
 
     return DSError::NoPredefinedReceiver;
@@ -295,7 +284,7 @@ DSError DeviceScanner::CheckPredefinedSettings() {
     char propSecmajor[PROPERTY_VALUE_MAX] = {};
     char propSbas[PROPERTY_VALUE_MAX] = {};
     property_get(mPropRequestedReceiver.c_str(), propTty,
-                 mDefaultPropertyValue.c_str());
+                 mSalvatorOtherTtyPath.c_str());
     property_get(mPropSecmajor.c_str(), propSecmajor,
                  mDefaultPropertyValue.c_str());
     property_get(mPropSbas.c_str(), propSbas, mDefaultPropertyValue.c_str());

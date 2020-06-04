@@ -59,7 +59,7 @@ private:
     NmeaVersion mCurrentProtocol = NmeaVersion::NMEAv23;
     bool mIsValid = false;
     parcel_t mParcel;
-    uint16_t mFlags;
+    uint16_t mFlags = 0u;
 };
 
 template <typename T>

@@ -23,14 +23,27 @@ using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 using LocationData_v1 = android::hardware::gnss::V1_0::GnssLocation;
 using LocationData_v2 = android::hardware::gnss::V2_0::GnssLocation;
 
+static const uint16_t flagsToClear = GnssLocationFlags::HAS_ALTITUDE |
+                                     GnssLocationFlags::HAS_HORIZONTAL_ACCURACY;
+
 template <>
 NPError NmeaGga<LocationExtraInfoOutType>::GetData(LocationExtraInfoOutType out) {
     if (!IsValid()) {
         return NPError::InvalidData;
     }
 
-    out.flags |= GnssLocationFlags::HAS_ALTITUDE;
+    out.flags &= ~flagsToClear;
+    out.flags |= mFlags;
     out.altitude = mParcel.altitude;
+
+    /*
+    * The NMEA protocol does not report accuracy.
+    * For this reason, we take some stated accuracy of the device and
+    * multiply it by Horizontal Dilution of Precision.
+    * This value will be overwritten with real accuracy
+    * from the PUBX message if it is supported by the receiver.
+    */
+    out.horizontalAcc = mParcel.hdop * 2.5f;
     ALOGV("%s, Success", __PRETTY_FUNCTION__);
     return NPError::Success;
 }

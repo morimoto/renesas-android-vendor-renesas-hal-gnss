@@ -147,7 +147,7 @@ private:
     DefaultReceiver& operator=(const DefaultReceiver&) = delete;
     DefaultReceiver(const DefaultReceiver&) = delete;
 
-    GnssVendor mVendor;
+    GnssVendor mVendor = GnssVendor::Unknown;
     GnssProduct mProduct;
     GnssReceiverType mReceiverType;
 

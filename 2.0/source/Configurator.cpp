@@ -90,8 +90,7 @@ CError Configurator::Config() {
         return ConfigUbx();
     }
 
-    ALOGE("%s: Unsupported receiver", __func__);
-    return CError::UnsupportedReceiver;
+    return CError::Success;
 }
 
 CError Configurator::ConfigUbx() {

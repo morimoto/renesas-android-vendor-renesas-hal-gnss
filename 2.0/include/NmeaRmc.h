@@ -18,7 +18,7 @@
 #include <cstring>
 
 #include "include/NmeaParserCommon.h"
-
+using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 
 template <typename T>
 class NmeaRmc : public NmeaParserCommon<T> {
@@ -92,7 +92,7 @@ private:
     bool mIsValid = false;
     NmeaVersion mCurrentProtocol = NmeaVersion::NMEAv23;
     parcel_t mParcel;
-    uint16_t mFlags;
+    uint16_t mFlags = 0u;
     float mSpeedAccuracy;
     float mBearingAccuracy;
 
@@ -143,11 +143,15 @@ void NmeaRmc<T>::SetConstants() {
     case NmeaVersion::NMEAv23:
         mSpeedAccuracy = speedAccUblox7;
         mBearingAccuracy = bearingAccUblox7;
+        mFlags |= GnssLocationFlags::HAS_SPEED_ACCURACY |
+                  GnssLocationFlags::HAS_BEARING_ACCURACY;
         break;
 
     case NmeaVersion::NMEAv41:
         mSpeedAccuracy = speedAccUblox8;
         mBearingAccuracy = bearingAccUblox8;
+        mFlags |= GnssLocationFlags::HAS_SPEED_ACCURACY |
+                  GnssLocationFlags::HAS_BEARING_ACCURACY;
         break;
 
     default:
@@ -227,6 +231,7 @@ NPError NmeaRmc<T>::SetLocation(const std::string& lat,
     degree = static_cast<int>(raw / 100);
     minutes = ((raw / 100) - degree) * 100;
     mParcel.lon = ((minutes / minutesPerDegree) + degree) * polarity;
+    mFlags |= GnssLocationFlags::HAS_LAT_LONG;
     return NPError::Success;
 }
 
@@ -240,6 +245,7 @@ NPError NmeaRmc<T>::SetMotion(const std::string& speed,
     mParcel.speed = (static_cast<float>(atof(speed.c_str())) * knotToKmph) /
                     mpsToKmph;
     mParcel.cog = static_cast<float>(atof(cog.c_str()));
+    mFlags |= GnssLocationFlags::HAS_SPEED | GnssLocationFlags::HAS_BEARING;
     return NPError::Success;
 }
 

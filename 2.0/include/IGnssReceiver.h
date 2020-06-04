@@ -64,9 +64,9 @@ enum class SupportedProtocol : uint8_t {
 };
 
 enum class VendorId : uint16_t {
-    Ublox = 0x1546,
-    SiRF,
+    SiRF   = 0x067b,
     Garmin = 0x091E,
+    Ublox  = 0x1546,
     Unknown,
 };
 

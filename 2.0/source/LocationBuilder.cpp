@@ -61,6 +61,8 @@ void LocationBuilder::ProcessExtraInfo() {
 }
 
 void LocationBuilder::AddExtraInfo(LocationData& outData) {
+    std::unique_lock<std::mutex> lock(mExtraInfoLock);
+
     outData.v1_0.gnssLocationFlags |= mExtraInfo.flags;
     outData.v1_0.altitudeMeters = mExtraInfo.altitude;
     outData.v1_0.horizontalAccuracyMeters = mExtraInfo.horizontalAcc;

@@ -28,7 +28,9 @@ namespace android::hardware::gnss::V2_0::renesas {
 DefaultReceiver::DefaultReceiver(const std::string& path,
                                  const GnssReceiverType& type) :
     GnssReceiverTTY(new GnssTransportTTY(path)),
-    mReceiverType(type), mTtyPath(path)  {
+    mReceiverType(type),
+    mTtyPath(path) {
+    SetBaudRate(defaultLineBaudRate);
     ALOGV("%s", __func__);
 }
 
@@ -36,11 +38,10 @@ DefaultReceiver::DefaultReceiver(uint16_t vendorId,
                                  uint16_t productId,
                                  const std::string& path,
                                  const GnssReceiverType& type) :
-    GnssReceiverTTY(new GnssTransportTTY(path)),
-    mReceiverType(type),
-    mVendorId(vendorId),
-    mProductId(productId),
-    mTtyPath(path) {
+    DefaultReceiver(path, type) {
+    mVendorId = vendorId;
+    mProductId = productId;
+    SetVendor();
     ALOGV("%s", __func__);
 }
 
@@ -145,7 +146,8 @@ RError DefaultReceiver::SetBaudRate(const uint32_t& baudrate) {
     }
 
     mLineBaudRate = baudrate;
-    return RError::Success;
+    return TError::TransportReady == GetTransportTTY()->SetBaudRate(baudrate) ?
+           RError::Success : RError::InternalError;
 }
 
 RError DefaultReceiver::SetFwVersion(const double& version) {

@@ -60,7 +60,7 @@ private:
     LocationBuilder(LocationBuilder&) = delete;
     LocationBuilder& operator=(const LocationBuilder&) = delete;
 
-    LocationExtraInfo mExtraInfo;
+    LocationExtraInfo mExtraInfo = {};
 
     MessageQueue& mMsgQueue;
     std::condition_variable& mExtraInfoCV;

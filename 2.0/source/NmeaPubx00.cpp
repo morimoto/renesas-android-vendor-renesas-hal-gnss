@@ -23,6 +23,9 @@ using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 using LocationData_v1 = android::hardware::gnss::V1_0::GnssLocation;
 using LocationData_v2 = android::hardware::gnss::V2_0::GnssLocation;
 
+static const uint16_t flagsToClear = GnssLocationFlags::HAS_VERTICAL_ACCURACY |
+                                     GnssLocationFlags::HAS_HORIZONTAL_ACCURACY;
+
 template <>
 NPError
 NmeaPubx00<LocationExtraInfoOutType>::GetData(LocationExtraInfoOutType out) {
@@ -30,6 +33,7 @@ NmeaPubx00<LocationExtraInfoOutType>::GetData(LocationExtraInfoOutType out) {
         return NPError::InvalidData;
     }
 
+    out.flags &= ~flagsToClear;
     out.flags |= mFlags;
     out.horizontalAcc = mParcel.horizontalAcc;
     out.verticalAcc = mParcel.verticalAcc;

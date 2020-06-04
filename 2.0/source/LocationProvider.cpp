@@ -31,7 +31,7 @@ void LocationProvider::Provide() {
     auto& syncInstance = GnssMeasurementSync::GetInstance();
 
     while (!mThreadExit) {
-        LocationData data;
+        LocationData data = {};
         auto error = mBuilder->Build(data);
 
         if (mEnabled && syncInstance.Ready()) {
