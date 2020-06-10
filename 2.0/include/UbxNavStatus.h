@@ -93,7 +93,7 @@ private:
     const uint8_t* mPayload;
     const size_t mPayloadLen;
 
-    navStatus_t mParcel;
+    navStatus_t mParcel = {};
     int64_t mTimeNano = 0;
     bool mIsValid = false;
 };

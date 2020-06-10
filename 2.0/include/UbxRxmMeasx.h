@@ -190,7 +190,7 @@ private:
     const size_t mPayloadLen;
 
     bool mIsValid = false;
-    parcel_t mParcel;
+    parcel_t mParcel = {};
 };
 
 template <typename ClassType>

@@ -88,13 +88,15 @@ std::queue<T, std::list<T>> MessageQueue::mQueue;
 template <typename T>
 void MessageQueue::Push(T in) {
     std::lock_guard<std::mutex> lock(locker<T>.mLock);
+    ALOGV("GnssRenesasQueue [%s]", __PRETTY_FUNCTION__);
 
-    if (mMaxSize > mQueue<T>.size()) {
-        ALOGV("GnssRenesasQueue [%s] mMaxSize > size(), %zu",
+    if (mMaxSize <= mQueue<T>.size()) {
+        ALOGV("GnssRenesasQueue [%s] mMaxSize <= size(), %zu",
             __PRETTY_FUNCTION__, mQueue<T>.size());
-        mQueue<T>.push(std::move(in));
+        mQueue<T>.pop();
     }
 
+    mQueue<T>.push(std::move(in));
     auto size = mQueue<T>.size();
     ALOGV("GnssRenesasQueue [%s], size = %zu", __PRETTY_FUNCTION__, size);
     mConditionVariable<T>.cv.notify_all();

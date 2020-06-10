@@ -100,7 +100,7 @@ private:
     const size_t mPayloadLen;
 
     bool mIsValid = false;
-    navClock_t mParcel;
+    navClock_t mParcel = {};
 };
 
 template <typename T>

@@ -44,21 +44,22 @@ void MeasurementProvider::StopProviding() {
 }
 
 void MeasurementProvider::Provide() {
+    ALOGV("%s", __func__);
     auto& syncInstance = GnssMeasurementSync::GetInstance();
 
     while (!mThreadExit) {
-        auto data = new GnssData_2_0();
+        GnssData_2_0 data = {};
         auto error = mBuilder->Build(data);
 
         if (mEnabled && error == MBError::SUCCESS) {
             if (mGnssMeasurementsCbIface_1_0) {
-                mGnssMeasurementsCbIface_1_0->GnssMeasurementCb(DataV2_0ToDataV1_0(*data));
+                mGnssMeasurementsCbIface_1_0->GnssMeasurementCb(DataV2_0ToDataV1_0(data));
             }
             if (mGnssMeasurementsCbIface_1_1) {
-                mGnssMeasurementsCbIface_1_1->gnssMeasurementCb(DataV2_0ToDataV1_1(*data));
+                mGnssMeasurementsCbIface_1_1->gnssMeasurementCb(DataV2_0ToDataV1_1(data));
             }
             if (mGnssMeasurementsCbIface_2_0) {
-                mGnssMeasurementsCbIface_2_0->gnssMeasurementCb_2_0(*data);
+                mGnssMeasurementsCbIface_2_0->gnssMeasurementCb_2_0(data);
             }
             syncInstance.NotifyEventOccured();
         }

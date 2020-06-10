@@ -57,7 +57,7 @@ public:
      *             INVALID - received GNSS data is invalid,
      *             EMPTY - MessageQueue of MBType is empty
      */
-    MBError Build(GnssData* outData);
+    MBError Build(GnssData& outData);
 
 protected:
     /*!
@@ -77,6 +77,7 @@ protected:
 private:
     MeasurementBuilder(MeasurementBuilder&) = delete;
     MeasurementBuilder& operator=(const MeasurementBuilder&) = delete;
+    void AddElapsedRealtime(GnssData& outData);
     MessageQueue& mMsgQueue;
     std::condition_variable& mCondVar;
     std::mutex mLock;

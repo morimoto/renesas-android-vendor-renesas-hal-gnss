@@ -66,7 +66,7 @@ private:
     static const int64_t fullWeekMs = 604800000; // ms in week
     const int64_t defaultRtcTime = 1;
 
-    singleBlock_t mParcel;
+    singleBlock_t mParcel = {};
     int64_t mTimeNano = 0;
     bool mIsValid = false;
 };

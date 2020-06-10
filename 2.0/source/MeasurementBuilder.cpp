@@ -21,6 +21,8 @@
 
 #include "include/MeasurementBuilder.h"
 
+#include <utils/SystemClock.h>
+
 using namespace std::chrono;
 namespace android::hardware::gnss::V2_0::renesas {
 
@@ -32,7 +34,15 @@ MeasurementBuilder::MeasurementBuilder() :
     mMsgQueue(MessageQueue::GetInstance()),
     mCondVar(mMsgQueue.GetConditionVariable<MBType>()) {}
 
-MBError MeasurementBuilder::Build(GnssData* outData) {
+void MeasurementBuilder::AddElapsedRealtime(GnssData& outData) {
+    outData.elapsedRealtime.flags = ElapsedRealtimeFlags::HAS_TIMESTAMP_NS |
+                                     ElapsedRealtimeFlags::HAS_TIME_UNCERTAINTY_NS;
+    outData.elapsedRealtime.timestampNs =
+        static_cast<uint64_t>(::android::elapsedRealtimeNano());
+    outData.elapsedRealtime.timeUncertaintyNs = 0;
+}
+
+MBError MeasurementBuilder::Build(GnssData& outData) {
     auto parserMap = std::make_unique<MBParserMap> ();
 
     if (auto res = GetParsers(*parserMap); res != MBError::SUCCESS) {
@@ -49,32 +59,34 @@ MBError MeasurementBuilder::Build(GnssData* outData) {
             return MBError::INVALID;
         }
 
-        parser->GetData(outData);
+        parser->GetData(&outData);
     }
 
+    AddElapsedRealtime(outData);
     return MBError::SUCCESS;
 }
 
 MBError MeasurementBuilder::GetParsers(MBParserMap& outMap) {
     MBType parser;
     auto start = steady_clock::now();
-    bool timeout = false;
     double uptime;
 
-    while (outMap.size() != numParsersExpected && !timeout) {
+    while (outMap.size() != numParsersExpected || mMsgQueue.GetSize<MBType>() > 0) {
         parser = mMsgQueue.Pop<MBType>();
 
         if (parser == nullptr) {
             std::unique_lock<std::mutex> lock(mLock);
             mCondVar.wait_for(lock, milliseconds{msgQueTimeout},
-                              [&] {return !mMsgQueue.Empty<MBType>();});
+                              [&] { return !mMsgQueue.Empty<MBType>(); });
         } else {
             outMap.insert_or_assign(parser->GetMsgType(), parser);
         }
 
         uptime =
             duration_cast<milliseconds>(steady_clock::now() - start).count();
-        timeout = uptime >= getParsersTimeout;
+        if (uptime >= getParsersTimeout){
+            break;
+        }
     }
 
     if (outMap.size() != numParsersExpected) {
@@ -83,5 +95,4 @@ MBError MeasurementBuilder::GetParsers(MBParserMap& outMap) {
 
     return MBError::SUCCESS;
 }
-
 }
