@@ -18,17 +18,50 @@
 using GnssData =
     android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData;
 
+// Difference between hardware clock epoch time and GPS epoch time in hours
+const long kGpsTimeBaseDifferenceHours = 87768;
+const long long kSecondsInWeek = 7 * 24 * 60 * 60;
+const int64_t kNanoSecondsInOneSecond = 1000000000;
+
+using std::chrono::hours;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
+using std::chrono::system_clock;
+using std::chrono::time_point;
+
+static time_t GpsTimeInSeconds(const int16_t week, const uint32_t iTow) {
+    time_point<system_clock> time(week * seconds(kSecondsInWeek) +
+                                  milliseconds(iTow));
+    return system_clock::to_time_t(time);
+}
+
+static time_t GpsTimeToSystemTime(const int16_t week, const uint32_t iTow) {
+    time_point<system_clock> time(hours(kGpsTimeBaseDifferenceHours) +
+                                  week * seconds(kSecondsInWeek) +
+                                  milliseconds(iTow));
+    return system_clock::to_time_t(time);
+}
+
 template <>
 UPError UbxNavTimeGps<GnssData*>::GetData(GnssData* out) {
     if (!mIsValid) {
         return UPError::InvalidData;
     }
 
-    int64_t updateTimeNs = std::max(out->clock.timeNs, defaultRtcTime);
-    out->clock.timeNs = updateTimeNs;
-    out->clock.fullBiasNs = updateTimeNs - mTimeNano;
+    out->clock.timeNs = GpsTimeToSystemTime(mParcel.week, mParcel.iTow) *
+                            kNanoSecondsInOneSecond +
+                        mParcel.fTow;
+    // Full bias will be difference between system and GPS time
+    // as receiver local time is a mapping of
+    // the local 1 kHz reference onto a GNSS time-base - 9.1 Receiver Local Time
+    out->clock.fullBiasNs =
+        out->clock.timeNs -
+        GpsTimeInSeconds(mParcel.week, mParcel.iTow) * kNanoSecondsInOneSecond +
+        mParcel.fTow;
+    out->clock.biasNs            = mParcel.fTow;
+    out->clock.biasUncertaintyNs = static_cast<double>(mParcel.tAcc);
     out->clock.timeUncertaintyNs = static_cast<double>(mParcel.tAcc);
-    out->clock.leapSecond = mParcel.leapS;
-    out->clock.gnssClockFlags = mParcel.clockFlags;
+    out->clock.leapSecond        = mParcel.leapS;
+    out->clock.gnssClockFlags    = mClockFlags;
     return UPError::Success;
 }

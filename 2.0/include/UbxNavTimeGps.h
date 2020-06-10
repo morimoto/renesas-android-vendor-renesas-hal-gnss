@@ -49,13 +49,12 @@ private:
     };
 
     typedef struct SingleBlock {
-        uint32_t iTow;
-        int32_t fTow;
-        int16_t week;
+        uint32_t iTow; // GPS time of week of the navigation epoch. (ms)
+        int32_t fTow; // Fractional part of iTOW (ns)
+        int16_t week; // GPS week number of the navigation epoch
         int8_t leapS;
         uint8_t valid;
-        uint32_t tAcc;
-        uint16_t clockFlags;
+        uint32_t tAcc; // Time Accuracy Estimate (ns)
     } singleBlock_t;
 
     const uint8_t* mPayload;
@@ -66,6 +65,7 @@ private:
     static const int64_t fullWeekMs = 604800000; // ms in week
     const int64_t defaultRtcTime = 1;
 
+    uint16_t      mClockFlags = 0;
     singleBlock_t mParcel = {};
     int64_t mTimeNano = 0;
     bool mIsValid = false;
@@ -133,11 +133,11 @@ UPError UbxNavTimeGps<ClassType>::CheckFlags() {
     bool validWeek = IsValidFlag(mParcel.valid, validWeekMask);
 
     if (IsValidFlag(mParcel.valid, validLeapMask)) {
-        mParcel.clockFlags |= static_cast<uint16_t>(GnssCF::HAS_LEAP_SECOND);
+        mClockFlags |= static_cast<uint16_t>(GnssCF::HAS_LEAP_SECOND);
     }
 
     if (validWeek && validTow) {
-        mParcel.clockFlags |= static_cast<uint16_t>
+        mClockFlags |= static_cast<uint16_t>
                         (GnssCF::HAS_TIME_UNCERTAINTY | GnssCF::HAS_FULL_BIAS);
         return UPError::Success;
     }
