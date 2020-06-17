@@ -1,3 +1,5 @@
+on boot && property:"ro.hardware"="salvator"
+    enable gnss-hal
 on boot && property:"ro.hardware"="kingfisher"
     chmod 660 /dev/gpiochip9
     enable gnss-hal
