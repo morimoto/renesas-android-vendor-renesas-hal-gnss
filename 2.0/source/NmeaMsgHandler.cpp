@@ -23,6 +23,7 @@
 #include "include/NmeaGsv.h"
 #include "include/NmeaRmc.h"
 #include "include/NmeaPubx00.h"
+#include "include/NmeaTxt.h"
 
 static int32_t CaluclateCrc(const std::vector<char>& in);
 
@@ -88,6 +89,9 @@ NMHError NmeaMsgHandler::SelectParser(std::string& in) {
         auto sp = std::make_shared<NmeaPubx00<LocationExtraInfoOutType>>
                                                             (in, mProtocol);
         mPipe.Push<LocationExtraInfoQueueType>(sp);
+    } else if (std::string::npos != in.find(txtHeader)) {
+        auto sp = std::make_shared<NmeaTxt<std::string&>>(in, mProtocol);
+        sp->PrintMsg();
     } else {
         //error, should not occur
         return NMHError::InternalError;

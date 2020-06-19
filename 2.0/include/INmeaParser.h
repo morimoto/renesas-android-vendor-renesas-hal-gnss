@@ -27,6 +27,7 @@ const std::string gsaHeader = "GSA";
 const std::string gsvHeader = "GSV";
 const std::string rmcHeader = "RMC";
 const std::string pubx00Header = "PUBX,00";
+const std::string txtHeader = "TXT";
 
 const char mNmeaBeginParcel = '$';
 const char mNmeaEndParcelCarriageReturn = '\r';
