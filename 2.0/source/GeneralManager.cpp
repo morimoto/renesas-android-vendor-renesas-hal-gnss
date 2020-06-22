@@ -55,11 +55,12 @@ GeneralManager::~GeneralManager() {
 
 void GeneralManager::StopToChange() {
     ALOGV("%s", __func__);
-    mReceiverStatus = GnssReceiverStatus::WAIT_FOR_RECEIVER;
 
     if (nullptr != mReader) {
+        mReceiverStatus = GnssReceiverStatus::WAIT_FOR_RECEIVER;
         mReader->Stop();
         mReceiver->GetTransport()->Reset();
+        mReader = nullptr;
     }
 }
 
@@ -74,6 +75,7 @@ void GeneralManager::StartAfterChange() {
         mReceiverStatus = GnssReceiverStatus::RECEIVER_FOUND;
         std::shared_ptr<Transport> transport = mReceiver->GetTransport();
         transport->Reset();
+        mReader = std::make_unique<TtyReader>(transport);
         mReader->Start();
         RunConfig();
     }
@@ -106,31 +108,31 @@ android::status_t GeneralManager::Run() {
         // might be connected later, check on gnssStart()
         if (err == DSError::NoReceiver) {
             mReceiverStatus = GnssReceiverStatus::WAIT_FOR_RECEIVER;
-            return ::android::OK;
+        } else {
+            return ::android::UNKNOWN_ERROR;
         }
-
-        return ::android::UNKNOWN_ERROR;
     }
 
-    mReceiverStatus = GnssReceiverStatus::RECEIVER_FOUND;
-    mReceiver = mDeviceScanner->GetReceiver();
-    std::shared_ptr<Transport> transport = mReceiver->GetTransport();
-
-    if (GnssReceiverType::FakeReceiver == mReceiver->GetReceiverType()) {
-        SetupLocationProvider();
-        mReceiverStatus = GnssReceiverStatus::READY;
-        return ::android::OK;
-    }
-
-    mReader = std::make_unique<TtyReader>(transport);
     mUbxMsgHandler = std::make_unique<UbxMsgHandler>();
     mNmeaMsgHandler = std::make_unique<NmeaMsgHandler>();
     mUbxMsgHandler->StartProcessing();
     mNmeaMsgHandler->StartProcessing();
-    mReader->Start();
+    mReceiver = mDeviceScanner->GetReceiver();
+    if (mReceiver) {
+        mReceiverStatus = GnssReceiverStatus::RECEIVER_FOUND;
+        std::shared_ptr<Transport> transport = mReceiver->GetTransport();
 
-    if (!mConfigThread.joinable()) {
-        mConfigThread = std::thread(&GeneralManager::RunConfig, this);
+        if (GnssReceiverType::FakeReceiver == mReceiver->GetReceiverType()) {
+            SetupLocationProvider();
+            mReceiverStatus = GnssReceiverStatus::READY;
+            return ::android::OK;
+        }
+
+        mReader = std::make_unique<TtyReader>(transport);
+        mReader->Start();
+        if (!mConfigThread.joinable()) {
+            mConfigThread = std::thread(&GeneralManager::RunConfig, this);
+        }
     }
 
     SetupLocationProvider();
@@ -161,7 +163,7 @@ GMError GeneralManager::SetCallbackV1_0(const GnssCbPtr_1_0& cb) {
 
     mLocationProvider->setCallback_1_0(mGnssCallback_1_0);
 
-    if (GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
+    if (!mReceiver || GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
         mSvInfoProvider->setCallback_1_0(mGnssCallback_1_0);
     }
 
@@ -176,9 +178,7 @@ GMError GeneralManager::SetCallbackV1_1(const GnssCbPtr_1_1& cb) {
     auto gnssName = "Renesas GNSS Implementation v1.1";
     mGnssCallback_1_1->gnssNameCb(gnssName);
 
-    mLocationProvider->setCallback_1_1(mGnssCallback_1_1);
-
-    if (GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
+    if (!mReceiver || GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
         mSvInfoProvider->setCallback_1_1(mGnssCallback_1_1);
     }
 
@@ -195,7 +195,7 @@ GMError GeneralManager::SetCallbackV2_0(const GnssCbPtr_2_0& cb) {
 
     mLocationProvider->setCallback_2_0(mGnssCallback_2_0);
 
-    if (GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
+    if (!mReceiver || GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
         mSvInfoProvider->setCallback_2_0(mGnssCallback_2_0);
     }
 
@@ -292,12 +292,7 @@ GMError GeneralManager::GnssStop() {
 }
 
 GMError GeneralManager::SetupLocationProvider() {
-    if (!mReceiver) {
-        ALOGE("%s: no GNSS receiver", __func__);
-        return GMError::NO_RECEIVER;
-    }
-
-    if (GnssReceiverType::FakeReceiver == mReceiver->GetReceiverType()) {
+    if (mReceiver && GnssReceiverType::FakeReceiver == mReceiver->GetReceiverType()) {
         mLocationProvider = std::make_unique<FakeLocationProvider>
                                 (mUpdateIntervalUs);
     } else {

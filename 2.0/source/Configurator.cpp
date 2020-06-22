@@ -95,6 +95,7 @@ CError Configurator::Config() {
 
 CError Configurator::ConfigUbx() {
     ALOGV("Config Ubx");
+    MessageQueue& pipe = MessageQueue::GetInstance();
 
     if (nullptr == mReceiver) {
         ALOGV("%s, mReceiver == null", __func__);
@@ -105,6 +106,7 @@ CError Configurator::ConfigUbx() {
         mUbxReceiver = std::static_pointer_cast<UbloxReceiver>(mReceiver);
     }
 
+    pipe.Clear<CvAckType>();
     if (CError::Success != UbxChangeBaudRate()) {
         return CError::InternalError;
     }
@@ -113,7 +115,6 @@ CError Configurator::ConfigUbx() {
         return CError::InternalError;
     }
 
-    MessageQueue& pipe = MessageQueue::GetInstance();
     pipe.Clear<std::shared_ptr<UbxACK>>();
     try {
         for (auto nextStep : mConfigs.at(mReceiver->GetSwVersion())) {

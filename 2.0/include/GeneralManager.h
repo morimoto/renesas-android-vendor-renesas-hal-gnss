@@ -176,21 +176,15 @@ private:
             return GMError::FAIL;
         }
 
-        if (mReceiverStatus == GnssReceiverStatus::WAIT_FOR_RECEIVER) {
-            auto err = Run();
-            if (err != android::OK || mReceiverStatus == GnssReceiverStatus::WAIT_FOR_RECEIVER) {
-                ALOGE("%s: No GNSS receiver, ignoring callback", __func__);
-                return GMError::FAIL;
-            }
-        }
-
         callback = inputCallback;
         callback->gnssSetCapabilitesCb(
                         IGnssCallback::Capabilities::GEOFENCING |
                         IGnssCallback::Capabilities::NAV_MESSAGES |
                         IGnssCallback::Capabilities::MEASUREMENTS);
-        callback->gnssSetSystemInfoCb(
-                    {static_cast<uint16_t>(mReceiver->GetYearOfHw())});
+        if (nullptr != mReceiver) {
+            callback->gnssSetSystemInfoCb(
+                {static_cast<uint16_t>(mReceiver->GetYearOfHw())});
+        }
         callback->gnssStatusCb(IGnssCallback::GnssStatusValue::NONE);
 
         return GMError::SUCCESS;
