@@ -197,11 +197,7 @@ private:
         uint32_t requestedBaudrate;
     } predefinedSettings_t;
 
-    static const std::string mPropRequestedReceiver;
     static const std::string mDefaultPropertyValue;
-    static const std::string mPropBaudRate;
-    static const std::string mPropSecmajor;
-    static const std::string mPropSbas;
     static const int32_t mTtyDefaultRate;
 
     static const std::string mSalvatorUbloxTtyPath;

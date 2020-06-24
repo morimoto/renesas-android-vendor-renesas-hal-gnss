@@ -43,7 +43,6 @@ static constexpr uint8_t cfgDefaulRate = 1;
 static constexpr uint8_t cfgDisableRate = 0;
 
 static const int32_t gnssDefaultRate = 38400;
-static const std::string propGnssBaudRate = "ro.boot.gps.gnss_baudrate";
 
 enum class CError : uint8_t {
     Success,

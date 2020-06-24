@@ -34,6 +34,7 @@
 #include "include/GnssTransport.h"
 #include "include/IUbxParser.h"
 #include "include/MessageQueue.h"
+#include "include/PropNames.h"
 #include "include/UbloxReceiver.h"
 #include "include/UbxMonVer.h"
 
@@ -46,11 +47,6 @@ namespace android::hardware::gnss::V2_1::renesas {
 static const std::set<DevId> supportedDevices = {uint16_t(VendorId::Garmin),
                                                  uint16_t(VendorId::SiRF),
                                                  uint16_t(VendorId::Ublox)};
-// TODO (d.gamazin) Move to separate header
-const std::string DeviceScanner::mPropRequestedReceiver = "ro.boot.gps.mode";
-const std::string DeviceScanner::mPropBaudRate = "ro.boot.gps.tty_baudrate";
-const std::string DeviceScanner::mPropSecmajor = "ro.boot.gps.secmajor";
-const std::string DeviceScanner::mPropSbas = "ro.boot.gps.sbas";
 
 // SC3 hardcoded in device tree overlay
 const std::string DeviceScanner::mSkKfUbloxTtyPath = "/dev/ttySC3";
@@ -368,18 +364,19 @@ DSError DeviceScanner::ProcessPredefinedSettings() {
 
 DSError DeviceScanner::CheckPredefinedSettings() {
     ALOGV("%s", __func__);
-    char propTty[PROPERTY_VALUE_MAX] = {};
-    char propSecmajor[PROPERTY_VALUE_MAX] = {};
-    char propSbas[PROPERTY_VALUE_MAX] = {};
-    property_get(mPropRequestedReceiver.c_str(), propTty,
+    char ttyPath[PROPERTY_VALUE_MAX] = {};
+    char secmajor[PROPERTY_VALUE_MAX] = {};
+    char sbas[PROPERTY_VALUE_MAX] = {};
+
+    property_get(propRequestedReceiver.c_str(), ttyPath,
                  mDefaultPropertyValue.c_str());
-    property_get(mPropSecmajor.c_str(), propSecmajor,
+    property_get(propSecmajor.c_str(), secmajor,
                  mDefaultPropertyValue.c_str());
-    property_get(mPropSbas.c_str(), propSbas, mDefaultPropertyValue.c_str());
-    mSettings.ttyPath = std::string(propTty);
-    mSettings.secmajor = std::string(propSecmajor);
-    mSettings.sbas = std::string(propSbas);
-    mSettings.requestedBaudrate = property_get_int32(mPropBaudRate.c_str(),
+    property_get(propSbas.c_str(), sbas, mDefaultPropertyValue.c_str());
+    mSettings.ttyPath = std::string(ttyPath);
+    mSettings.secmajor = std::string(secmajor);
+    mSettings.sbas = std::string(sbas);
+    mSettings.requestedBaudrate = property_get_int32(propBaudRate.c_str(),
                                                      mTtyDefaultRate);
 
     return DSError::Success;

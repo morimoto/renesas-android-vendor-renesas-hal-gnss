@@ -25,6 +25,7 @@
 
 #include "include/MessageQueue.h"
 #include "include/Configurator.h"
+#include "include/PropNames.h"
 #include "include/UbloxReceiver.h"
 
 #ifdef BIG_ENDIAN_CPU
@@ -412,8 +413,8 @@ CError Configurator::UbxProcessAck(const UbxClass& _class, const UbxId& _id,
 
 void GetProp(char* secmajor, char* sbas) {
     ALOGV("[%s, line %d] Entry", __func__, __LINE__);
-    property_get("ro.boot.gps.secmajor", secmajor, "glonass");
-    property_get("ro.boot.gps.sbas", sbas, "enable");
+    property_get(propSecmajor.c_str(), secmajor, "glonass");
+    property_get(propSbas.c_str(), sbas, "enable");
 
     std::transform(secmajor, secmajor + strlen(secmajor), secmajor, toupper);
     std::transform(sbas, sbas + strlen(sbas), sbas, toupper);
