@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2018 GlobalLogic
+// Copyright (C) 2020 GlobalLogic
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,141 +17,81 @@ cc_binary {
     relative_install_path: "hw",
     proprietary: true,
 
-    name: "android.hardware.gnss@1.0-service.renesas",
-    init_rc: ["android.hardware.gnss@1.0-service.renesas.rc"],
-    vintf_fragments: ["android.hardware.gnss@1.0-service.renesas.xml"],
+    name: "android.hardware.gnss@2.0-service.renesas",
+    init_rc: ["android.hardware.gnss@2.0-service.renesas.rc"],
+    vintf_fragments: ["android.hardware.gnss@1.1-service.renesas.xml",
+        "android.hardware.gnss@2.0-service.renesas.xml"],
 
     cflags: [
         "-Werror",
         "-Wall",
+        "-Wno-unused-parameter",
+        "-O0",
+        "-fexceptions",
     ],
 
     srcs: [
-        "GnssHwTTY.cpp",
-        "GnssHwFAKE.cpp",
-        "Gnss.cpp",
-        "service.cpp",
-        "AGnss.cpp",
-        "AGnssRil.cpp",
-        "GnssBatching.cpp",
-        "GnssConfiguration.cpp",
-        "GnssDebug.cpp",
-        "GnssGeofencing.cpp",
-        "GnssMeasurement.cpp",
-        "GnssNavigationMessage.cpp",
-        "GnssNi.cpp",
-        "GnssXtra.cpp",
-        "UsbHandler.cpp",
-        "GnssRxmMeasxParser.cpp",
-        "GnssNavClockParser.cpp",
-        "GnssNavTimeGPSParser.cpp",
-        "GnssNavStatusParser.cpp",
-        "GnssParserCommonImpl.cpp",
-        "GnssMeasQueue.cpp",
-        "GnssMeasToLocSync.cpp",
-        "ThreadCreationWrapper.cpp",
+        "source/AGnss.cpp",
+        "source/AGnssRil.cpp",
+        "source/Configurator.cpp",
+        "source/DefaultReceiver.cpp",
+        "source/DeviceScanner.cpp",
+        "source/FakeLocationProvider.cpp",
+        "source/FakeReader.cpp",
+        "source/FakeReceiver.cpp",
+        "source/FakeLocationBuilder.cpp",
+        "source/GeneralManager.cpp",
+        "source/GnssBatching.cpp",
+        "source/GnssConfiguration.cpp",
+        "source/Gnss.cpp",
+        "source/GnssDebug.cpp",
+        "source/GnssInfoProvider.cpp",
+        "source/GnssInfoBuilder.cpp",
+        "source/GnssMeasurement.cpp",
+        "source/GnssTransport.cpp",
+        "source/GnssTransportFake.cpp",
+        "source/GnssTransportTTY.cpp",
+        "source/LocationProviderBase.cpp",
+        "source/LocationProvider.cpp",
+        "source/LocationBuilder.cpp",
+        "source/MeasurementProvider.cpp",
+        "source/MeasurementBuilder.cpp",
+        "source/GnssMeasurementSync.cpp",
+        "source/Service.cpp",
+        "source/MessageQueue.cpp",
+        "source/TtyReader.cpp",
+        "source/UbloxReceiver.cpp",
+        "source/UbloxMsgHandler.cpp",
+        "source/NmeaMsgHandler.cpp",
+        "source/NmeaGga.cpp",
+        "source/NmeaPubx00.cpp",
+        "source/NmeaRmc.cpp",
+        "source/NmeaGsv.cpp",
+        "source/NmeaGsa.cpp",
+        "source/NmeaTxt.cpp",
+        "source/UbxRxmMeasx.cpp",
+        "source/UbxAckNack.cpp",
+        "source/UbxMonVer.cpp",
+        "source/UbxNavTimeGps.cpp",
+        "source/UbxNavClock.cpp",
+        "source/UbxNavStatus.cpp",
     ],
 
-/*
-    sanitize: {
-          misc_undefined: [
-              "alignment",
-              "bounds",
-              "null",
-              "unreachable",
-              "integer",
-          ],
-          diag: {
-              undefined : true
-          },
-     },
-*/
-
     shared_libs: [
-        "liblog",
-        "libcutils",
-        "libdl",
-        "libbase",
-        "libutils",
-        "libhardware",
-        "libbinder",
-        "libhidlbase",
-        "libusbhost",
         "libgpio",
-        "android.hardware.gnss@1.0",
-    ],
-}
-
-cc_test {
-    proprietary: true,
-
-    name: "gnss_tests",
-
-    cflags: [
-        "-Werror",
-        "-Wall",
-        "-Wno-format",
-        "-O0"
-    ],
-
-    srcs: [
-        "tests/parsers/nav_clock_parser.cpp",
-        "tests/parsers/common_impl_parser.cpp",
-        "tests/parsers/nav_time_utc_parser.cpp",
-        "tests/parsers/rxm_measx_parser.cpp",
-        "tests/hwtty/gnss_hw_tty.cpp",
-        "tests/queue/gnss_meas_queue.cpp",
-        "GnssHwTTY.cpp",
-        "GnssHwFAKE.cpp",
-        "Gnss.cpp",
-        "AGnss.cpp",
-        "AGnssRil.cpp",
-        "GnssBatching.cpp",
-        "GnssConfiguration.cpp",
-        "GnssDebug.cpp",
-        "GnssGeofencing.cpp",
-        "GnssMeasurement.cpp",
-        "GnssNavigationMessage.cpp",
-        "GnssNi.cpp",
-        "GnssXtra.cpp",
-        "UsbHandler.cpp",
-        "GnssRxmMeasxParser.cpp",
-        "GnssNavClockParser.cpp",
-        "GnssNavTimeUTCParser.cpp",
-        "GnssNavTimeGPSParser.cpp",
-        "GnssNavStatusParser.cpp",
-        "GnssParserCommonImpl.cpp",
-        "GnssMeasQueue.cpp",
-        "GnssMeasToLocSync.cpp",
-        "ThreadCreationWrapper.cpp",
-    ],
-
-    sanitize: {
-        address: true,
-        integer_overflow: true,
-        misc_undefined: [
-            "alignment",
-            "bounds",
-            "null",
-            "unreachable",
-            "integer",
-        ],
-        diag: {
-            undefined : true
-        },
-    },
-
-    shared_libs: [
         "liblog",
         "libcutils",
-        "libdl",
         "libbase",
         "libutils",
-        "libhardware",
         "libbinder",
         "libhidlbase",
-        "libusbhost",
         "android.hardware.gnss@1.0",
+        "android.hardware.gnss@1.1",
+        "android.hardware.gnss@2.0",
+    ],
+
+    static_libs: [
+        "libusbscanner",
     ],
 
     host_supported: false,
