@@ -16,14 +16,16 @@
 #define LOG_TAG "GnssRenesasHalDeviceScanner"
 #define LOG_NDEBUG 1
 
-#include <chrono>
-#include <unistd.h>
-#include <log/log.h>
-
 #include "include/DeviceScanner.h"
 
 #include <cutils/properties.h>
+#include <log/log.h>
+#include <poll.h>
+#include <sys/inotify.h>
 #include <sys/system_properties.h>
+#include <unistd.h>
+
+#include <chrono>
 
 #include "include/DefaultReceiver.h"
 #include "include/FakeReceiver.h"
@@ -35,8 +37,9 @@
 #include "include/UbxMonVer.h"
 
 static const uint16_t ubxVid = 0x1546;
-static const int maxCheckRetries = 5;
-static const int tryInterval = 50;
+static const int badFd = -1;
+static const int bufSize = 4096;
+static const int pollTimeOut = 10000; //ms
 static const std::string deviceClass = "tty";
 static const std::set<DevId> supportedDevices = {ubxVid};
 
@@ -84,6 +87,8 @@ DSError DeviceScanner::DetectDevice() {
 }
 
 void DeviceScanner::PrintReceivers() {
+    std::lock_guard<std::mutex> lock(mLock);
+
     receiversQueue_t Receivers = mReceivers;
     ALOGV("mReceivers.size(): %lu", mReceivers.size());
 
@@ -97,6 +102,7 @@ void DeviceScanner::PrintReceivers() {
 
 bool DeviceScanner::ReceiverAlreadyAdded(const std::string& newPath) {
     ALOGV("%s", __func__);
+    std::lock_guard<std::mutex> lock(mLock);
     receiversQueue_t Receivers = mReceivers;
 
     while (!Receivers.empty()) {
@@ -132,6 +138,7 @@ void DeviceScanner::InsertNewReceiver(const std::string& path, DevId devId) {
 
 void DeviceScanner::RemoveReceiver(const std::string& pathToRemove) {
     ALOGV("%s", __func__);
+    std::lock_guard<std::mutex> lock(mLock);
     receiversQueue_t newReceivers;
 
     while (!mReceivers.empty()) {
@@ -150,24 +157,35 @@ void DeviceScanner::RemoveReceiver(const std::string& pathToRemove) {
 
 void DeviceScanner::UpdateReceivers(const std::string& path, DevId devId,
                                     ProbingStage state) {
-    ALOGV("%s", __func__);
-    mGManager->StopToChange();
-    switch (state) {
-        case ProbingStage::Added: {
-            InsertNewReceiver(path, devId);
-            break;
-        }
-
-        case ProbingStage::Removed: {
-            RemoveReceiver(path);
-            break;
-        }
-
-        default: {
-            break;
-        }
+    ALOGV("%s, path: %s", __func__, path.c_str());
+    if (mThread.joinable()) {
+        mThread.join();
     }
-    mGManager->StartAfterChange();
+
+    mThread = std::thread([devId, state, this](const std::string path) {
+        mGManager->StopToChange();
+        switch (state) {
+            case ProbingStage::Added: {
+                InsertNewReceiver(path, devId);
+                break;
+            }
+
+            case ProbingStage::Removed: {
+                RemoveReceiver(path);
+                break;
+            }
+
+            default: {
+                break;
+            }
+        }
+
+        mGManager->StartAfterChange();
+    }, path);
+
+    if (!mGManager->IsRun() && mThread.joinable()) {
+        mThread.join();
+    }
 }
 
 bool DeviceScanner::IsKingfisher() {
@@ -210,6 +228,7 @@ DSError DeviceScanner::Scan() {
 DSError DeviceScanner::CreateUbxReceiver(const std::string& path,
         const GnssReceiverType& type, const Priority& priority) {
     ALOGV("%s", __func__);
+    std::lock_guard<std::mutex> lock(mLock);
     std::shared_ptr<UbloxReceiver> ubReceiver = std::make_shared<UbloxReceiver>
                                                 (path, type);
     receiver_t receiver = {ubReceiver, priority};
@@ -230,6 +249,7 @@ DSError DeviceScanner::CreateUbxReceiver(const std::string& path,
 DSError DeviceScanner::CreateDefaultReceiver(const std::string& path,
         const GnssReceiverType& type, const Priority& priority) {
     ALOGV("%s", __func__);
+    std::lock_guard<std::mutex> lock(mLock);
     std::shared_ptr<DefaultReceiver> dfReceiver = std::make_shared<DefaultReceiver>
                                                   (path, type);
     receiver_t receiver = {dfReceiver, priority};
@@ -241,6 +261,8 @@ DSError DeviceScanner::CreateDefaultReceiver(const std::string& path,
 
 DSError DeviceScanner::CreateFakeReceiver() {
     ALOGV("%s", __func__);
+    std::lock_guard<std::mutex> lock(mLock);
+
     receiver_t receiver =
             {std::make_shared<FakeReceiver>(mFakeRoutePath), Priority::Fake};
     mReceivers.push(receiver);
@@ -249,6 +271,7 @@ DSError DeviceScanner::CreateFakeReceiver() {
 
 std::shared_ptr<IGnssReceiver> DeviceScanner::GetReceiver() {
     ALOGV("%s", __func__);
+    std::lock_guard<std::mutex> lock(mLock);
 
     if (0 < mReceivers.size()) {
         std::string path;
@@ -284,7 +307,7 @@ DSError DeviceScanner::CheckPredefinedSettings() {
     char propSecmajor[PROPERTY_VALUE_MAX] = {};
     char propSbas[PROPERTY_VALUE_MAX] = {};
     property_get(mPropRequestedReceiver.c_str(), propTty,
-                 mSalvatorOtherTtyPath.c_str());
+                 mDefaultPropertyValue.c_str());
     property_get(mPropSecmajor.c_str(), propSecmajor,
                  mDefaultPropertyValue.c_str());
     property_get(mPropSbas.c_str(), propSbas, mDefaultPropertyValue.c_str());
@@ -297,20 +320,96 @@ DSError DeviceScanner::CheckPredefinedSettings() {
     return DSError::Success;
 }
 
-bool DeviceScanner::CheckTtyPath(const std::string& path) {
+bool DeviceScanner::HandleNotifyMessage(const int fd, const std::string& fileName) {
     ALOGV("%s", __func__);
-    int res;
-    for (int retry = 0; retry < maxCheckRetries; ++retry) {
-        res = access(path.c_str(), F_OK);
-        if (res != 0) {
-            //waiting for the receiver to be ready after plug.
-            std::this_thread::sleep_for(std::chrono::milliseconds(tryInterval));
-        } else {
-            break;
+    const inotify_event* event = nullptr;
+    char buf[bufSize] = {0};
+
+    for (int ret = read(fd, buf, bufSize);
+         ret > 0;
+         ret = read(fd, buf, bufSize)) {
+        for (char* crntEvent = buf; crntEvent < buf + ret;
+             crntEvent += sizeof(inotify_event) + event->len) {
+            event = reinterpret_cast<const inotify_event*>(buf);
+            ALOGV("event->len: %d, event->name: %s", event->len, event->name);
+            if (!fileName.compare(event->name)) {
+                ALOGV("Found : %s", event->name);
+                return true;
+            }
         }
     }
 
-    return (res == 0);
+    return false;
+}
+
+bool DeviceScanner::WaitEventFromSystem(const std::string& path) {
+    ALOGV("%s", __func__);
+    bool res = false;
+    int watchDesriptor = 0, poll_num = 0;
+    nfds_t numFileDscrptrs = 1;
+    std::string watchDir, fileName;
+    netlink_desc fileDescriptor(inotify_init1(IN_NONBLOCK));
+    pollfd fds = {
+        .fd = fileDescriptor,
+        .events = POLLIN,
+    };
+
+    try {
+        watchDir = path.substr(0, path.rfind('/'));
+        fileName = path.substr(path.rfind('/') + 1);
+        ALOGV("watchdir: %s, filename: %s", watchDir.c_str(), fileName.c_str());
+    } catch (const std::exception& e) {
+        ALOGW("Substr: %s", e.what());
+        return false;
+    }
+
+    if (badFd == fileDescriptor) {
+        ALOGW("Error: inotify_init1");
+        return false;
+    }
+
+    watchDesriptor = inotify_add_watch(fileDescriptor, watchDir.c_str(), IN_CREATE);
+    if (badFd == watchDesriptor) {
+        ALOGW("Error: Cannot watch: %s, %s", watchDir.c_str(), strerror(errno));
+        return false;
+    }
+
+    ALOGV("Listening for events...");
+
+    while (true) {
+        poll_num = poll(&fds, numFileDscrptrs, pollTimeOut);
+
+        if (poll_num == -1) {
+            ALOGW("Poll failed: %s", std::strerror(errno));
+            break;
+        }
+
+        if (poll_num == 0) {
+            ALOGW("Event not received after %d ms waiting", pollTimeOut);
+            break;
+        }
+
+        if (fds.revents & POLLIN) {
+            ALOGV("Received event from system");
+            res = HandleNotifyMessage(fileDescriptor, fileName);
+            if (res == true) {
+                break;
+            }
+        }
+    }
+
+    return (res);
+}
+
+bool DeviceScanner::CheckTtyPath(const std::string& path) {
+    ALOGV("%s", __func__);
+    if (!access(path.c_str(), F_OK)){
+        ALOGV("File %s - exist, return true", path.c_str());
+        return (true);
+    }
+
+    ALOGV("File %s - NO exist, wait notify from system...", path.c_str());
+    return WaitEventFromSystem(path);
 }
 
 } //namespace android::hardware::gnss::V2_0::renesas

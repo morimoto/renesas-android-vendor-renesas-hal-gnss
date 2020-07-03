@@ -323,4 +323,8 @@ sp<IGnssMeasurement> GeneralManager::getExtensionGnssMeasurement_v2_0() {
     return mGnssMeasurement;
 }
 
+bool GeneralManager::IsRun() {
+    return mIsRun;
+}
+
 } // namespace android::hardware::gnss::V2_0::renesas

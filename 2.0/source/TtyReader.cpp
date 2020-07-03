@@ -52,7 +52,7 @@ void TtyReader::ReadingLoop() {
         SupportedProtocol protocol = SupportedProtocol::UnknownProtocol;
         RDError result = RDError::InternalError;
 
-        while (RDError::Success != result) {
+        while (!mExitThread && RDError::Success != result) {
             if (TError::Success != mTransport->Read(*parcel)) {
                 result = RDError::TransportError;
                 std::this_thread::sleep_for(std::chrono::milliseconds(tryInterval));

@@ -166,6 +166,23 @@ protected:
      */
     void PrintReceivers();
 
+    /*!
+     * \brief WaitEventFromSystem - a method in which we expect
+     * a message from the system that the device is ready
+     * \param path - path to the expected file
+     * \return
+     */
+    bool WaitEventFromSystem(const std::string& path);
+
+    /*!
+     * \brief HandleNotifyMessage - method for getting a message from
+     * the notify event
+     * \param fileName - the name of expected file
+     * \param fd - file descriptor
+     * \return
+     */
+    bool HandleNotifyMessage(const int fd, const std::string& fileName);
+
 private:
     typedef struct PredefinedSettings {
         std::string ttyPath;
@@ -188,6 +205,7 @@ private:
     static const std::string mFake;
 
     std::mutex mLock;
+    std::thread mThread;
     std::string mTargetDevice;
     TargetDevice mBoard = TargetDevice::Unknown;
     GeneralManager* mGManager;

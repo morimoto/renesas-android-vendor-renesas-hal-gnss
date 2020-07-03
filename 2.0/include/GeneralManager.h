@@ -122,6 +122,12 @@ public:
      */
     void StartAfterChange();
 
+    /*!
+     * \brief IsRun - return true if hal is running
+     * \return
+     */
+    bool IsRun();
+
 protected:
     /*!
      * \brief SetupLocationProvider
