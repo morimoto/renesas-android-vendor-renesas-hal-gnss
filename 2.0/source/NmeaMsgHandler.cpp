@@ -25,7 +25,7 @@
 #include "include/NmeaPubx00.h"
 #include "include/NmeaTxt.h"
 
-static int32_t CaluclateCrc(const std::vector<char>& in);
+NMHError ValidateParcel(std::string& in);
 
 NmeaMsgHandler::NmeaMsgHandler(const NmeaVersion& protocol) :
     mExitThread(false),
@@ -110,9 +110,8 @@ void NmeaMsgHandler::ProcessingLoop() {
 
         auto parcel = mPipe.Pop<std::shared_ptr<nmeaParcel_t>>();
 
-        if (NMHError::Success == VerifyCheckSum(*parcel)) {
-            std::string curParcel(parcel->sp->begin(), parcel->sp->end());
-
+        std::string curParcel(parcel->sp->begin(), parcel->sp->end());
+        if (NMHError::Success == ValidateParcel(curParcel)) {
             if (NMHError::Success != SelectParser(curParcel)) {
                 // Error should be processed correctly
             }
@@ -120,43 +119,34 @@ void NmeaMsgHandler::ProcessingLoop() {
     }
 }
 
-static int32_t CaluclateCrc(const std::vector<char>& in) {
-    int32_t crc = 36; // ASCII '$' - xor it with first symbol in the
-    // message as we don't erase it from payload
+NMHError ValidateParcel(std::string& in) {
+    const std::string::size_type secondCharacterPos = 1;
+    const std::string::size_type shiftPos           = 1;
+    const std::string::size_type minimumPacketSize  = 8;
+    const std::string::size_type parcelSize         = in.size();
+    const std::string::size_type checkSumCharPosR   = 5;
+    const char                   checkSumChar       = '*';
+    const int                    hexBase            = 16;
 
-    for (auto x : in) {
-        crc  ^= x;
+    if (in.size() < minimumPacketSize || in.front() != mNmeaBeginParcel ||
+        in.back() != mNmeaEndParcelNewLine ||
+        in[parcelSize - checkSumCharPosR] != checkSumChar) {
+        ALOGE("%s - Incorrect message structure - %s", __func__, in.c_str());
+        return NMHError::FailedToProcess;
     }
 
-    return crc;
-}
-
-NMHError NmeaMsgHandler::VerifyCheckSum(nmeaParcel_t& parcel) {
-    std::vector<char>::reverse_iterator it = parcel.sp->rbegin();
-    int64_t signedCrc = 0;
-    const int base = 16;
-
-    while (it != parcel.sp->rend()) {
-        if (crcDelimiter == *it) {
-            std::string crcStr(it.base(), parcel.sp->end());
-
-            if (crcStr.empty()) {
-                return NMHError::NoCrc;
-            }
-
-            signedCrc = std::stoi(crcStr, nullptr, base);
-            parcel.sp->erase((it + 1).base(), parcel.sp->end());
-            break;
-        }
-
-        ++it;
+    unsigned short checkSum = in[secondCharacterPos];
+    for (auto character : in.substr(
+             secondCharacterPos + shiftPos,
+             parcelSize - checkSumCharPosR - secondCharacterPos - shiftPos)) {
+        checkSum = checkSum ^ character;
     }
 
-    if (it == parcel.sp->rend()) {
-        return NMHError::NoCrc;
-    }
-
-    if (CaluclateCrc(*parcel.sp) ^ signedCrc) {
+    if (checkSum !=
+        std::stoul(in.substr(parcelSize - checkSumCharPosR + shiftPos,
+                             secondCharacterPos + shiftPos),
+                   nullptr, hexBase)) {
+        ALOGE("%s - Bad checksum - %s", __func__, in.c_str());
         return NMHError::BadCrc;
     }
 

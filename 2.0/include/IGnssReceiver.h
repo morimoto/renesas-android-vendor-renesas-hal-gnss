@@ -70,6 +70,8 @@ enum class VendorId : uint16_t {
     Unknown,
 };
 
+VendorId toVendorId(const uint16_t value);
+
 enum SWVersion : uint16_t {
     SPG_100 = 0,
     SPG_201 = 1,

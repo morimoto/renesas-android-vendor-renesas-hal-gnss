@@ -124,7 +124,8 @@ TError GnssTransportTTY::Open() {
     } while (mFd <= closedFd && errno == EINTR);
 
     if (closedFd >= mFd) {
-        ALOGE("Could not open TTY device");
+        ALOGE("Could not open TTY device %s - %s", GetPath().c_str(),
+              strerror(errno));
         return TError::TransportNotReady;
     }
 

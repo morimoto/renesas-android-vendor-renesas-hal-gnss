@@ -15,9 +15,7 @@
  */
 #pragma once
 
-#include <cstdlib>
 #include "include/NmeaParserCommon.h"
-
 
 //TODO(g.chabukiani): add doxygen, check all over the project
 template <typename T>
@@ -35,7 +33,7 @@ public:
     bool IsValid() override;
 protected:
     NPError Parse();
-    NPError Parse(std::string& in);
+    NPError Parse(std::string& in) override;
     NPError ParseCommon(std::vector<std::string>& gsa);
     NPError ValidateParcel();
 
@@ -46,8 +44,8 @@ private:
     } parcel_t;
 
     enum GsaOfst : size_t {
-        SvBegin = 3,
-        SvEnd = 15,
+        SvBegin = 3, // Start of repeated block (12 times)
+        SvEnd = 15,  // End of repeated block
         SystemId = 18,
     };
 
@@ -129,20 +127,24 @@ NPError NmeaGsa<T>::Parse() {
 template <typename T>
 NPError NmeaGsa<T>::ParseCommon(std::vector<std::string>& gsa) {
     if (gsa.size() != mGsaPartsAmount[mCurrentProtocol]) {
+        ALOGE("%s - %s - Parts count (%lu) in GSA message is incorrect", LOG_TAG,
+              __func__, gsa.size());
         return NPError::IncompletePacket;
     }
 
     const int base = 10;
-
+    // NMEA defined GNSS System ID available in NMEA 4.10 and later
     if (NmeaVersion::NMEAv41 <= mCurrentProtocol) {
-        mParcel.gnssId = strtoul(gsa[GsaOfst::SystemId].c_str(),
-                                 nullptr, base) - 1;
+        mParcel.gnssId =
+            strtoul(gsa[GsaOfst::SystemId].c_str(), nullptr, base) - 1;
     }
+    // Active satellites used for navigation
     for (auto gsaPart = static_cast<size_t>(GsaOfst::SvBegin);
          gsaPart < GsaOfst::SvEnd; gsaPart++) {
+        // If less than 12 SVs are used for navigation, the remaining fields are
+        // left empty.
         if (gsa[gsaPart].length() > 0) {
-            mParcel.svList.push_back(strtol(gsa[gsaPart].c_str(),
-                                            nullptr, base));
+            mParcel.svList.push_back(stol(gsa[gsaPart]));
         } else {
             break;
         }
@@ -153,11 +155,10 @@ NPError NmeaGsa<T>::ParseCommon(std::vector<std::string>& gsa) {
 
 template <typename T>
 NPError NmeaGsa<T>::Parse(std::string& in) {
-    if (in.empty()) {
-        return NPError::IncompletePacket;
-    }
+    NPError status = NPError::Success;
+    NP_CH(NmeaParserCommon<T>::Parse(in));
     std::vector<std::string> gsa;
-    this->Split(in, gsa);
+    NP_CH(NmeaParserCommon<T>::Split(in, gsa));
     return ParseCommon(gsa);
 }
 

@@ -28,9 +28,9 @@ class GeneralManager;
 
 enum class Priority : uint8_t {
     Fake = 1,
+    Requested,
     UbxUsb,
     UbxNative,
-    Requested,
     Default,
 };
 
@@ -109,6 +109,12 @@ protected:
      * \return
      */
     DSError CheckPredefinedSettings();
+
+    /*!
+     * \brief Check if device supported
+     * \return
+     */
+    bool IsSupportedDevice(DevId &devId);
 
     /*!
      * \brief ProcessPredefinedSettings

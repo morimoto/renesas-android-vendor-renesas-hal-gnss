@@ -22,6 +22,7 @@
 #include <log/log.h>
 #include <poll.h>
 #include <sys/inotify.h>
+#include <sys/stat.h>
 #include <sys/system_properties.h>
 #include <unistd.h>
 
@@ -36,14 +37,15 @@
 #include "include/UbloxReceiver.h"
 #include "include/UbxMonVer.h"
 
-static const uint16_t ubxVid = 0x1546;
 static const int badFd = -1;
 static const int bufSize = 4096;
 static const int pollTimeOut = 10000; //ms
 static const std::string deviceClass = "tty";
-static const std::set<DevId> supportedDevices = {ubxVid};
 
 namespace android::hardware::gnss::V2_0::renesas {
+static const std::set<DevId> supportedDevices = {uint16_t(VendorId::Garmin),
+                                                 uint16_t(VendorId::SiRF),
+                                                 uint16_t(VendorId::Ublox)};
 // TODO (d.gamazin) Move to separate header
 const std::string DeviceScanner::mPropRequestedReceiver = "ro.boot.gps.mode";
 const std::string DeviceScanner::mPropBaudRate = "ro.boot.gps.tty_baudrate";
@@ -64,6 +66,61 @@ const std::string DeviceScanner::mFakeRoutePath = "/vendor/etc/fake_route.txt";
 const std::string DeviceScanner::mDefaultPropertyValue = "";
 
 const int32_t DeviceScanner::mTtyDefaultRate = 9600;
+
+VendorId toVendorId(const uint16_t value)
+{
+    #define CR(id) case id: return id
+    switch (static_cast<VendorId>(value)) {
+        CR(VendorId::SiRF);
+        CR(VendorId::Garmin);
+        CR(VendorId::Ublox);
+        default:
+            return VendorId::Unknown;
+    }
+}
+
+VendorId GetVendorIdByTtyDevFile(std::string& devPath) {
+    const ssize_t     maxPathSize  = PATH_MAX;
+    const std::string pathTtyClass = "/sys/class/tty";
+    const std::string pathDev      = "/dev/tty";
+    const std::string fileUevent   = "/uevent";
+    const std::string strProduct   = "PRODUCT=";
+    const int         baseHex      = 16;
+    const int         vidSize      = 4;
+    uint16_t          vid          = 0u;
+    struct stat       fileStat;
+    char              charBuf[maxPathSize];
+
+    if (devPath.find(pathDev) != 0) {
+        return VendorId::Unknown;
+    }
+    std::string fileName = devPath.substr(devPath.rfind("/"), devPath.size());
+    std::string filePath = pathTtyClass + fileName;
+    // Read link
+    if (lstat(filePath.c_str(), &fileStat) != 0 || !S_ISLNK(fileStat.st_mode)) {
+        return VendorId::Unknown;
+    }
+    filePath = realpath(filePath.c_str(), &charBuf[0]);
+
+    // Go 3 levels up directory
+    for (int i = 0; i < 3; i++) {
+        filePath = filePath.substr(0, filePath.rfind("/"));
+    }
+    // Read VID from uevent file
+    fileName = filePath + fileUevent;
+    std::ifstream fileIdVendor(fileName);
+    while (fileIdVendor.good()) {
+        fileIdVendor.getline(&charBuf[0], sizeof(charBuf));
+        fileName = charBuf;
+        if (fileName.find(strProduct) != 0) {
+            continue;
+        }
+        vid = stoul(fileName.substr(strProduct.size(), vidSize), 0, baseHex);
+        return toVendorId(vid);
+    }
+
+    return VendorId::Unknown;
+}
 
 DSError DeviceScanner::DetectDevice() {
     ALOGV("%s", __func__);
@@ -121,18 +178,21 @@ bool DeviceScanner::ReceiverAlreadyAdded(const std::string& newPath) {
 
 void DeviceScanner::InsertNewReceiver(const std::string& path, DevId devId) {
     ALOGV("%s", __func__);
-    switch (devId.vid) {
-        case (static_cast<uint16_t>(VendorId::Ublox)): {
-            if (CheckTtyPath(path) && !ReceiverAlreadyAdded(path)) {
-                CreateUbxReceiver(path, GnssReceiverType::UsbDongle,
-                                  Priority::UbxUsb);
-            }
-            break;
-        }
 
-        default: {
+    if (!IsSupportedDevice(devId) || !CheckTtyPath(path) ||
+        ReceiverAlreadyAdded(path)) {
+        ALOGW("Device with path %s was not inserted", path.c_str());
+        return;
+    }
+
+    switch (static_cast<VendorId>(devId.vid)) {
+        case VendorId::Ublox:
+            CreateUbxReceiver(path, GnssReceiverType::UsbDongle,
+                              Priority::UbxUsb);
             break;
-        }
+        default:
+            CreateDefaultReceiver(path, GnssReceiverType::UsbDongle,
+                                  Priority::UbxUsb);
     }
 }
 
@@ -227,7 +287,7 @@ DSError DeviceScanner::Scan() {
 
 DSError DeviceScanner::CreateUbxReceiver(const std::string& path,
         const GnssReceiverType& type, const Priority& priority) {
-    ALOGV("%s", __func__);
+    ALOGI("Creation of U-Blox receiver with path: %s", path.c_str());
     std::lock_guard<std::mutex> lock(mLock);
     std::shared_ptr<UbloxReceiver> ubReceiver = std::make_shared<UbloxReceiver>
                                                 (path, type);
@@ -248,7 +308,7 @@ DSError DeviceScanner::CreateUbxReceiver(const std::string& path,
 
 DSError DeviceScanner::CreateDefaultReceiver(const std::string& path,
         const GnssReceiverType& type, const Priority& priority) {
-    ALOGV("%s", __func__);
+    ALOGI("Creation of general receiver with path: %s", path.c_str());
     std::lock_guard<std::mutex> lock(mLock);
     std::shared_ptr<DefaultReceiver> dfReceiver = std::make_shared<DefaultReceiver>
                                                   (path, type);
@@ -286,19 +346,24 @@ std::shared_ptr<IGnssReceiver> DeviceScanner::GetReceiver() {
 
 DSError DeviceScanner::ProcessPredefinedSettings() {
     ALOGV("%s", __func__);
+    std::string ttyPath = mSettings.ttyPath;
 
-    if (mFake == mSettings.ttyPath && CheckTtyPath(mFakeRoutePath)) {
+    if (ttyPath.size() == 0 || !CheckTtyPath(ttyPath)) {
+        return DSError::NoPredefinedReceiver;
+    }
+
+    if (mFake == ttyPath) {
         return CreateFakeReceiver();
     }
 
-    if (mSettings.ttyPath.length() > mDefaultPropertyValue.length()
-        && CheckTtyPath(mSettings.ttyPath)) {
+    if (GetVendorIdByTtyDevFile(ttyPath) == VendorId::Ublox) {
+        return CreateUbxReceiver(mSettings.ttyPath, GnssReceiverType::UsbDongle,
+                                 Priority::Requested);
+    } else {
         return CreateDefaultReceiver(mSettings.ttyPath,
                                      GnssReceiverType::UsbDongle,
                                      Priority::Requested);
     }
-
-    return DSError::NoPredefinedReceiver;
 }
 
 DSError DeviceScanner::CheckPredefinedSettings() {
@@ -339,6 +404,16 @@ bool DeviceScanner::HandleNotifyMessage(const int fd, const std::string& fileNam
         }
     }
 
+    return false;
+}
+
+bool DeviceScanner::IsSupportedDevice(DevId& devId) {
+    for (auto supDev = supportedDevices.begin();
+         supDev != supportedDevices.end(); supDev++) {
+        if (supDev->vid == devId.vid) {
+            return true;
+        }
+    }
     return false;
 }
 

@@ -15,19 +15,22 @@
  */
 #pragma once
 
-#include <array>
-#include <vector>
-
 #include "include/INmeaParser.h"
 
+#define NP_CH(FUNC) status=FUNC; if(NPError::Success!=status) return status
 
 template <typename T>
 class NmeaParserCommon : public INmeaParser<T> {
 public:
     NmeaParserCommon() = default;
     virtual ~NmeaParserCommon() override = default;
-
 protected:
+    virtual NPError Parse(std::string& in) {
+        if (in.empty()) {
+            return NPError::IncompletePacket;
+        }
+        return NPError::Success;
+    };
     NPError Split(std::string& in, std::vector<std::string>& out);
 };
 
