@@ -178,6 +178,8 @@ GMError GeneralManager::SetCallbackV1_1(const GnssCbPtr_1_1& cb) {
     auto gnssName = "Renesas GNSS Implementation v1.1";
     mGnssCallback_1_1->gnssNameCb(gnssName);
 
+    mLocationProvider->setCallback_1_1(mGnssCallback_1_1);
+
     if (!mReceiver || GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
         mSvInfoProvider->setCallback_1_1(mGnssCallback_1_1);
     }
