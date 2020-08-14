@@ -23,7 +23,7 @@
 #include "include/IGnssReceiver.h"
 #include <usb-scanner/UsbScanner.h>
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 class GeneralManager;
 
 enum class Priority : uint8_t {

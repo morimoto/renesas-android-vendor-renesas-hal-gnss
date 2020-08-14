@@ -20,9 +20,10 @@
 
 #include <android/hardware/gnss/1.1/IGnssCallback.h>
 #include <android/hardware/gnss/2.0/IGnssCallback.h>
+#include <android/hardware/gnss/2.1/IGnssCallback.h>
 #include "include/GnssInfoBuilder.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using GnssCallback_1_0
     = ::android::sp<::android::hardware::gnss::V1_0::IGnssCallback>;
@@ -30,6 +31,8 @@ using GnssCallback_1_1
     = ::android::sp<::android::hardware::gnss::V1_1::IGnssCallback>;
 using GnssCallback_2_0
     = ::android::sp<::android::hardware::gnss::V2_0::IGnssCallback>;
+using GnssCallback_2_1
+    = ::android::sp<::android::hardware::gnss::V2_1::IGnssCallback>;
 using GnssSvStatus_1_0
     = ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvStatus;
 
@@ -43,6 +46,7 @@ public:
     void setCallback_1_0(GnssCallback_1_0& cb);
     void setCallback_1_1(GnssCallback_1_1& cb);
     void setCallback_2_0(GnssCallback_2_0& cb);
+    void setCallback_2_1(GnssCallback_2_1& cb);
     void SetUpdateInterval(uint32_t newInterval);
     void SetEnabled(bool isEnabled);
 protected:
@@ -51,11 +55,14 @@ private:
     GnssInfoProvider(GnssInfoProvider&) = delete;
     GnssInfoProvider& operator=(const GnssInfoProvider&) = delete;
     ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvStatus
-        SvInfoV2_0To_V1_0(SvInfoList v2_0);
+        SvInfoV2_1To_V1_0(SvInfoList v2_1);
+    std::vector<::android::hardware::gnss::V2_0::IGnssCallback::GnssSvInfo>
+        SvInfoV2_1To_V2_0(SvInfoList v2_1);
 
     GnssCallback_1_0 mGnssCallback_1_0;
     GnssCallback_1_1 mGnssCallback_1_1;
     GnssCallback_2_0 mGnssCallback_2_0;
+    GnssCallback_2_1 mGnssCallback_2_1;
     uint32_t mUpdateIntervalUs;
     std::unique_ptr<GnssInfoBuilder> mBuilder;
     std::thread mGnssSvInfoProvidingThread;
@@ -63,4 +70,4 @@ private:
     std::atomic<bool> mEnabled;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

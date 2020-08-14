@@ -16,7 +16,7 @@
 
 #include "include/GnssDebug.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 // Methods from ::android::hardware::gnss::V1_0::IGnssDebug follow.
 Return<void> GnssDebug::getDebugData(getDebugData_cb _hidl_cb) {
     // TODO implement

@@ -22,7 +22,7 @@
 #include "include/IUbxParser.h"
 #include "include/GnssTransport.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 static constexpr size_t cfgResetLen = 8;
 static constexpr size_t cfgClearLen = 17;

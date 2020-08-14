@@ -20,7 +20,7 @@
 #include "include/INmeaParser.h"
 #include "include/MessageQueue.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 typedef std::map<NmeaMsgType, LocationQueueType> LBParserMap;
 

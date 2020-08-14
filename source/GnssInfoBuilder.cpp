@@ -27,7 +27,7 @@
 using std::chrono::steady_clock;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
-using GnssSvInfo = ::android::hardware::gnss::V2_0::IGnssCallback::GnssSvInfo;
+using GnssSvInfo = ::android::hardware::gnss::V2_1::IGnssCallback::GnssSvInfo;
 using ::android::hardware::gnss::V2_0::GnssConstellationType;
 
 #if !LOG_NDEBUG
@@ -50,7 +50,7 @@ void PrintSvList(const std::vector<GnssSvInfo>& svlist,
 }
 #endif
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 GnssInfoBuilder::GnssInfoBuilder():
         mMsgQueue(MessageQueue::GetInstance()),
@@ -160,7 +160,7 @@ void GnssInfoBuilder::GetSatellites() {
 }
 
 void GnssInfoBuilder::ProcessFixFlag(GnssSvInfo& sv, uint8_t gnssId) {
-    uint32_t origSvid = sv.v1_0.svid;
+    uint32_t origSvid = sv.v2_0.v1_0.svid;
     if (NmeaConstellationId::GLONASS == gnssId){
         origSvid += 64;
     } else if (origSvid >= 140 && origSvid <= 171) {
@@ -172,8 +172,8 @@ void GnssInfoBuilder::ProcessFixFlag(GnssSvInfo& sv, uint8_t gnssId) {
     std::vector<int64_t>* usedInFix = &mSatellitesUsedInFix[gnssId];
     for (auto it = usedInFix->begin(); it != usedInFix->end();) {
         if (*it == origSvid) {
-            sv.v1_0.svFlag |= static_cast<uint8_t>
-                            (IGnssCallback::GnssSvFlags::USED_IN_FIX);
+            sv.v2_0.v1_0.svFlag |= static_cast<uint8_t>
+                (android::hardware::gnss::V2_0::IGnssCallback::GnssSvFlags::USED_IN_FIX);
             it = usedInFix->erase(it);
             return ;
         } else {

@@ -19,7 +19,7 @@
 
 #include "include/FakeLocationProvider.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 FakeLocationProvider::FakeLocationProvider(uint32_t interval) :
     LocationProviderBase(interval),

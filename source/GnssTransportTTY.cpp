@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include <termios.h>
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 static constexpr uint32_t badBaudRate = 0;
 static constexpr int closedFd = -1;

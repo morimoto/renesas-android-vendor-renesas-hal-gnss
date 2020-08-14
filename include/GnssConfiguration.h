@@ -20,7 +20,7 @@
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using ::android::hardware::hidl_array;
 using ::android::hardware::hidl_memory;
@@ -30,7 +30,7 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
-struct GnssConfiguration : public IGnssConfiguration {
+struct GnssConfiguration : public android::hardware::gnss::V2_0::IGnssConfiguration {
     // Methods from ::android::hardware::gnss::V1_0::IGnssConfiguration follow.
     Return<bool> setSuplEs(bool enabled) override;
     Return<bool> setSuplVersion(uint32_t version) override;

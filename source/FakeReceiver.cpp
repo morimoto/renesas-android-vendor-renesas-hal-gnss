@@ -18,7 +18,7 @@
 
 #include "include/GnssTransportFake.h"
 
-namespace android::hardware::gnss::V2_0::renesas{
+namespace android::hardware::gnss::V2_1::renesas{
 
 FakeReceiver::FakeReceiver(const std::string& path) :
     GnssReceiver(new GnssTransportFake(path)) {

@@ -16,7 +16,7 @@
 
 #include "include/AGnss.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 // Methods from ::android::hardware::gnss::V2_0::IAGnss follow.
 Return<void> AGnss::setCallback(const
             sp<::android::hardware::gnss::V2_0::IAGnssCallback>& callback) {

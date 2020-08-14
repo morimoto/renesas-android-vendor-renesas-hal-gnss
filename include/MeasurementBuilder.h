@@ -21,7 +21,7 @@
 #include "include/IUbxParser.h"
 #include "include/MessageQueue.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 enum MBError : int8_t {
     SUCCESS = 0,
@@ -30,7 +30,7 @@ enum MBError : int8_t {
     EMPTY = -102        // no parsers in MessageQueue
 };
 
-typedef IGnssMeasurementCallback::GnssData GnssData;
+typedef android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData GnssData;
 typedef std::shared_ptr<IUbxParser<GnssData*>> MBType;
 typedef std::map<UbxMsg, MBType> MBParserMap;
 

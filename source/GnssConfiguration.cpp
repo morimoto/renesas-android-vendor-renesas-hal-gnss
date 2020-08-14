@@ -19,7 +19,7 @@
 
 #include "include/GnssConfiguration.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 // Methods from ::android::hardware::gnss::V1_0::IGnssConfiguration follow.
 Return<bool> GnssConfiguration::setSuplEs(bool enabled) {
     ALOGV("%s: GnssConfiguration is not supported", __func__);

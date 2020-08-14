@@ -48,7 +48,7 @@ static inline uint32_t Encode8N1() {
     return (uint32_t)(1 << 11) | (3 << 6);
 }
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using cfg = Configurator;
 

@@ -26,7 +26,7 @@
 #include "include/FakeReader.h"
 #include "include/TtyReader.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 GeneralManager::GeneralManager() : mIsRun(false) {
     mDeviceScanner = std::make_unique<DeviceScanner>(this);
@@ -202,6 +202,23 @@ GMError GeneralManager::SetCallbackV2_0(const GnssCbPtr_2_0& cb) {
     return GMError::SUCCESS;
 }
 
+GMError GeneralManager::SetCallbackV2_1(const GnssCbPtr_2_1& cb) {
+    if (GMError::SUCCESS != FillCallback(cb, mGnssCallback_2_1)) {
+        return GMError::FAIL;
+    }
+
+    auto gnssName = "Renesas GNSS Implementation v2.1";
+    mGnssCallback_2_1->gnssNameCb(gnssName);
+
+    mLocationProvider->setCallback_2_1(mGnssCallback_2_1);
+
+    if (GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
+        mSvInfoProvider->setCallback_2_1(mGnssCallback_2_1);
+    }
+
+    return GMError::SUCCESS;
+}
+
 GMError GeneralManager::CleanUpCb() {
     if (mLocationProvider) {
         mLocationProvider->SetEnabled(false);
@@ -221,6 +238,10 @@ GMError GeneralManager::CleanUpCb() {
 
     if (mGnssCallback_2_0) {
         mGnssCallback_2_0.clear();
+    }
+
+    if (mGnssCallback_2_1) {
+        mGnssCallback_2_1.clear();
     }
 
     return GMError::SUCCESS;
@@ -258,13 +279,20 @@ GMError GeneralManager::GnssStart() {
     }
 
     if (mGnssCallback_1_0) {
-        mGnssCallback_1_0->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_BEGIN);
+        mGnssCallback_1_0->gnssStatusCb(
+            android::hardware::gnss::V1_0::IGnssCallback::GnssStatusValue::SESSION_BEGIN);
     }
     if (mGnssCallback_1_1) {
-        mGnssCallback_1_1->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_BEGIN);
+        mGnssCallback_1_1->gnssStatusCb(
+            android::hardware::gnss::V1_0::IGnssCallback::GnssStatusValue::SESSION_BEGIN);
     }
     if (mGnssCallback_2_0) {
-        mGnssCallback_2_0->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_BEGIN);
+        mGnssCallback_2_0->gnssStatusCb(
+            android::hardware::gnss::V1_0::IGnssCallback::GnssStatusValue::SESSION_BEGIN);
+    }
+    if (mGnssCallback_2_1) {
+        mGnssCallback_2_1->gnssStatusCb(
+            android::hardware::gnss::V1_0::IGnssCallback::GnssStatusValue::SESSION_BEGIN);
     }
 
     return GMError::SUCCESS;
@@ -280,13 +308,20 @@ GMError GeneralManager::GnssStop() {
         mSvInfoProvider->SetEnabled(false);
     }
     if (mGnssCallback_1_0) {
-        mGnssCallback_1_0->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_END);
+        mGnssCallback_1_0->gnssStatusCb(
+            android::hardware::gnss::V1_0::IGnssCallback::GnssStatusValue::SESSION_END);
     }
     if (mGnssCallback_1_1) {
-        mGnssCallback_1_1->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_END);
+        mGnssCallback_1_1->gnssStatusCb(
+            android::hardware::gnss::V1_0::IGnssCallback::GnssStatusValue::SESSION_END);
     }
     if (mGnssCallback_2_0) {
-        mGnssCallback_2_0->gnssStatusCb(IGnssCallback::GnssStatusValue::SESSION_END);
+        mGnssCallback_2_0->gnssStatusCb(
+            android::hardware::gnss::V1_0::IGnssCallback::GnssStatusValue::SESSION_END);
+    }
+    if (mGnssCallback_2_1) {
+        mGnssCallback_2_1->gnssStatusCb(
+            android::hardware::gnss::V1_0::IGnssCallback::GnssStatusValue::SESSION_END);
     }
     return GMError::SUCCESS;
 }
@@ -319,7 +354,13 @@ GMError GeneralManager::SetupSvInfoProvider() {
     return GMError::SUCCESS;
 }
 
-sp<IGnssMeasurement> GeneralManager::getExtensionGnssMeasurement_v2_0() {
+sp<android::hardware::gnss::V2_0::IGnssMeasurement>
+    GeneralManager::getExtensionGnssMeasurement_v2_0() {
+    return mGnssMeasurement;
+}
+
+sp<android::hardware::gnss::V2_1::IGnssMeasurement>
+    GeneralManager::getExtensionGnssMeasurement_v2_1() {
     return mGnssMeasurement;
 }
 

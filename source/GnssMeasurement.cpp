@@ -20,7 +20,7 @@
 #include "include/GnssMeasurement.h"
 #include "include/GnssMeasurementSync.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using GnssMeasurementStatus
     = ::android::hardware::gnss::V1_0::IGnssMeasurement::GnssMeasurementStatus;
@@ -151,4 +151,11 @@ GnssMeasurement::setCallback_2_0(const
     return GnssMeasurementStatus::SUCCESS;
 }
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+// Methods from V2_1::IGnssMeasurement follow.
+Return<V1_0::IGnssMeasurement::GnssMeasurementStatus> GnssMeasurement::setCallback_2_1(
+        const sp<V2_1::IGnssMeasurementCallback>& callback, bool) {
+    //TODO implement
+    return V1_0::IGnssMeasurement::GnssMeasurementStatus::SUCCESS;
+}
+
+}  // namespace android::hardware::gnss::V2_1::renesas

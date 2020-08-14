@@ -22,7 +22,7 @@
 #include <array>
 #include <vector>
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 enum class Endian : uint8_t {
     Little,

@@ -20,7 +20,7 @@
 namespace android {
 namespace hardware {
 namespace gnss {
-namespace V2_0 {
+namespace V2_1 {
 namespace renesas {
 
 ::android::status_t GnssImpl::SetGeneralManager(const
@@ -86,7 +86,7 @@ Return<bool> GnssImpl::injectLocation([[maybe_unused]] double
 }
 
 Return<void>
-GnssImpl::deleteAidingData([[maybe_unused]] 
+GnssImpl::deleteAidingData([[maybe_unused]]
     ::android::hardware::gnss::V1_0::IGnss::GnssAidingData aidingDataFlags) {
     // TODO implement
     return Void();
@@ -297,8 +297,46 @@ Return<bool> GnssImpl::injectBestLocation_2_0(
     return false;
 }
 
+Return<bool> GnssImpl::setCallback_2_1(const sp<V2_1::IGnssCallback>& cb) {
+    ALOGV("%s", __PRETTY_FUNCTION__);
+
+    if (mGeneralManager) {
+        return (GMError::SUCCESS == mGeneralManager->SetCallbackV2_1(cb));
+    }
+
+    return false;
+}
+
+Return<sp<V2_1::IGnssMeasurement>> GnssImpl::getExtensionGnssMeasurement_2_1() {
+    if (!mGeneralManager) {
+        ALOGE("%s: No general manager!", __func__);
+        return nullptr;
+    }
+
+    return mGeneralManager->getExtensionGnssMeasurement_v2_1();
+}
+
+Return<sp<V2_1::IGnssConfiguration>> GnssImpl::getExtensionGnssConfiguration_2_1() {
+    // TODO implement
+    return
+        ::android::sp<::android::hardware::gnss::V2_1::IGnssConfiguration> {};
+}
+
+Return<sp<measurement_corrections::V1_1::IMeasurementCorrections>>
+GnssImpl::getExtensionMeasurementCorrections_1_1() {
+    // TODO implement
+    return
+        ::android::sp<
+            ::android::hardware::gnss::measurement_corrections::V1_1::IMeasurementCorrections> {};
+}
+
+Return<sp<V2_1::IGnssAntennaInfo>> GnssImpl::getExtensionGnssAntennaInfo() {
+    //TODO implement
+    return ::android::sp<::android::hardware::gnss::V2_1::IGnssAntennaInfo> {};
+}
+
 }  // namespace renesas
-}  // namespace V2_0
+}  // namespace V2_1
 }  // namespace gnss
 }  // namespace hardware
 }  // namespace android

@@ -25,7 +25,7 @@
 #include "include/IReader.h"
 #include "include/GnssMeasurement.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 enum class GMError : uint8_t {
     SUCCESS,
@@ -52,7 +52,8 @@ public:
     using GnssCbPtr_1_0 = android::sp<android::hardware::gnss::V1_0::IGnssCallback>;
     using GnssCbPtr_1_1 = android::sp<android::hardware::gnss::V1_1::IGnssCallback>;
     using GnssCbPtr_2_0 = android::sp<android::hardware::gnss::V2_0::IGnssCallback>;
-    using GnssHalImpl = android::hardware::gnss::V2_0::renesas::GnssImpl;
+    using GnssCbPtr_2_1 = android::sp<android::hardware::gnss::V2_1::IGnssCallback>;
+    using GnssHalImpl = android::hardware::gnss::V2_1::renesas::GnssImpl;
 
     /*!
      * \brief GeneralManager
@@ -89,6 +90,13 @@ public:
     GMError SetCallbackV2_0(const GnssCbPtr_2_0& cb);
 
     /*!
+     * \brief SetCallbackV2_1
+     * \param cb
+     * \return
+     */
+    GMError SetCallbackV2_1(const GnssCbPtr_2_1& cb);
+
+    /*!
      * \brief CleanUpCb
      * \return
      */
@@ -96,7 +104,9 @@ public:
 
     void setUpdatePeriod(uint32_t updateIntervalMs);
 
-    sp<IGnssMeasurement> getExtensionGnssMeasurement_v2_0();
+    sp<android::hardware::gnss::V2_0::IGnssMeasurement> getExtensionGnssMeasurement_v2_0();
+
+    sp<android::hardware::gnss::V2_1::IGnssMeasurement> getExtensionGnssMeasurement_v2_1();
 
     /*!
      * \brief GnssStart
@@ -155,7 +165,8 @@ private:
     GnssCbPtr_1_0 mGnssCallback_1_0;
     GnssCbPtr_1_1 mGnssCallback_1_1;
     GnssCbPtr_2_0 mGnssCallback_2_0;
-    std::shared_ptr<android::hardware::gnss::V2_0::renesas::GnssImpl> mGnssImpl;
+    GnssCbPtr_2_1 mGnssCallback_2_1;
+    std::shared_ptr<android::hardware::gnss::V2_1::renesas::GnssImpl> mGnssImpl;
 
     std::unique_ptr<DeviceScanner> mDeviceScanner;
     std::shared_ptr<IGnssReceiver> mReceiver;
@@ -184,14 +195,14 @@ private:
 
         callback = inputCallback;
         callback->gnssSetCapabilitesCb(
-                        IGnssCallback::Capabilities::GEOFENCING |
-                        IGnssCallback::Capabilities::NAV_MESSAGES |
-                        IGnssCallback::Capabilities::MEASUREMENTS);
+            android::hardware::gnss::V2_0::IGnssCallback::Capabilities::GEOFENCING |
+            android::hardware::gnss::V2_0::IGnssCallback::Capabilities::NAV_MESSAGES |
+            android::hardware::gnss::V2_0::IGnssCallback::Capabilities::MEASUREMENTS);
         if (nullptr != mReceiver) {
             callback->gnssSetSystemInfoCb(
                 {static_cast<uint16_t>(mReceiver->GetYearOfHw())});
         }
-        callback->gnssStatusCb(IGnssCallback::GnssStatusValue::NONE);
+        callback->gnssStatusCb(android::hardware::gnss::V1_0::IGnssCallback::GnssStatusValue::NONE);
 
         return GMError::SUCCESS;
     }

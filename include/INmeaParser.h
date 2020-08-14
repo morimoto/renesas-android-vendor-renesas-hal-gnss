@@ -20,6 +20,7 @@
 #include <log/log.h>
 
 #include <android/hardware/gnss/2.0/IGnssCallback.h>
+#include <android/hardware/gnss/2.1/IGnssCallback.h>
 #include <android/hardware/gnss/2.0/types.h>
 
 const std::string ggaHeader = "GGA";
@@ -115,7 +116,7 @@ typedef struct {
 } LocationExtraInfo;
 typedef LocationExtraInfo& LocationExtraInfoOutType;
 typedef std::shared_ptr<INmeaParser<LocationExtraInfoOutType>> LocationExtraInfoQueueType;
-typedef std::vector<::android::hardware::gnss::V2_0::IGnssCallback::GnssSvInfo> SvInfoList;
+typedef std::vector<::android::hardware::gnss::V2_1::IGnssCallback::GnssSvInfo> SvInfoList;
 typedef struct {
     NmeaConstellationId gnssId;
     uint8_t msgAmount;

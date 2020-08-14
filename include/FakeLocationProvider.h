@@ -18,7 +18,7 @@
 #include "include/LocationProviderBase.h"
 #include "include/FakeLocationBuilder.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 class FakeLocationProvider : public LocationProviderBase {
 public:

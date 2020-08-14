@@ -20,7 +20,7 @@
 #include "include/INmeaParser.h"
 #include "include/MessageQueue.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 enum class IBError : int8_t {
     SUCCESS = 0,
@@ -42,7 +42,9 @@ protected:
 private:
     GnssInfoBuilder(GnssInfoBuilder&) = delete;
     GnssInfoBuilder& operator=(const GnssInfoBuilder&) = delete;
-    void ProcessFixFlag(IGnssCallback::GnssSvInfo& sv, uint8_t gnssId);
+    void ProcessFixFlag(
+        android::hardware::gnss::V2_1::IGnssCallback::GnssSvInfo& sv,
+        uint8_t gnssId);
 
     SvInfoList mSatellites[static_cast<int>(NmeaConstellationId::COUNT)];
     std::vector<int64_t> mSatellitesUsedInFix[static_cast<int>(NmeaConstellationId::COUNT)];

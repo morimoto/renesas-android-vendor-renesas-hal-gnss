@@ -21,7 +21,7 @@
 
 #include <log/log.h>
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 TError Transport::SetUp() {
     ALOGV("%s", __func__);

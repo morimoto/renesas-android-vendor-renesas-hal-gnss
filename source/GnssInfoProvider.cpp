@@ -20,7 +20,7 @@
 
 #include "include/GnssInfoProvider.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 GnssInfoProvider::GnssInfoProvider(uint32_t interval) :
     mUpdateIntervalUs(interval),
@@ -52,24 +52,34 @@ void GnssInfoProvider::Provide() {
 
         if (mEnabled && error == IBError::SUCCESS) {
             if (mGnssCallback_1_0) {
-                auto ret = mGnssCallback_1_0->gnssSvStatusCb(SvInfoV2_0To_V1_0(outList));
+                auto ret = mGnssCallback_1_0->gnssSvStatusCb(
+                    SvInfoV2_1To_V1_0(outList));
 
                 if (!ret.isOk()) {
                     ALOGE("%s: Unable to invoke gnssSvStatusCb_1_0", __func__);
                 }
             }
             if (mGnssCallback_1_1) {
-                auto ret = mGnssCallback_1_1->gnssSvStatusCb(SvInfoV2_0To_V1_0(outList));
+                auto ret = mGnssCallback_1_1->gnssSvStatusCb(
+                    SvInfoV2_1To_V1_0(outList));
 
                 if (!ret.isOk()) {
                     ALOGE("%s: Unable to invoke gnssSvStatusCb_1_1", __func__);
                 }
             }
             if (mGnssCallback_2_0) {
-                auto ret = mGnssCallback_2_0->gnssSvStatusCb_2_0(outList);
+                auto ret = mGnssCallback_2_0->gnssSvStatusCb_2_0(
+                    SvInfoV2_1To_V2_0(outList));
 
                 if (!ret.isOk()) {
                     ALOGE("%s: Unable to invoke gnssSvStatusCb_2_0", __func__);
+                }
+            }
+            if (mGnssCallback_2_1) {
+                auto ret = mGnssCallback_2_1->gnssSvStatusCb_2_1(outList);
+
+                if (!ret.isOk()) {
+                    ALOGE("%s: Unable to invoke gnssSvStatusCb_2_1", __func__);
                 }
             }
         }
@@ -94,17 +104,31 @@ void GnssInfoProvider::setCallback_2_0(GnssCallback_2_0& cb) {
     mGnssCallback_2_0 = cb;
 }
 
+void GnssInfoProvider::setCallback_2_1(GnssCallback_2_1& cb) {
+    mGnssCallback_2_1 = cb;
+}
+
 void GnssInfoProvider::SetEnabled(bool isEnabled) {
     mEnabled = isEnabled;
 }
 ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvStatus
-        GnssInfoProvider::SvInfoV2_0To_V1_0(SvInfoList v2_0) {
+    GnssInfoProvider::SvInfoV2_1To_V1_0(SvInfoList v2_1) {
     ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvStatus v1_0;
-    v1_0.numSvs = v2_0.size();
-    for (size_t i = 0; i < v2_0.size(); i++) {
-        v1_0.gnssSvList[i] = v2_0[i].v1_0;
+    v1_0.numSvs = v2_1.size();
+    for (size_t i = 0; i < v2_1.size(); i++) {
+        v1_0.gnssSvList[i] = v2_1[i].v2_0.v1_0;
     }
     return v1_0;
+}
+
+std::vector<::android::hardware::gnss::V2_0::IGnssCallback::GnssSvInfo>
+    GnssInfoProvider::SvInfoV2_1To_V2_0(SvInfoList v2_1) {
+    std::vector<::android::hardware::gnss::V2_0::IGnssCallback::GnssSvInfo>
+        v2_0(v2_1.size());
+    for (size_t i = 0; i < v2_1.size(); i++) {
+        v2_0.push_back(v2_1[i].v2_0);
+    }
+    return v2_0;
 }
 
 }

@@ -21,11 +21,12 @@
 
 #include "include/ILocationProvider.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using GnssCallback_1_0 = android::sp<android::hardware::gnss::V1_0::IGnssCallback>;
 using GnssCallback_1_1 = android::sp<android::hardware::gnss::V1_1::IGnssCallback>;
 using GnssCallback_2_0 = android::sp<android::hardware::gnss::V2_0::IGnssCallback>;
+using GnssCallback_2_1 = android::sp<android::hardware::gnss::V2_1::IGnssCallback>;
 
 class LocationProviderBase : public ILocationProvider {
 public:
@@ -37,6 +38,7 @@ public:
     void setCallback_1_0(GnssCallback_1_0& cb) override;
     void setCallback_1_1(GnssCallback_1_1& cb) override;
     void setCallback_2_0(GnssCallback_2_0& cb) override;
+    void setCallback_2_1(GnssCallback_2_1& cb) override;
     void SetEnabled(bool isEnabled) override;
 protected:
     /*!
@@ -49,6 +51,7 @@ protected:
     GnssCallback_1_0 mGnssCallback_1_0;
     GnssCallback_1_1 mGnssCallback_1_1;
     GnssCallback_2_0 mGnssCallback_2_0;
+    GnssCallback_2_1 mGnssCallback_2_1;
     std::atomic<bool> mEnabled;
     uint32_t mUpdateIntervalUs;
 private:

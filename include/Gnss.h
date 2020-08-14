@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <android/hardware/gnss/2.0/IGnss.h>
+#include <android/hardware/gnss/2.1/IGnss.h>
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
 
@@ -28,7 +28,7 @@
 
 class GeneralManager;
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using ::android::hardware::hidl_array;
 using ::android::hardware::hidl_memory;
@@ -133,6 +133,15 @@ public:
     Return<bool> injectBestLocation_2_0(
         const ::android::hardware::gnss::V2_0::GnssLocation&
         location) override;
+
+    // Methods from ::android::hardware::gnss::V2_1::IGnss follow.
+    Return<bool> setCallback_2_1(const sp<V2_1::IGnssCallback>& callback) override;
+    Return<sp<V2_1::IGnssMeasurement>> getExtensionGnssMeasurement_2_1() override;
+    Return<sp<V2_1::IGnssConfiguration>> getExtensionGnssConfiguration_2_1() override;
+    Return<sp<measurement_corrections::V1_1::IMeasurementCorrections>>
+    getExtensionMeasurementCorrections_1_1() override;
+    Return<sp<V2_1::IGnssAntennaInfo>> getExtensionGnssAntennaInfo() override;
+
 };
 
 }  // namespace android::hardware::gnss::V2_0::renesas

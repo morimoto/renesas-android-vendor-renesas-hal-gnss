@@ -17,7 +17,7 @@
 #include "include/NmeaGsv.h"
 
 using GnssSvInfo
-    = ::android::hardware::gnss::V2_0::IGnssCallback::GnssSvInfo;
+    = ::android::hardware::gnss::V2_1::IGnssCallback::GnssSvInfo;
 using GnssConstellationType1_0
     = ::android::hardware::gnss::V1_0::GnssConstellationType;
 using GnssConstellationType2_0
@@ -71,14 +71,15 @@ NPError NmeaGsv<SvInfoOutType>::GetData(SvInfoOutType out) {
 
     for (auto gsv : mParcel.subPart) {
         GnssSvInfo sv;
-        sv.v1_0.svid = gsv.svid;
-        sv.v1_0.cN0Dbhz = gsv.cn0;
-        sv.v1_0.elevationDegrees = gsv.elevation;
-        sv.v1_0.azimuthDegrees = gsv.azimuth;
-        sv.v1_0.carrierFrequencyHz = mParcel.carrierFrequencyHz;
-        sv.v1_0.svFlag = mParcel.svFlag;
-        sv.v1_0.constellation = Constallation_2_0_to_1_0(gsv.constellation);
-        sv.constellation = gsv.constellation;
+        sv.v2_0.v1_0.svid = gsv.svid;
+        sv.v2_0.v1_0.cN0Dbhz = gsv.cn0;
+        sv.v2_0.v1_0.elevationDegrees = gsv.elevation;
+        sv.v2_0.v1_0.azimuthDegrees = gsv.azimuth;
+        sv.v2_0.v1_0.carrierFrequencyHz = mParcel.carrierFrequencyHz;
+        sv.v2_0.v1_0.svFlag = mParcel.svFlag;
+        sv.v2_0.v1_0.constellation =
+            Constallation_2_0_to_1_0(gsv.constellation);
+        sv.v2_0.constellation = gsv.constellation;
         out.svInfoList.push_back(sv);
     }
 

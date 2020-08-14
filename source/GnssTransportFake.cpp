@@ -16,7 +16,7 @@
 
 #include "include/GnssTransportFake.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 GnssTransportFake::GnssTransportFake(const std::string &dataFilePath): Transport(
         dataFilePath) {

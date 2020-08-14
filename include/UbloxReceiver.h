@@ -19,7 +19,7 @@
 
 #include "include/GnssReceiverTTY.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 enum class ProductId : uint16_t {
     Ublox4 = 0x01a4,

@@ -18,7 +18,7 @@
 #include "include/FakeReader.h"
 #include "include/MessageQueue.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 static const std::string mFakeRoute = "/vendor/etc/fake_route.txt";
 

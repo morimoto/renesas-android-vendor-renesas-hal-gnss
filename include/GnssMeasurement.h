@@ -16,20 +16,20 @@
 
 #pragma once
 
-#include <android/hardware/gnss/2.0/IGnssMeasurement.h>
+#include <android/hardware/gnss/2.1/IGnssMeasurement.h>
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
 #include <memory>
 
 #include "include/MeasurementProvider.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using IGnssMeasurementCallback_1_0
     = android::hardware::gnss::V1_0::IGnssMeasurementCallback;
 using IGnssMeasurementCallback_1_1
     = android::hardware::gnss::V1_1::IGnssMeasurementCallback;
-using IGnssMeasurementCallback_2_0 = IGnssMeasurementCallback;
+using IGnssMeasurementCallback_2_0 = android::hardware::gnss::V2_0::IGnssMeasurementCallback;
 using ::android::hardware::hidl_array;
 using ::android::hardware::hidl_memory;
 using ::android::hardware::hidl_string;
@@ -38,7 +38,7 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
-class GnssMeasurement : public IGnssMeasurement {
+class GnssMeasurement : public android::hardware::gnss::V2_1::IGnssMeasurement {
 public:
     GnssMeasurement() {};
     ~GnssMeasurement() override;
@@ -64,6 +64,10 @@ public:
         sp<IGnssMeasurementCallback_2_0>&
         callback, bool enableFullTracking) override;
 
+    // Methods from V2_1::IGnssMeasurement follow.
+    Return<V1_0::IGnssMeasurement::GnssMeasurementStatus> setCallback_2_1(
+            const sp<V2_1::IGnssMeasurementCallback>& callback,
+            bool enableFullTracking) override;
 private:
     std::unique_ptr<MeasurementProvider> mProvider;
     sp<IGnssMeasurementCallback_1_0> mGnssMeasurementsCbIface_1_0;

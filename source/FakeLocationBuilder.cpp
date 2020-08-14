@@ -34,7 +34,7 @@ using std::chrono::steady_clock;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 typedef ::android::hardware::gnss::V1_0::GnssLocation GnssLocation;
 typedef ::android::hardware::gnss::V1_0::GnssLocationFlags GnssLocationFlags;
@@ -94,8 +94,9 @@ FLBError FakeLocationBuilder::Build(fakeLocationPoint_t& from,
         auto current_time_ms = duration_cast<milliseconds>
                         (std::chrono::system_clock::now().time_since_epoch());
         location.v1_0.timestamp = current_time_ms.count();
-        location.elapsedRealtime.flags = ElapsedRealtimeFlags::HAS_TIMESTAMP_NS |
-                                    ElapsedRealtimeFlags::HAS_TIME_UNCERTAINTY_NS;
+        location.elapsedRealtime.flags =
+            android::hardware::gnss::V2_0::ElapsedRealtimeFlags::HAS_TIMESTAMP_NS |
+            android::hardware::gnss::V2_0::ElapsedRealtimeFlags::HAS_TIME_UNCERTAINTY_NS;
         location.elapsedRealtime.timestampNs =
             static_cast<uint64_t>(::android::elapsedRealtimeNano());
         location.elapsedRealtime.timeUncertaintyNs = 0;

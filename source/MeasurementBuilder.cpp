@@ -24,7 +24,7 @@
 #include <utils/SystemClock.h>
 
 using namespace std::chrono;
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 static constexpr uint32_t numParsersExpected = 4;
 static constexpr size_t msgQueTimeout = 1000;
@@ -35,8 +35,9 @@ MeasurementBuilder::MeasurementBuilder() :
     mCondVar(mMsgQueue.GetConditionVariable<MBType>()) {}
 
 void MeasurementBuilder::AddElapsedRealtime(GnssData& outData) {
-    outData.elapsedRealtime.flags = ElapsedRealtimeFlags::HAS_TIMESTAMP_NS |
-                                     ElapsedRealtimeFlags::HAS_TIME_UNCERTAINTY_NS;
+    outData.elapsedRealtime.flags =
+        android::hardware::gnss::V2_0::ElapsedRealtimeFlags::HAS_TIMESTAMP_NS |
+        android::hardware::gnss::V2_0::ElapsedRealtimeFlags::HAS_TIME_UNCERTAINTY_NS;
     outData.elapsedRealtime.timestampNs =
         static_cast<uint64_t>(::android::elapsedRealtimeNano());
     outData.elapsedRealtime.timeUncertaintyNs = 0;

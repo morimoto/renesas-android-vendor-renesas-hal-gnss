@@ -17,7 +17,7 @@
 // #include <android/hardware/interfaces/gnss/2.0/default/AGnssRil.h>
 #include "include/AGnssRil.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 // Methods from ::android::hardware::gnss::V1_0::IAGnssRil follow.
 Return<void> AGnssRil::setCallback(const
             sp<::android::hardware::gnss::V1_0::IAGnssRilCallback>& callback) {
@@ -61,4 +61,3 @@ Return<bool> AGnssRil::updateNetworkState_2_0(
 }
 
 }  // namespace android::hardware::gnss::V2_0::renesas
-

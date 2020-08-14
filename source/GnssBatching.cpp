@@ -19,7 +19,7 @@
 
 #include "include/GnssBatching.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 // Methods from ::android::hardware::gnss::V1_0::IGnssBatching follow.
 Return<bool> GnssBatching::init(const
         sp<::android::hardware::gnss::V1_0::IGnssBatchingCallback>& callback) {

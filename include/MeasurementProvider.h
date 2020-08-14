@@ -19,14 +19,14 @@
 
 #include "include/MeasurementBuilder.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using IGnssMeasxCb_1_0 = ::android::sp<android::hardware::gnss::V1_0::IGnssMeasurementCallback>;
 using IGnssMeasxCb_1_1 = ::android::sp<android::hardware::gnss::V1_1::IGnssMeasurementCallback>;
-using IGnssMeasxCb_2_0 = ::android::sp<IGnssMeasurementCallback>;
+using IGnssMeasxCb_2_0 = ::android::sp<android::hardware::gnss::V2_0::IGnssMeasurementCallback>;
 using GnssData_1_0 = android::hardware::gnss::V1_0::IGnssMeasurementCallback::GnssData;
 using GnssData_1_1 = android::hardware::gnss::V1_1::IGnssMeasurementCallback::GnssData;
-using GnssData_2_0 = IGnssMeasurementCallback::GnssData;
+using GnssData_2_0 = android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData;
 
 class MeasurementProvider {
 public:

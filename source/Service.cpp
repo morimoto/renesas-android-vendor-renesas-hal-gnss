@@ -17,9 +17,9 @@ int main(void) {
     android::ProcessState::initWithDriver("/dev/vndbinder");
     android::hardware::configureRpcThreadpool(1, true);
     auto gnssHal =
-        std::make_shared<android::hardware::gnss::V2_0::renesas::GnssImpl>();
+        std::make_shared<android::hardware::gnss::V2_1::renesas::GnssImpl>();
     auto genManager = std::make_shared
-        <android::hardware::gnss::V2_0::renesas::GeneralManager>();
+        <android::hardware::gnss::V2_1::renesas::GeneralManager>();
     CHECK_EQ(android::OK, gnssHal->SetGeneralManager(genManager)) <<
             "Failed to register GNSS HAL";
     CHECK_EQ(android::OK, genManager->Run()) << "Failed to run GeneralManager";

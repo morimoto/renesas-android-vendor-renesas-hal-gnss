@@ -23,7 +23,7 @@
 #include "include/IReader.h"
 #include "include/MessageQueue.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using LocationData = ::android::hardware::gnss::V2_0::GnssLocation;
 typedef std::shared_ptr<fakeLocationPoint_t> FLBType;

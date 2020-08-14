@@ -20,7 +20,7 @@
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 using ::android::hardware::hidl_array;
 using ::android::hardware::hidl_memory;
@@ -30,7 +30,7 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
-struct GnssBatching : public IGnssBatching {
+struct GnssBatching : public android::hardware::gnss::V2_0::IGnssBatching {
     // Methods from ::android::hardware::gnss::V1_0::IGnssBatching follow.
     Return<bool> init(const
         sp<::android::hardware::gnss::V1_0::IGnssBatchingCallback>&

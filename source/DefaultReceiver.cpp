@@ -23,7 +23,7 @@
 
 #include "include/GnssTransportTTY.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 DefaultReceiver::DefaultReceiver(const std::string& path,
                                  const GnssReceiverType& type) :

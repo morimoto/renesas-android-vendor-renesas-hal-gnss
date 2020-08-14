@@ -19,7 +19,7 @@
 
 #include "include/LocationProviderBase.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 LocationProviderBase::LocationProviderBase(uint32_t interval):
     mUpdateIntervalUs(interval) {
@@ -63,6 +63,10 @@ void LocationProviderBase::setCallback_1_1(GnssCallback_1_1& cb) {
 
 void LocationProviderBase::setCallback_2_0(GnssCallback_2_0& cb) {
     mGnssCallback_2_0 = cb;
+}
+
+void LocationProviderBase::setCallback_2_1(GnssCallback_2_1& cb) {
+    mGnssCallback_2_1 = cb;
 }
 
 void LocationProviderBase::SetEnabled(bool isEnabled) {

@@ -20,7 +20,7 @@
 #include "include/LocationProvider.h"
 #include "include/GnssMeasurementSync.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 LocationProvider::LocationProvider(uint32_t interval) :
     LocationProviderBase(interval),
@@ -58,6 +58,14 @@ void LocationProvider::Provide() {
 
                     if (!ret.isOk()) {
                         ALOGE("%s: Unable to invoke gnssLocationCb_2_0", __func__);
+                    }
+                }
+                if (mGnssCallback_2_1) {
+                    ALOGV("%s, Provide location callback_2_1", __PRETTY_FUNCTION__);
+                    auto ret = mGnssCallback_2_1->gnssLocationCb_2_0(data);
+
+                    if (!ret.isOk()) {
+                        ALOGE("%s: Unable to invoke gnssLocationCb_2_1", __func__);
                     }
                 }
             } else {

@@ -20,7 +20,7 @@
 #include "include/MeasurementProvider.h"
 #include "include/GnssMeasurementSync.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 MeasurementProvider::MeasurementProvider() :
     mBuilder(std::make_unique<MeasurementBuilder>()) {}

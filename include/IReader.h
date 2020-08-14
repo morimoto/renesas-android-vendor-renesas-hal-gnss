@@ -17,7 +17,7 @@
 
 #include "include/GnssTransport.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 enum class RDError : uint8_t {
     Success,

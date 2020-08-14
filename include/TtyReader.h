@@ -21,7 +21,7 @@
 #include "include/IReader.h"
 #include "include/IGnssReceiver.h"
 
-using namespace android::hardware::gnss::V2_0::renesas;
+using namespace android::hardware::gnss::V2_1::renesas;
 
 class TtyReader : public IReader {
 public:

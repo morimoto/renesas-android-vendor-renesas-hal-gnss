@@ -42,7 +42,7 @@ static const int bufSize = 4096;
 static const int pollTimeOut = 10000; //ms
 static const std::string deviceClass = "tty";
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 static const std::set<DevId> supportedDevices = {uint16_t(VendorId::Garmin),
                                                  uint16_t(VendorId::SiRF),
                                                  uint16_t(VendorId::Ublox)};
@@ -487,4 +487,4 @@ bool DeviceScanner::CheckTtyPath(const std::string& path) {
     return WaitEventFromSystem(path);
 }
 
-} //namespace android::hardware::gnss::V2_0::renesas
+} //namespace android::hardware::gnss::V2_1::renesas

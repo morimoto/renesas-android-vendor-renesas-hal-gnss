@@ -21,7 +21,7 @@
 
 #include "include/IReader.h"
 
-namespace android::hardware::gnss::V2_0::renesas {
+namespace android::hardware::gnss::V2_1::renesas {
 
 class FakeReader : public IReader {
 public:
