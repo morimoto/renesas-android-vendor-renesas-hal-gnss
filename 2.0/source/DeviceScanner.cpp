@@ -320,7 +320,7 @@ DSError DeviceScanner::CreateDefaultReceiver(const std::string& path,
 }
 
 DSError DeviceScanner::CreateFakeReceiver() {
-    ALOGV("%s", __func__);
+    ALOGI("Creation of fake receiver");
     std::lock_guard<std::mutex> lock(mLock);
 
     receiver_t receiver =
@@ -348,12 +348,12 @@ DSError DeviceScanner::ProcessPredefinedSettings() {
     ALOGV("%s", __func__);
     std::string ttyPath = mSettings.ttyPath;
 
-    if (ttyPath.size() == 0 || !CheckTtyPath(ttyPath)) {
-        return DSError::NoPredefinedReceiver;
-    }
-
     if (mFake == ttyPath) {
         return CreateFakeReceiver();
+    }
+
+    if (ttyPath.size() == 0 || !CheckTtyPath(ttyPath)) {
+        return DSError::NoPredefinedReceiver;
     }
 
     if (GetVendorIdByTtyDevFile(ttyPath) == VendorId::Ublox) {
