@@ -13,14 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <atomic>
-#include <thread>
+#ifndef GNSSINFOPROVIDER_H
+#define GNSSINFOPROVIDER_H
 
-#include <android/hardware/gnss/1.1/IGnssCallback.h>
-#include <android/hardware/gnss/2.0/IGnssCallback.h>
-#include <android/hardware/gnss/2.1/IGnssCallback.h>
 #include "include/GnssInfoBuilder.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
@@ -71,3 +67,5 @@ private:
 };
 
 } // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // GNSSINFOPROVIDER_H

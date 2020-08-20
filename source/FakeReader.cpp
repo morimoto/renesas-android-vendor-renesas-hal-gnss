@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-#include <utility>
 #include "include/FakeReader.h"
+
+#include <utility>
+
 #include "include/MessageQueue.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
@@ -117,4 +119,4 @@ RDError FakeReader::SetUpNotificationCallback(cbPtr notificationCb) {
     return RDError::InvalidInput;
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

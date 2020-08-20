@@ -13,17 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_TAG "GnssRenesasHal"
 #define LOG_NDEBUG 1
 
-#include <android-base/logging.h>
-
 #include "include/GeneralManager.h"
 
+#include <android-base/logging.h>
+
 #include "include/DeviceScanner.h"
-#include "include/LocationProvider.h"
 #include "include/FakeLocationProvider.h"
 #include "include/FakeReader.h"
+#include "include/LocationProvider.h"
 #include "include/TtyReader.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
@@ -368,4 +369,4 @@ bool GeneralManager::IsRun() {
     return mIsRun;
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

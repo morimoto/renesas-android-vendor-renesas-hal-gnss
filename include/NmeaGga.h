@@ -13,9 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef NMEAGGA_H
+#define NMEAGGA_H
 
 #include "include/NmeaParserCommon.h"
+
 using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 
 //TODO(g.chabukiani): add doxygen, check all over the project
@@ -161,3 +164,5 @@ template <typename T>
 NPError NmeaGga<T>::ValidateParcel() {
     return NPError::Success;
 }
+
+#endif // NMEAGGA_H

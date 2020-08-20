@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasBatching"
-#include <log/log.h>
 
 #include "include/GnssBatching.h"
+
+#include <log/log.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 // Methods from ::android::hardware::gnss::V1_0::IGnssBatching follow.
@@ -61,4 +63,4 @@ Return<bool> GnssBatching::init_2_0(const
     return false;
 }
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_TAG "GnssRenesasHalDeviceScanner"
 #define LOG_NDEBUG 1
 
@@ -23,17 +24,13 @@
 #include <poll.h>
 #include <sys/inotify.h>
 #include <sys/stat.h>
-#include <sys/system_properties.h>
 #include <unistd.h>
 
-#include <chrono>
+#include <fstream>
 
 #include "include/DefaultReceiver.h"
 #include "include/FakeReceiver.h"
 #include "include/GeneralManager.h"
-#include "include/GnssTransport.h"
-#include "include/IUbxParser.h"
-#include "include/MessageQueue.h"
 #include "include/PropNames.h"
 #include "include/UbloxReceiver.h"
 #include "include/UbxMonVer.h"

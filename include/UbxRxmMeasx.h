@@ -13,15 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef UBXRXMMEASX_H
+#define UBXRXMMEASX_H
+
+#include <android/hardware/gnss/2.0/types.h>
 #include <log/log.h>
 
 #include <vector>
 
-#include <hidl/HidlSupport.h>
 #include "include/UbxParserCommon.h"
-#include <android/hardware/gnss/2.0/types.h>
-#include <android/hardware/gnss/2.0/IGnssMeasurementCallback.h>
+
 /* From u-blox 8 / u-blox M8 Receiver Description - Manual
  * 33.18.2 UBX-RXM-MEASX (0x02 0x14)
  * 33.18.2.1 Satellite Measurements for RRLP
@@ -489,3 +491,5 @@ template <typename T>
 UbxRxmMeasx<T>::~UbxRxmMeasx() {
     //TODO(g.chabukiani): check if we need to clean up
 }
+
+#endif // UBXRXMMEASX_H

@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef GNSSTRANSPORTFAKE_H
 #define GNSSTRANSPORTFAKE_H
+
+#include <fstream>
 
 #include "include/GnssTransport.h"
 
@@ -35,6 +38,6 @@ protected:
     std::ifstream fakeStream;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
 
 #endif // GNSSTRANSPORTFAKE_H

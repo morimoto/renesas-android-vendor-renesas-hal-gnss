@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef NMEATXT_H
+#define NMEATXT_H
+
+#include <log/log.h>
 
 #include "include/NmeaParserCommon.h"
 
@@ -130,3 +133,5 @@ NPError NmeaTxt<T>::ParseMsg(std::vector<std::string>& in) {
     mParcel.text = in[TxtOfst::msgText];
     return NPError::Success;
 }
+
+#endif // NMEATXT_H

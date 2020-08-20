@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef DEFAULTRECEIVER_H
+#define DEFAULTRECEIVER_H
 
 #include "include/GnssReceiverTTY.h"
 
@@ -166,4 +168,6 @@ private:
     SupportedProtocol mProtocol = SupportedProtocol::NMEA0183;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // DEFAULTRECEIVER_H

@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasInfoBuilder"
+
 #include <log/log.h>
 
 #include <chrono>
@@ -205,4 +207,4 @@ IBError GnssInfoBuilder::Build(SvInfoList& outList) {
     return IBError::SUCCESS;
 }
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas

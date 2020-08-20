@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <memory>
-#include <map>
-#include <cstdint>
+#ifndef FAKELOCATIONBUILDER_H
+#define FAKELOCATIONBUILDER_H
 
 #include <android/hardware/gnss/2.0/types.h>
+
 #include "include/IReader.h"
 #include "include/MessageQueue.h"
 
@@ -67,4 +66,6 @@ private:
     std::mutex mLock;
 };
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // FAKELOCATIONBUILDER_H

@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#define LOG_NDEBUG 1
-#define LOG_TAG "GnssRenesasLocationProviderBase"
-#include <log/log.h>
 
 #include "include/LocationProviderBase.h"
 
@@ -73,4 +70,4 @@ void LocationProviderBase::SetEnabled(bool isEnabled) {
     mEnabled = isEnabled;
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

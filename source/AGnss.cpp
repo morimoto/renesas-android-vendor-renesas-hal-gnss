@@ -48,4 +48,4 @@ Return<bool> AGnss::dataConnOpen(uint64_t networkHandle,
     return bool {};
 }
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas

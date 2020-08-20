@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasHalUbxAckNack"
 
-#include <log/log.h>
 #include "include/UbxAckNack.h"
+
+#include <log/log.h>
 
 template <>
 UPError UbxAckNack<AckOutType>::GetData(AckOutType out) {

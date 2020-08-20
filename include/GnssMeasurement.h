@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include <android/hardware/gnss/2.1/IGnssMeasurement.h>
-#include <hidl/MQDescriptor.h>
-#include <hidl/Status.h>
-#include <memory>
+#ifndef GNSSMEASUREMENT_H
+#define GNSSMEASUREMENT_H
 
 #include "include/MeasurementProvider.h"
 
@@ -75,4 +71,6 @@ private:
     sp<IGnssMeasurementCallback_2_0> mGnssMeasurementsCbIface_2_0;
 };
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // GNSSMEASUREMENT_H

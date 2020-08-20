@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef IUBXPARSER_H
+#define IUBXPARSER_H
+
+#include <android/hardware/gnss/2.1/IGnss.h>
+
 #include <cstddef>
 #include <cstdint>
-
-#include <android/hardware/gnss/2.0/IGnss.h>
-#include <android/hardware/gnss/2.0/IGnssMeasurementCallback.h>
-#include <android/hardware/gnss/2.0/types.h>
 
 enum class UPError : uint8_t {
     Success,
@@ -133,3 +134,5 @@ typedef struct MonVerOut {
 } monVerOut_t;
 typedef monVerOut_t& monVerOut;
 typedef std::shared_ptr<IUbxParser<monVerOut>> MonVerQueueType;
+
+#endif // IUBXPARSER_H

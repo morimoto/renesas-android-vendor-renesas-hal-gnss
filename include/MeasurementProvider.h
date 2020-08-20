@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef MEASUREMENTPROVIDER_H
+#define MEASUREMENTPROVIDER_H
 
 #include <thread>
 
@@ -58,4 +60,6 @@ private:
     std::atomic<bool> mEnabled;
 };
 
-}
+} //namespace android::hardware::gnss::V2_1::renesas
+
+#endif // MEASUREMENTPROVIDER_H

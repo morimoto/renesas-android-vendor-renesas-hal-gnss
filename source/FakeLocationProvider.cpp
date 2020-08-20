@@ -19,6 +19,10 @@
 
 #include "include/FakeLocationProvider.h"
 
+#include <log/log.h>
+
+#include <fstream>
+
 namespace android::hardware::gnss::V2_1::renesas {
 
 FakeLocationProvider::FakeLocationProvider(uint32_t interval) :
@@ -129,4 +133,4 @@ size_t pt_idx = 0;
     }
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

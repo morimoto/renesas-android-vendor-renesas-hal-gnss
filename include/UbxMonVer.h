@@ -13,14 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <vector>
-#include <string>
+#ifndef UBXMONVER_H
+#define UBXMONVER_H
+
+#include <log/log.h>
+
+#include <algorithm>
 #include <cmath>
 #include <regex>
-#include <algorithm>
-#include <log/log.h>
+#include <string>
+#include <vector>
 
 #include "include/UbxParserCommon.h"
 
@@ -174,3 +177,5 @@ template <typename T>
 UbxMonVer<T>::~UbxMonVer() {
     //TODO(g.chabukiani): check if we need to clean up
 }
+
+#endif // UBXMONVER_H

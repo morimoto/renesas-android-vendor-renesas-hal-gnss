@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <memory>
-#include <cutils/properties.h>
+#ifndef CONFIGURATOR_H
+#define CONFIGURATOR_H
+
+#include <log/log.h>
 
 #include "include/IGnssReceiver.h"
 #include "include/IUbxParser.h"
-#include "include/GnssTransport.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -234,4 +234,6 @@ const std::array<uint8_t, CfgIndex::COUNT> cfgIndexSPG301 = {
     7  // GLONASS
 };
 
-} //namespace android::hardware::gnss::V2_0::renesas
+}  //namespace android::hardware::gnss::V2_1::renesas
+
+#endif // CONFIGURATOR_H

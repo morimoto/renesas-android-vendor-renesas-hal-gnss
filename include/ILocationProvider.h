@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef ILOCATIONPROVIDER_H
+#define ILOCATIONPROVIDER_H
 
 #include <android/hardware/gnss/2.0/IGnssCallback.h>
 #include <android/hardware/gnss/2.1/IGnssCallback.h>
@@ -64,4 +66,6 @@ public:
     virtual void SetEnabled(bool isEnabled) = 0;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // ILOCATIONPROVIDER_H

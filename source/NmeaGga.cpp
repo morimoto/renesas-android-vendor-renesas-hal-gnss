@@ -16,8 +16,7 @@
 
 #include "include/NmeaGga.h"
 
-#include <android/hardware/gnss/1.0/types.h>
-#include <android/hardware/gnss/2.0/types.h>
+#include <log/log.h>
 
 using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 using LocationData_v1 = android::hardware::gnss::V1_0::GnssLocation;

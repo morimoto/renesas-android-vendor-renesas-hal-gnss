@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasHalUbxMonVer"
 

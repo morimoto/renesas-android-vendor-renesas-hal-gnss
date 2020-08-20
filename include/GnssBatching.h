@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef GNSSBATCHING_H
+#define GNSSBATCHING_H
 
 #include <android/hardware/gnss/2.0/IGnssBatching.h>
-#include <hidl/MQDescriptor.h>
-#include <hidl/Status.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -51,4 +50,6 @@ struct GnssBatching : public android::hardware::gnss::V2_0::IGnssBatching {
 
 };
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // GNSSBATCHING_H

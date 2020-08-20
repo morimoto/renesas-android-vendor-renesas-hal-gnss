@@ -13,7 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef NMEAGSA_H
+#define NMEAGSA_H
+
+#include <log/log.h>
 
 #include "include/NmeaParserCommon.h"
 
@@ -170,3 +174,5 @@ template <typename T>
 NPError NmeaGsa<T>::ValidateParcel() {
     return NPError::Success;
 }
+
+#endif // NMEAGSA_H

@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef UBXNAVCLOCK_H
+#define UBXNAVCLOCK_H
 
 #include "include/UbxParserCommon.h"
 
@@ -169,3 +171,5 @@ template <typename T>
 UbxNavClock<T>::~UbxNavClock() {
     //TODO(g.chabukiani): check if we need to clean up
 }
+
+#endif // UBXNAVCLOCK_H

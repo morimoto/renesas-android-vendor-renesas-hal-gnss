@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <type_traits>
-#include <log/log.h>
-#include <fstream>
-#include <mutex>
+#ifndef GNSSTRANSPORT_H
+#define GNSSTRANSPORT_H
+
 #include <array>
+#include <mutex>
 #include <vector>
 
 namespace android::hardware::gnss::V2_1::renesas {
@@ -192,4 +191,6 @@ TError Transport::Write(const std::array<uint8_t, size>& in) {
     return WriteData(toWrite);
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // GNSSTRANSPORT_H

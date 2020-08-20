@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef GNSSINFOBUILDER_H
+#define GNSSINFOBUILDER_H
 
 #include <thread>
 
@@ -60,4 +62,6 @@ private:
     std::mutex fixLock;
 };
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // GNSSINFOBUILDER_H

@@ -16,16 +16,12 @@
 
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasHalTtyReader"
-#include <log/log.h>
-
-#include <memory>
-#include <vector>
-#include <utility>
 
 #include "include/TtyReader.h"
+
+#include "include/MessageQueue.h"
 #include "include/NmeaMsgHandler.h"
 #include "include/UbloxMsgHandler.h"
-#include "include/MessageQueue.h"
 
 static std::string printLog(const std::vector<char>& in,
                             const bool asHex = true);

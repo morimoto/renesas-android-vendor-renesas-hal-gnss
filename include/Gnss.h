@@ -14,19 +14,12 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include <android/hardware/gnss/2.1/IGnss.h>
-#include <hidl/MQDescriptor.h>
-#include <hidl/Status.h>
-
-#include <memory>
+#ifndef GNSS_H
+#define GNSS_H
 
 #include "include/GeneralManager.h"
-#include "include/GnssConfiguration.h"
 #include "include/GnssBatching.h"
-
-class GeneralManager;
+#include "include/GnssConfiguration.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -144,4 +137,6 @@ public:
 
 };
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // GNSS_H

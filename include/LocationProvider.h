@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include "include/LocationProviderBase.h"
+#ifndef LOCATIONPROVIDER_H
+#define LOCATIONPROVIDER_H
+
 #include "include/LocationBuilder.h"
+#include "include/LocationProviderBase.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -34,4 +36,6 @@ private:
     std::mutex mSvLock;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // LOCATIONPROVIDER_H

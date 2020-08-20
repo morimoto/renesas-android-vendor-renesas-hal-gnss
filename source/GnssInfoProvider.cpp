@@ -16,9 +16,10 @@
 
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasInfoProvider"
-#include <log/log.h>
 
 #include "include/GnssInfoProvider.h"
+
+#include <log/log.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

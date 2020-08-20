@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef DEVICESCANNER_H
+#define DEVICESCANNER_H
+
+#include <usb-scanner/UsbScanner.h>
 
 #include <queue>
-#include <vector>
-#include <memory>
-#include <mutex>
 
 #include "include/IGnssReceiver.h"
-#include <usb-scanner/UsbScanner.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 class GeneralManager;
@@ -215,4 +215,6 @@ private:
     receiversQueue_t mReceivers;
     UsbScanner mUscanner;
 };
-}
+} //namespace android::hardware::gnss::V2_1::renesas
+
+#endif // DEVICESCANNER_H

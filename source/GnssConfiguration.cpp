@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasConfiguration"
-#include <log/log.h>
 
 #include "include/GnssConfiguration.h"
+
+#include <log/log.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 // Methods from ::android::hardware::gnss::V1_0::IGnssConfiguration follow.
@@ -75,4 +77,4 @@ Return<bool> GnssConfiguration::setEsExtensionSec(uint32_t
     return false;
 }
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas

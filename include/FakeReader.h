@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <memory>
+#ifndef FAKEREADER_H
+#define FAKEREADER_H
+
 #include <thread>
-#include <atomic>
 
 #include "include/IReader.h"
 
@@ -103,4 +103,6 @@ private:
     std::shared_ptr<Transport> mTransport;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // FAKEREADER_H

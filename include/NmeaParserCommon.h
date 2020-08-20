@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef NMEAPARSERCOMMON_H
+#define NMEAPARSERCOMMON_H
 
 #include "include/INmeaParser.h"
 
@@ -60,3 +62,5 @@ NPError NmeaParserCommon<T>::Split(std::string& in,
 
     return NPError::Success;
 }
+
+#endif // NMEAPARSERCOMMON_H

@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <map>
+#ifndef MEASUREMENTBUILDER_H
+#define MEASUREMENTBUILDER_H
 
-#include <android/hardware/gnss/2.0/IGnssMeasurement.h>
+#include <android/hardware/gnss/2.1/IGnssMeasurement.h>
+
 #include "include/IUbxParser.h"
 #include "include/MessageQueue.h"
 
@@ -83,4 +84,6 @@ private:
     std::mutex mLock;
 };
 
-}
+} //namespace android::hardware::gnss::V2_1::renesas
+
+#endif // MEASUREMENTBUILDER_H

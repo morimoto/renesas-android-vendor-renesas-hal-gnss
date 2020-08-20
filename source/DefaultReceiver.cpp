@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_TAG "GnssRenesasHalDefaultReceiver"
 #define LOG_NDEBUG 1
 
 #include "include/DefaultReceiver.h"
 
-#include <type_traits>
 #include <log/log.h>
-
-#include "include/GnssTransportTTY.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -175,4 +173,4 @@ SWVersion DefaultReceiver::GetSwVersion() {
     return mSwVersion;
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

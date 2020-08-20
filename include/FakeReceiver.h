@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef FAKERECEIVER_H
+#define FAKERECEIVER_H
 
 #include "include/GnssReceiver.h"
 
@@ -137,4 +139,6 @@ private:
     std::string mFirmwareVersion = "0.0";
 };
 
-} // android::hardware::gnss::V2_0::renesas
+} //namespace android::hardware::gnss::V2_1::renesas
+
+#endif // FAKERECEIVER_H

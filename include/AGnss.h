@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef AGNSS_H
+#define AGNSS_H
 
 #include <android/hardware/gnss/2.0/IAGnss.h>
-#include <hidl/MQDescriptor.h>
-#include <hidl/Status.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -46,3 +45,5 @@ struct AGnss : public android::hardware::gnss::V2_0::IAGnss {
 };
 
 }  // namespace android::hardware::gnss::V2_0::renesas
+
+#endif // AGNSS_H

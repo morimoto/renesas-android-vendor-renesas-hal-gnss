@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef IREADER_H
+#define IREADER_H
 
 #include "include/GnssTransport.h"
 
@@ -48,4 +50,6 @@ public:
     virtual RDError SetUpNotificationCallback(cbPtr notificationCb) = 0;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // IREADER_H

@@ -15,8 +15,8 @@
  */
 
 #include "include/NmeaRmc.h"
-#include <android/hardware/gnss/1.0/types.h>
-#include <android/hardware/gnss/2.0/types.h>
+
+#include <log/log.h>
 
 using LocationData_v1 = android::hardware::gnss::V1_0::GnssLocation;
 using LocationData_v2 = android::hardware::gnss::V2_0::GnssLocation;

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-// #include <android/hardware/interfaces/gnss/2.0/default/AGnssRil.h>
 #include "include/AGnssRil.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
@@ -60,4 +59,4 @@ Return<bool> AGnssRil::updateNetworkState_2_0(
     return bool {};
 }
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas

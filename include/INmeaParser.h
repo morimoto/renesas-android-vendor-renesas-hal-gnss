@@ -13,15 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
-#include <cstddef>
-#include <cstdint>
-#include <string>
-#include <log/log.h>
+
+#ifndef INMEAPARSER_H
+#define INMEAPARSER_H
 
 #include <android/hardware/gnss/2.0/IGnssCallback.h>
 #include <android/hardware/gnss/2.1/IGnssCallback.h>
-#include <android/hardware/gnss/2.0/types.h>
 
 const std::string ggaHeader = "GGA";
 const std::string gsaHeader = "GSA";
@@ -134,3 +131,5 @@ typedef SvInfoFixType& SvInfoFixOutType;
 typedef std::shared_ptr<INmeaParser<SvInfoFixOutType>> SvInfoFixQueueType;
 
 size_t talkerIdToGnssId(std::string talkerId);
+
+#endif // INMEAPARSER_H

@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef AGNSSRIL_H
+#define AGNSSRIL_H
 
 #include <android/hardware/gnss/2.0/IAGnssRil.h>
-#include <hidl/MQDescriptor.h>
-#include <hidl/Status.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -52,4 +51,6 @@ struct AGnssRil : public android::hardware::gnss::V2_0::IAGnssRil {
 
 };
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // AGNSSRIL_H

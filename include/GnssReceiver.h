@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef IGnssReceiver_H
-#define IGnssReceiver_H
+
+#ifndef GNSSRECEIVER_H
+#define GNSSRECEIVER_H
 
 #include "include/IGnssReceiver.h"
 
@@ -35,4 +36,4 @@ private:
 
 } // namespace android::hardware::gnss::V2_1::renesas
 
-#endif // IGnssReceiver_H
+#endif // GNSSRECEIVER_H

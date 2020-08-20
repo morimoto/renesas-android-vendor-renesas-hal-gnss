@@ -17,19 +17,16 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasHalUbloxMsgHandler"
 
-#include <algorithm>
-#include <log/log.h>
-#include <chrono>
-
-#include "include/UbxMonVer.h"
-#include "include/UbxNavPvt.h"
-#include "include/UbxAckNack.h"
-#include "include/UbxNavClock.h"
-#include "include/UbxRxmMeasx.h"
-#include "include/UbxNavStatus.h"
-#include "include/MessageQueue.h"
-#include "include/UbxNavTimeGps.h"
 #include "include/UbloxMsgHandler.h"
+
+#include "include/MessageQueue.h"
+#include "include/UbxAckNack.h"
+#include "include/UbxMonVer.h"
+#include "include/UbxNavClock.h"
+#include "include/UbxNavPvt.h"
+#include "include/UbxNavStatus.h"
+#include "include/UbxNavTimeGps.h"
+#include "include/UbxRxmMeasx.h"
 
 using GnssData =
     android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData;

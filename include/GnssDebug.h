@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef GNSSDEBUG_H
+#define GNSSDEBUG_H
 
 #include <android/hardware/gnss/2.0/IGnssDebug.h>
-#include <hidl/MQDescriptor.h>
-#include <hidl/Status.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -38,4 +37,6 @@ struct GnssDebug : public android::hardware::gnss::V2_0::IGnssDebug {
     Return<void> getDebugData_2_0(getDebugData_2_0_cb _hidl_cb) override;
 };
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // GNSSDEBUG_H

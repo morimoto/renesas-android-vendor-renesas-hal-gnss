@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <thread>
+#ifndef LOCATIONPROVIDERBASE_H
+#define LOCATIONPROVIDERBASE_H
+
 #include <atomic>
-#include <functional>
+#include <thread>
 
 #include "include/ILocationProvider.h"
 
@@ -59,4 +60,6 @@ private:
     LocationProviderBase& operator=(const LocationProviderBase&) = delete;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // LOCATIONPROVIDERBASE_H

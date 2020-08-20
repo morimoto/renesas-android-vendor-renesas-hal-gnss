@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <memory>
-#include <vector>
+#ifndef NMEAMSGHANDLER_H
+#define NMEAMSGHANDLER_H
+
 #include <thread>
-#include <atomic>
 
 #include "include/INmeaParser.h"
 #include "include/MessageQueue.h"
@@ -60,3 +59,5 @@ private:
     std::condition_variable& mWaitCv;
     const char crcDelimiter = '*';
 };
+
+#endif // NMEAMSGHANDLER_H

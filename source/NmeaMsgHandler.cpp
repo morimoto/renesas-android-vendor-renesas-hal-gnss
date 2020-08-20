@@ -13,16 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasNmeaMsgHandler"
-#include <log/log.h>
 
 #include "include/NmeaMsgHandler.h"
+
+#include <log/log.h>
+
 #include "include/NmeaGga.h"
 #include "include/NmeaGsa.h"
 #include "include/NmeaGsv.h"
-#include "include/NmeaRmc.h"
 #include "include/NmeaPubx00.h"
+#include "include/NmeaRmc.h"
 #include "include/NmeaTxt.h"
 
 NMHError ValidateParcel(std::string& in);

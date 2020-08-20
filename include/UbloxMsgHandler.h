@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include <memory>
-#include <vector>
+#ifndef UBLOXMSGHANDLER_H
+#define UBLOXMSGHANDLER_H
+
 #include <thread>
-#include <atomic>
 
 #include "include/IUbxParser.h"
 #include "include/MessageQueue.h"
@@ -93,3 +92,5 @@ private:
     MessageQueue& mPipe;
     std::condition_variable& mWaitCv;
 };
+
+#endif // UBLOXMSGHANDLER_H

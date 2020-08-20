@@ -16,16 +16,14 @@
 
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasFakeLocationBuilder"
+
+#include "include/FakeLocationBuilder.h"
+
 #include <log/log.h>
+#include <utils/SystemClock.h>
 
 #include <chrono>
 #include <cmath>
-#include <utils/SystemClock.h>
-
-#include <android/hardware/gnss/1.0/IGnss.h>
-
-#include "include/FakeLocationBuilder.h"
-#include "include/MessageQueue.h"
 
 #define EARTH_RADIUS            6373000 // in meters
 #define PI                      3.141592653589793
@@ -105,4 +103,4 @@ FLBError FakeLocationBuilder::Build(fakeLocationPoint_t& from,
     return FLBError::SUCCESS;
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

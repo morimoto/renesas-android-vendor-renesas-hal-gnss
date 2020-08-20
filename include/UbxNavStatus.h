@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
-#include "include/UbxParserCommon.h"
 
+#ifndef UBXNAVSTATUS_H
+#define UBXNAVSTATUS_H
+
+#include "include/UbxParserCommon.h"
 
 template <typename T>
 class UbxNavStatus : public UbxParserCommon<T> {
@@ -159,3 +161,5 @@ UPError UbxNavStatus<T>::ValidateParcel() {
                                        UbxParserCommon<T>::msToNsMultiplier);
     return UPError::Success;
 }
+
+#endif // UBXNAVSTATUS_H

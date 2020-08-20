@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasMeasurementBuilder"
-#include <log/log.h>
-
-#include <chrono>
 
 #include "include/MeasurementBuilder.h"
 
+#include <log/log.h>
 #include <utils/SystemClock.h>
 
 using namespace std::chrono;

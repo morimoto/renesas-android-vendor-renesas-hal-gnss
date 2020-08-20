@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
+#define LOG_TAG "GnssRenesasHalTransportFake"
+#define LOG_NDEBUG 1
+
 #include "include/GnssTransportFake.h"
+
+#include <log/log.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -51,4 +56,4 @@ char GnssTransportFake::ReadByte(TError& errCode) {
     return character;
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

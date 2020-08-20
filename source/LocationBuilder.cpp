@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasLocationBuilder"
 
-#include <log/log.h>
-#include <chrono>
-#include <utils/SystemClock.h>
-
 #include "include/LocationBuilder.h"
+
+#include <log/log.h>
+#include <utils/SystemClock.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -95,4 +95,4 @@ LBError LocationBuilder::Build(LocationData& outData) {
     return LBError::SUCCESS;
 }
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas

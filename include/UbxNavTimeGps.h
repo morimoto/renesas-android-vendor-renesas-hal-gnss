@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef UBXNAVTIMEGPS_H
+#define UBXNAVTIMEGPS_H
 
 #include "include/UbxParserCommon.h"
 
@@ -198,3 +200,5 @@ template <typename T>
 UbxNavTimeGps<T>::~UbxNavTimeGps() {
     //TODO(g.chabukiani): check if we need to clean up
 }
+
+#endif // UBXNAVTIMEGPS_H

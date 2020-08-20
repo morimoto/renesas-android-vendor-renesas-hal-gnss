@@ -29,4 +29,4 @@ Return<void> GnssDebug::getDebugData_2_0(getDebugData_2_0_cb _hidl_cb) {
     // TODO implement
     return Void();
 }
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas

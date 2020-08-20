@@ -18,11 +18,9 @@
 #define LOG_TAG "GnssRenesasHalUbloxReceiver"
 #define LOG_NDEBUG 1
 
-#include <log/log.h>
-#include <type_traits>
 #include "include/UbloxReceiver.h"
 
-#include "include/GnssTransportTTY.h"
+#include <log/log.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

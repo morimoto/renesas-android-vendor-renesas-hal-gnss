@@ -94,4 +94,4 @@ SWVersion FakeReceiver::GetSwVersion() {
     return mSwVersion;
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

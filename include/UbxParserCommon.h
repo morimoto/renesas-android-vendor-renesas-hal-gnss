@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef UBXPARSERCOMMON_H
+#define UBXPARSERCOMMON_H
 
 #include "include/IUbxParser.h"
 
@@ -215,3 +217,5 @@ T UbxParserCommon<ClassType>::Convert(const uint8_t* ptr) {
 
 template <typename ClassType>
 UbxParserCommon<ClassType>::UbxParserCommon() {}
+
+#endif // UBXPARSERCOMMON_H

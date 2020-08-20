@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef LOCATIONBUILDER_H
+#define LOCATIONBUILDER_H
 
 #include <thread>
 
@@ -71,4 +73,6 @@ private:
     std::atomic<bool> mThreadExit;
 };
 
-}  // namespace android::hardware::gnss::V2_0::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // LOCATIONBUILDER_H

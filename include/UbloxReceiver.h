@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef UBLOXRECEIVER_H
+#define UBLOXRECEIVER_H
 
 #include <cmath>
 
@@ -164,4 +166,6 @@ private:
     std::vector<SupportedProtocol> mProtocolList;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // UBLOXRECEIVER_H

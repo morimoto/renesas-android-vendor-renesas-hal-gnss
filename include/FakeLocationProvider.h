@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include "include/LocationProviderBase.h"
+#ifndef FAKELOCATIONPROVIDER_H
+#define FAKELOCATIONPROVIDER_H
+
 #include "include/FakeLocationBuilder.h"
+#include "include/LocationProviderBase.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -35,4 +37,6 @@ private:
     std::vector<fakeLocationPoint_t> mFakePoints;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // FAKELOCATIONPROVIDER_H

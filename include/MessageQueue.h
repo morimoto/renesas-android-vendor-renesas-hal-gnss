@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef MESSAGEQUEUE_H
+#define MESSAGEQUEUE_H
 
-#include <list>
-#include <queue>
-#include <mutex>
+#include <log/log.h>
+
 #include <condition_variable>
+#include <list>
+#include <mutex>
+#include <queue>
 
 //TODO(g.chabukiani): add doxygen, check all over the project
 class MessageQueue {
@@ -162,3 +165,5 @@ template <typename T>
 std::condition_variable& MessageQueue::GetConditionVariable() {
     return mConditionVariable<T>.cv;
 }
+
+#endif // MESSAGEQUEUE_H

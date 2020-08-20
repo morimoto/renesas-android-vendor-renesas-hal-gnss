@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef TTYREADER_H
+#define TTYREADER_H
 
 #include <thread>
-#include <atomic>
 
-#include "include/IReader.h"
 #include "include/IGnssReceiver.h"
+#include "include/IReader.h"
 
 using namespace android::hardware::gnss::V2_1::renesas;
 
@@ -65,3 +66,5 @@ private:
     size_t mReaderUbxParcelOffset = 0u;
     Endian mEndianType = Endian::Unset;
 };
+
+#endif // TTYREADER_H

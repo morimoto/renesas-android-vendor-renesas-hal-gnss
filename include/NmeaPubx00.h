@@ -13,9 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef NMEAPUBX00_H
+#define NMEAPUBX00_H
 
 #include "include/NmeaParserCommon.h"
+
 using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 
 template <typename T>
@@ -166,3 +169,5 @@ template <typename T>
 NPError NmeaPubx00<T>::ValidateParcel() {
     return NPError::Success;
 }
+
+#endif // NMEAPUBX00_H

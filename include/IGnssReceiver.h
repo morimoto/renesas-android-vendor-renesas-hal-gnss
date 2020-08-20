@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
-#include <cstdint>
-#include <string>
-#include <vector>
-#include <unistd.h>
+
+#ifndef IGNSSRECEIVER_H
+#define IGNSSRECEIVER_H
 
 #include "include/GnssTransport.h"
 
@@ -204,3 +202,5 @@ protected:
 };
 
 } // namespace android::hardware::gnss::V2_1::renesas
+
+#endif // IGNSSRECEIVER_H

@@ -17,14 +17,16 @@
 #define LOG_TAG "GnssRenesasHalConfigurator"
 #define LOG_NDEBUG 1
 
-#include <array>
+#include "include/Configurator.h"
+
+#include <cutils/properties.h>
+
 #include <algorithm>
-#include <stdexcept>
-#include <log/log.h>
+#include <array>
 #include <functional>
+#include <stdexcept>
 
 #include "include/MessageQueue.h"
-#include "include/Configurator.h"
 #include "include/PropNames.h"
 #include "include/UbloxReceiver.h"
 
@@ -462,4 +464,4 @@ void PrepareGnssConfig(const std::array<uint8_t, CfgIndex::COUNT>& index,
     }
 }
 
-} //namespace android::hardware::gnss::V2_0::renesas
+} //namespace android::hardware::gnss::V2_1::renesas

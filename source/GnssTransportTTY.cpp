@@ -13,14 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_TAG "GnssRenesasHalTransportTTY"
 #define LOG_NDEBUG 1
 
 #include "include/GnssTransportTTY.h"
 
 #include <libgpio.h>
-#include <unistd.h>
+#include <log/log.h>
 #include <termios.h>
+#include <unistd.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -215,4 +217,4 @@ TError GnssTransportTTY::ResetReceiver() {
     return ret < 0 ? TError::InternalError : TError::Success;
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

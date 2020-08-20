@@ -13,10 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef NMEAGSV_H
+#define NMEAGSV_H
+
+#include <log/log.h>
 
 #include "include/NmeaParserCommon.h"
-#include <iterator>
 
 using GnssSvFlags = ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvFlags;
 using ::android::hardware::gnss::V2_0::GnssConstellationType;
@@ -293,3 +296,5 @@ template <typename T>
 NPError NmeaGsv<T>::ValidateParcel() {
     return NPError::Success;
 }
+
+#endif // NMEAGSV_H

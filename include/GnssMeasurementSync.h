@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
+
+#ifndef GNSSMEASUREMENTSYNC_H
+#define GNSSMEASUREMENTSYNC_H
 
 #include <atomic>
-#include <log/log.h>
 
 class GnssMeasurementSync {
 public:
@@ -37,3 +38,5 @@ private:
 
     std::atomic<int8_t> mEventsToWait;
 };
+
+#endif // GNSSMEASUREMENTSYNC_H

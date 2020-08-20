@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasLocationProvider"
-#include <log/log.h>
 
 #include "include/LocationProvider.h"
+
+#include <log/log.h>
+
 #include "include/GnssMeasurementSync.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
@@ -77,4 +80,4 @@ void LocationProvider::Provide() {
     }
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

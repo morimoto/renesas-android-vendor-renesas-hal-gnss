@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
-#include "include/UbxParserCommon.h"
 
+#ifndef UBXACKNACK_H
+#define UBXACKNACK_H
+
+#include "include/UbxParserCommon.h"
 
 template <typename T>
 class UbxAckNack : public UbxParserCommon<T> {
@@ -135,3 +137,5 @@ UPError UbxAckNack<T>::Parse() {
     mParcel.id = mPayload[AckNackOffst::id];
     return UPError::Success;
 }
+
+#endif // UBXACKNACK_H

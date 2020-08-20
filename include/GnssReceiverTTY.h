@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #ifndef GNSSRECEIVERTTY_H
 #define GNSSRECEIVERTTY_H
 
@@ -48,6 +49,6 @@ public:
     }
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
 
 #endif // GNSSRECEIVERTTY_H
