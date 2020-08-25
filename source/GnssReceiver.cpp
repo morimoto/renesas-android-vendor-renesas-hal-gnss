@@ -13,26 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef IGnssReceiver_H
-#define IGnssReceiver_H
 
-#include "include/IGnssReceiver.h"
+#include "include/GnssReceiver.h"
 
 namespace android::hardware::gnss::V2_1::renesas {
 
-class GnssReceiver : public IGnssReceiver {
-public:
-    GnssReceiver(Transport* transport);
-    virtual std::shared_ptr<Transport> GetTransport() override;
-    bool HasFeature(const Feature ftr) const;
-protected:
-    void SetFeature(const Feature ftr) override;
-private:
-    GnssReceiver(const GnssReceiver&) = delete;
-    std::shared_ptr<Transport> mTransport;
-    uint32_t mFeatures = 0;
-};
+GnssReceiver::GnssReceiver(Transport* transport) : mTransport(transport) {}
 
-} // namespace android::hardware::gnss::V2_1::renesas
+std::shared_ptr<Transport> GnssReceiver::GetTransport() {
+    return mTransport;
+}
 
-#endif // IGnssReceiver_H
+bool GnssReceiver::HasFeature(const Feature ftr) const {
+    return (static_cast<u_int32_t>(ftr) & mFeatures) != 0;
+}
+
+void GnssReceiver::SetFeature(const Feature ftr) {
+    mFeatures |= static_cast<u_int32_t>(ftr);
+}
+
+}  // namespace android::hardware::gnss::V2_1::renesas

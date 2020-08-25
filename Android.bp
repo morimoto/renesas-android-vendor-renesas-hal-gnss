@@ -49,6 +49,7 @@ cc_binary {
         "source/GnssInfoProvider.cpp",
         "source/GnssInfoBuilder.cpp",
         "source/GnssMeasurement.cpp",
+        "source/GnssReceiver.cpp",
         "source/GnssTransport.cpp",
         "source/GnssTransportFake.cpp",
         "source/GnssTransportTTY.cpp",

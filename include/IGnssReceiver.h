@@ -81,6 +81,10 @@ enum SWVersion : uint16_t {
     Unknown,
 };
 
+enum class Feature: uint32_t{
+    ttyDevice = 1,
+};
+
 const uint32_t minBaudRate = 4800;
 const uint32_t maxBaudRate = 460800;
 
@@ -179,7 +183,24 @@ public:
      */
     virtual SWVersion GetSwVersion() = 0;
 
+    /*!
+     * \brief GetTransport
+     * \return
+     */
     virtual std::shared_ptr<Transport> GetTransport() = 0;
+
+    /*!
+     * \brief HasFeature
+     * \return
+     */
+    virtual bool HasFeature(const Feature ftr) const = 0;
+
+protected:
+    /*!
+     * \brief SetFeature
+     * \return
+     */
+    virtual void SetFeature(const Feature ftr) = 0;
 };
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas

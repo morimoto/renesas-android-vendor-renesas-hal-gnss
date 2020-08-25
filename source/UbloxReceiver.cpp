@@ -163,6 +163,7 @@ UbloxReceiver::UbloxReceiver(const std::string& path,
     ALOGV("%s", __func__);
     SetSupportedProtocols();
     SetBaudRate(defaultBaudRate);
+    SetFeature(Feature::ttyDevice);
 
     if (GnssReceiverType::OnboardChip == mReceiverType) {
         GetTransportTTY()->SetOpenReceiverWithReset(true);
@@ -233,4 +234,4 @@ SWVersion UbloxReceiver::GetSwVersion() {
     return mSwVersion;
 }
 
-} // namespace android::hardware::gnss::V2_0::renesas
+} // namespace android::hardware::gnss::V2_1::renesas
