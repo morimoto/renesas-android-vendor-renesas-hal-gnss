@@ -1,4 +1,0 @@
-service gnss-hal /vendor/bin/hw/android.hardware.gnss@1.0-service.renesas
-    class hal
-    user root
-    group root system gps radio usb
