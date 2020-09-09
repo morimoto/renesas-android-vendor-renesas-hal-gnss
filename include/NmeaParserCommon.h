@@ -44,6 +44,9 @@ NPError NmeaParserCommon<T>::Split(std::string& in,
     while (!in.empty()) {
         if ((end = in.find(",")) == std::string::npos) {
             separator = false;
+            if ((end = in.find("*")) != std::string::npos) {
+                in.erase(end, in.length() - end);
+            }
             end = in.length();
         }
 
