@@ -23,3 +23,23 @@ NPError NmeaGsa<SvInfoFixOutType>::GetData(SvInfoFixOutType out) {
 
     return NPError::Success;
 }
+
+size_t talkerIdToGnssId(std::string talkerId) {
+    size_t firstCharIndex = 0;
+
+    if ('$' == talkerId[firstCharIndex]) {
+        talkerId = talkerId.erase(firstCharIndex, 1);
+    }
+
+    for (size_t gnssId = 0; gnssId < sizeof(NmeaCallerIdGnssIdPair) /
+                                         sizeof(NmeaCallerIdGnssIdPair[0]);
+         ++gnssId) {
+        if (0 == talkerId.compare(firstCharIndex,
+                                  2,  // only two character to compare
+                                  NmeaCallerIdGnssIdPair[gnssId].first)) {
+            return NmeaCallerIdGnssIdPair[gnssId].second;
+        }
+    }
+
+    return 0;
+}

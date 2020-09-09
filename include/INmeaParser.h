@@ -68,6 +68,9 @@ enum NmeaConstellationId : size_t {
     COUNT         = 5,
 };
 
+static std::pair<std::string, size_t> NmeaCallerIdGnssIdPair[] = {
+    {"GP", 0}, {"GN", 0}, {"GL", 6}, {"GA", 2}, {"GB", 3}};
+
 template <typename T>
 class INmeaParser {
 public:
@@ -128,3 +131,5 @@ typedef struct {
 } SvInfoFixType;
 typedef SvInfoFixType& SvInfoFixOutType;
 typedef std::shared_ptr<INmeaParser<SvInfoFixOutType>> SvInfoFixQueueType;
+
+size_t talkerIdToGnssId(std::string talkerId);

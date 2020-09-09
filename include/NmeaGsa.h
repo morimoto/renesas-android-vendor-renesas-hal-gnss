@@ -44,6 +44,7 @@ private:
     } parcel_t;
 
     enum GsaOfst : size_t {
+        talkerId = 0,
         SvBegin = 3, // Start of repeated block (12 times)
         SvEnd = 15,  // End of repeated block
         SystemId = 18,
@@ -137,6 +138,8 @@ NPError NmeaGsa<T>::ParseCommon(std::vector<std::string>& gsa) {
     if (NmeaVersion::NMEAv41 <= mCurrentProtocol) {
         mParcel.gnssId =
             strtoul(gsa[GsaOfst::SystemId].c_str(), nullptr, base) - 1;
+    } else {
+        mParcel.gnssId = talkerIdToGnssId(gsa[GsaOfst::talkerId]);
     }
     // Active satellites used for navigation
     for (auto gsaPart = static_cast<size_t>(GsaOfst::SvBegin);
