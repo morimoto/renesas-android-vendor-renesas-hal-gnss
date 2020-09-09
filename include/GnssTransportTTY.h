@@ -23,6 +23,12 @@ namespace android::hardware::gnss::V2_0::renesas {
 class GnssTransportTTY: public Transport {
 public:
     GnssTransportTTY(const std::string &filePath);
+
+     /*!
+     * \brief GnssTransportTTY - destructor
+     */
+    virtual ~GnssTransportTTY();
+
     /*!
      * \brief GetBaudRate
      * \return

@@ -111,7 +111,7 @@ protected:
     /*!
      * \brief Close
      */
-    virtual TError Close() = 0;
+    virtual TError Close();
 
     /*!
      * \brief SetUp

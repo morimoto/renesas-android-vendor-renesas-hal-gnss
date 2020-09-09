@@ -25,13 +25,15 @@ namespace android::hardware::gnss::V2_0::renesas {
 
 TError Transport::SetUp() {
     ALOGV("%s", __func__);
-    return TError::TransportReady;
+    mState = TError::TransportReady;
+    return mState;
 }
 
 TError Transport::Reset() {
     ALOGV("%s", __func__);
-    mState = Close();
-    return Open();
+    Close();
+    mState = Open();
+    return mState;
 }
 
 TError Transport::GetTransportState() {
@@ -71,6 +73,11 @@ Endian Transport::GetEndianType() const {
 
 std::string Transport::GetPath() const {
     return mFilePath;
+}
+
+TError Transport::Close() {
+    mState = TError::TransportNotReady;
+    return mState;
 }
 
 } // namespace android::hardware::gnss::V2_0::renesas

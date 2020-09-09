@@ -31,14 +31,32 @@ GnssTransportTTY::GnssTransportTTY(const std::string &filePath):
     Transport(filePath), mBaudRate(badBaudRate), mFd(closedFd) {
 }
 
+GnssTransportTTY::~GnssTransportTTY() {
+    if (closedFd != mFd) {
+        Close();
+    }
+}
+
 TError GnssTransportTTY::SetBaudRate(const uint32_t& baudrate) {
+    TError status = TError::TransportReady;
+    uint32_t oldBaudRate = mBaudRate;
     mBaudRate = baudrate;
-    return (closedFd >= mFd) ? TError::TransportReady : SetUp();
+
+    if (mFd > closedFd && baudrate != oldBaudRate) {
+        status = SetUp();
+    }
+
+    if (TError::TransportReady != status) {
+        mBaudRate = oldBaudRate;
+    }
+
+    return status;
 }
 
 TError GnssTransportTTY::SetUp() {
     // Setup serial port
-    ALOGI("%s, baudrate: %u", __func__, mBaudRate);
+    ALOGI("%s, baudrate: %u for fd %d (%s)", __func__, mBaudRate, mFd,
+          GetPath().c_str());
     struct termios ios;
 
     if (tcdrain(mFd)) {
@@ -147,7 +165,7 @@ TError GnssTransportTTY::Close() {
         mFd = closedFd;
     }
 
-    return TError::TransportNotReady;
+    return Transport::Close();
 }
 
 TError GnssTransportTTY::WriteData(const std::vector<uint8_t> &toWrite) {

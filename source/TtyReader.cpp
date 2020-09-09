@@ -222,7 +222,12 @@ RDError TtyReader::SetUpNotificationCallback(cbPtr notificationCb) {
 RDError TtyReader::Start() {
     ALOGV("%s", __func__);
 
-    if (TError::TransportReady != mTransport->Reset()) {
+    TError status = mTransport->GetTransportState();
+    if (TError::TransportReady != status) {
+        status = mTransport->Reset();
+    }
+
+    if (TError::TransportReady != status) {
         return RDError::TransportError;
     }
 
