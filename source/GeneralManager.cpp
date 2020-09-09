@@ -59,7 +59,6 @@ void GeneralManager::StopToChange() {
     if (nullptr != mReader) {
         mReceiverStatus = GnssReceiverStatus::WAIT_FOR_RECEIVER;
         mReader->Stop();
-        mReceiver->GetTransport()->Reset();
         mReader = nullptr;
     }
 }
@@ -74,7 +73,6 @@ void GeneralManager::StartAfterChange() {
     } else if (mIsRun) {
         mReceiverStatus = GnssReceiverStatus::RECEIVER_FOUND;
         std::shared_ptr<Transport> transport = mReceiver->GetTransport();
-        transport->Reset();
         mReader = std::make_unique<TtyReader>(transport);
         mReader->Start();
         RunConfig();
