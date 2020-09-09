@@ -192,7 +192,7 @@ void DeviceScanner::InsertNewReceiver(const std::string& path, DevId devId) {
             break;
         default:
             CreateDefaultReceiver(path, GnssReceiverType::UsbDongle,
-                                  Priority::UbxUsb);
+                                  Priority::Default);
     }
 }
 
