@@ -126,6 +126,14 @@ size_t pt_idx = 0;
                         ALOGE("%s: Unable to invoke gnssLocationCb_2_0", __func__);
                     }
                 }
+                if (mGnssCallback_2_1) {
+                    ALOGV("%s, Provide fake location callback_2_1", __func__);
+                    auto ret = mGnssCallback_2_1->gnssLocationCb_2_0(data.front());
+
+                    if (!ret.isOk()) {
+                        ALOGE("%s: Unable to invoke gnssLocationCb_2_1", __func__);
+                    }
+                }
                 data.pop();
                 usleep(mUpdateIntervalUs);
             }
