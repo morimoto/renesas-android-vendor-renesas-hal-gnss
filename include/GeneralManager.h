@@ -138,6 +138,14 @@ public:
      */
     bool IsRun();
 
+    /*!
+     * \brief setGnssVisibilityControl - set gnss visibility control
+     * pointer in location provider
+     * \param gnssVisibilityControl gnss visibility control ptr
+     * \return
+     */
+    void setGnssVisibilityControl(sp<GnssVisibilityControlV1_0>& gnssVisibilityControl);
+
 protected:
     /*!
      * \brief SetupLocationProvider

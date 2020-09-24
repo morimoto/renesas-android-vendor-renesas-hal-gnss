@@ -62,6 +62,11 @@ void LocationProvider::Provide() {
                     if (!ret.isOk()) {
                         ALOGE("%s: Unable to invoke gnssLocationCb_2_0", __func__);
                     }
+
+                    if (mGnssVisibilityControl){
+                        mGnssVisibilityControl->sendNfwNotificationMsg(
+                            mGnssCallback_2_0->descriptor);
+                    }
                 }
                 if (mGnssCallback_2_1) {
                     ALOGV("%s, Provide location callback_2_1", __PRETTY_FUNCTION__);
@@ -69,6 +74,11 @@ void LocationProvider::Provide() {
 
                     if (!ret.isOk()) {
                         ALOGE("%s: Unable to invoke gnssLocationCb_2_1", __func__);
+                    }
+
+                    if (mGnssVisibilityControl){
+                        mGnssVisibilityControl->sendNfwNotificationMsg(
+                            mGnssCallback_2_1->descriptor);
                     }
                 }
             } else {

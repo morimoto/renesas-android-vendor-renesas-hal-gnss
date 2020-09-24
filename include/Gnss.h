@@ -57,6 +57,7 @@ private:
     std::shared_ptr<GeneralManager> mGeneralManager;
     sp<GnssConfiguration> mGnssConfig;
     sp<GnssBatching> mGnssBatching;
+    sp<GnssVisibilityControlV1_0> mGnssVisibilityControl;
 
 public:
     // Methods from ::android::hardware::gnss::V1_0::IGnss follow.

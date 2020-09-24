@@ -70,4 +70,9 @@ void LocationProviderBase::SetEnabled(bool isEnabled) {
     mEnabled = isEnabled;
 }
 
+void LocationProviderBase::setGnssVisibilityControl(
+        sp<GnssVisibilityControlV1_0>& gnssVisibilityControl){
+    mGnssVisibilityControl = gnssVisibilityControl;
+}
+
 } // namespace android::hardware::gnss::V2_1::renesas

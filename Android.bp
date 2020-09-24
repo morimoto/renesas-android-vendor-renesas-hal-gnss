@@ -53,6 +53,7 @@ cc_binary {
         "source/GnssTransport.cpp",
         "source/GnssTransportFake.cpp",
         "source/GnssTransportTTY.cpp",
+        "source/GnssVisibilityControl.cpp",
         "source/LocationProviderBase.cpp",
         "source/LocationProvider.cpp",
         "source/LocationBuilder.cpp",

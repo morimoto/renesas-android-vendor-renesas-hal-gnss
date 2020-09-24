@@ -369,4 +369,9 @@ bool GeneralManager::IsRun() {
     return mIsRun;
 }
 
+void GeneralManager::setGnssVisibilityControl(
+        sp<GnssVisibilityControlV1_0>& gnssVisibilityControl){
+    mLocationProvider->setGnssVisibilityControl(gnssVisibilityControl);
+}
+
 } // namespace android::hardware::gnss::V2_1::renesas

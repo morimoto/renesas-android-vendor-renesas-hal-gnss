@@ -280,8 +280,12 @@ GnssImpl::getExtensionMeasurementCorrections() {
 
 Return<sp<::android::hardware::gnss::visibility_control::V1_0::IGnssVisibilityControl>>
 GnssImpl::getExtensionVisibilityControl() {
-    // TODO implement
-    return ::android::sp<::android::hardware::gnss::visibility_control::V1_0::IGnssVisibilityControl> {};
+    if(!mGnssVisibilityControl) {
+        mGnssVisibilityControl = new GnssVisibilityControlV1_0();
+    }
+
+    mGeneralManager->setGnssVisibilityControl(mGnssVisibilityControl);
+    return mGnssVisibilityControl;
 }
 
 Return<sp<::android::hardware::gnss::V2_0::IGnssBatching>>

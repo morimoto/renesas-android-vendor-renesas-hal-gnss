@@ -41,6 +41,9 @@ public:
     void setCallback_2_0(GnssCallback_2_0& cb) override;
     void setCallback_2_1(GnssCallback_2_1& cb) override;
     void SetEnabled(bool isEnabled) override;
+    void setGnssVisibilityControl(
+        sp<GnssVisibilityControlV1_0>& gnssVisibilityControl) override;
+
 protected:
     /*!
      * \brief Provide
@@ -55,6 +58,7 @@ protected:
     GnssCallback_2_1 mGnssCallback_2_1;
     std::atomic<bool> mEnabled;
     uint32_t mUpdateIntervalUs;
+    sp<GnssVisibilityControlV1_0> mGnssVisibilityControl;
 private:
     LocationProviderBase(LocationProviderBase&) = delete;
     LocationProviderBase& operator=(const LocationProviderBase&) = delete;
