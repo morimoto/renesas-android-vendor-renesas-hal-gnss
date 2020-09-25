@@ -17,9 +17,9 @@
 #include "include/UbxNavClock.h"
 
 using GnssData =
-    android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData;
+    android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData;
 using GnssCF =
-    android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssClockFlags;
+    android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssClockFlags;
 
 static constexpr uint16_t gnssClockFlags = static_cast<uint16_t>
         (GnssCF::HAS_BIAS | GnssCF::HAS_BIAS_UNCERTAINTY |
@@ -32,12 +32,12 @@ UPError UbxNavClock<GnssData*>::GetData(GnssData* out) {
         return UPError::InvalidData;
     }
 
-    out->clock.biasNs = static_cast<int64_t>(mParcel.clockBias);
-    out->clock.driftNsps = static_cast<double>(mParcel.clockDrift);
-    out->clock.biasUncertaintyNs = static_cast<double>(mParcel.timeAccuracy);
-    out->clock.driftUncertaintyNsps = ScaleDown(mParcel.freqAccuracyEstimate,
+    out->clock.v1_0.biasNs = static_cast<int64_t>(mParcel.clockBias);
+    out->clock.v1_0.driftNsps = static_cast<double>(mParcel.clockDrift);
+    out->clock.v1_0.biasUncertaintyNs = static_cast<double>(mParcel.timeAccuracy);
+    out->clock.v1_0.driftUncertaintyNsps = ScaleDown(mParcel.freqAccuracyEstimate,
                                       psToNsScale);
-    out->clock.hwClockDiscontinuityCount = 0;
-    out->clock.gnssClockFlags |= gnssClockFlags;
+    out->clock.v1_0.hwClockDiscontinuityCount = 0;
+    out->clock.v1_0.gnssClockFlags |= gnssClockFlags;
     return UPError::Success;
 }

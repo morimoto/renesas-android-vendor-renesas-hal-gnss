@@ -29,7 +29,7 @@
 #include "include/UbxRxmMeasx.h"
 
 using GnssData =
-    android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData;
+    android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData;
 
 UbxMsgHandler::UbxMsgHandler(const UbxProtocolVersion& protocol) :
     mExitThread(false),

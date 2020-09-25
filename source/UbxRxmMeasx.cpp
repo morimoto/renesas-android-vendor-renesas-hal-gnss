@@ -19,7 +19,7 @@
 #include "include/UbxRxmMeasx.h"
 
 using GnssData =
-    android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData;
+    android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData;
 
 static constexpr double pseudorangeRateScaleUp = 0.04;
 
@@ -52,7 +52,7 @@ float UbxRxmMeasx<GnssData*>::GetCarrierFrequencyFromGnssId(
 template<>
 UPError UbxRxmMeasx<GnssData*>::GetGnssMeasurement(
     repeatedBlock_t& block, GnssMeasx& measurement) {
-    auto& meas_v1_0 = measurement.v1_1.v1_0;
+    auto& meas_v1_0 = measurement.v2_0.v1_1.v1_0;
     UbxGnssId id = static_cast<UbxGnssId>(block.gnssId);
     meas_v1_0.carrierFrequencyHz = GetCarrierFrequencyFromGnssId(
                                        static_cast<UbxGnssId>
@@ -65,11 +65,11 @@ UPError UbxRxmMeasx<GnssData*>::GetGnssMeasurement(
     }
 
     meas_v1_0.svid = GetValidSvidForGnssId(id, block.svId);
-    measurement.codeType = "C";
-    measurement.constellation = GetConstellationFromGnssId(id);
-    GetTowForGnssId(id, meas_v1_0.receivedSvTimeInNs, measurement.state);
+    measurement.v2_0.codeType = "C";
+    measurement.v2_0.constellation = GetConstellationFromGnssId(id);
+    GetTowForGnssId(id, meas_v1_0.receivedSvTimeInNs, measurement.v2_0.state);
     GetTowAccForGnssId(id, meas_v1_0.receivedSvTimeUncertaintyInNs,
-                       measurement.state);
+                       measurement.v2_0.state);
     meas_v1_0.cN0DbHz = static_cast<double>(block.cn0);
     meas_v1_0.multipathIndicator = (block.multipath == 0) ?
                                    GnssMI::INDICATIOR_NOT_PRESENT :

@@ -17,13 +17,13 @@
 #include "include/UbxNavStatus.h"
 
 using GnssData =
-    android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData;
+    android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData;
 
 template <>
 UPError UbxNavStatus<GnssData*>::GetData(GnssData* out) {
     if (mIsValid) {
-        out->clock.fullBiasNs -= (out->clock.timeNs - mTimeNano);
-        out->clock.timeNs = mTimeNano;
+        out->clock.v1_0.fullBiasNs -= (out->clock.v1_0.timeNs - mTimeNano);
+        out->clock.v1_0.timeNs = mTimeNano;
         return UPError::Success;
     }
 

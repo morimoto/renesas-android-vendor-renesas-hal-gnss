@@ -31,7 +31,7 @@
  * Description: Satellite Measurements for RRLP
 */
 
-using ::android::hardware::gnss::V2_0::IGnssMeasurementCallback;
+using ::android::hardware::gnss::V2_1::IGnssMeasurementCallback;
 using ::android::hardware::gnss::V2_0::GnssConstellationType;
 
 typedef IGnssMeasurementCallback::GnssMeasurementState GnssMs;

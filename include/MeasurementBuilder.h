@@ -31,7 +31,7 @@ enum MBError : int8_t {
     EMPTY = -102        // no parsers in MessageQueue
 };
 
-typedef android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData GnssData;
+typedef android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData GnssData;
 typedef std::shared_ptr<IUbxParser<GnssData*>> MBType;
 typedef std::map<UbxMsg, MBType> MBParserMap;
 

@@ -70,7 +70,8 @@ GnssMeasurement::setCallback(const
 Return<void> GnssMeasurement::close() {
     if (mGnssMeasurementsCbIface_1_0 == nullptr
         && mGnssMeasurementsCbIface_1_1 == nullptr
-        && mGnssMeasurementsCbIface_2_0 == nullptr) {
+        && mGnssMeasurementsCbIface_2_0 == nullptr
+        && mGnssMeasurementsCbIface_2_1 == nullptr) {
         return Void();
     }
 
@@ -84,6 +85,7 @@ Return<void> GnssMeasurement::close() {
     mGnssMeasurementsCbIface_1_0 = nullptr;
     mGnssMeasurementsCbIface_1_1 = nullptr;
     mGnssMeasurementsCbIface_2_0 = nullptr;
+    mGnssMeasurementsCbIface_2_1 = nullptr;
     return Void();
 }
 
@@ -155,10 +157,36 @@ GnssMeasurement::setCallback_2_0(const
 }
 
 // Methods from V2_1::IGnssMeasurement follow.
-Return<V1_0::IGnssMeasurement::GnssMeasurementStatus> GnssMeasurement::setCallback_2_1(
-        const sp<V2_1::IGnssMeasurementCallback>& callback, bool) {
-    //TODO implement
-    return V1_0::IGnssMeasurement::GnssMeasurementStatus::SUCCESS;
+Return<V1_0::IGnssMeasurement::GnssMeasurementStatus>
+GnssMeasurement::setCallback_2_1(const
+    sp<V2_1::IGnssMeasurementCallback>& callback, bool enableFullTracking) {
+    ALOGV("%s", __func__);
+
+    if (mGnssMeasurementsCbIface_2_1 != nullptr) {
+        ALOGE("%s: GnssMeasurementCallback already inited", __func__);
+        return GnssMeasurementStatus::ERROR_ALREADY_INIT;
+    }
+
+    if (enableFullTracking) {
+        ALOGV("Full tracking enabled");
+    }
+
+    mGnssMeasurementsCbIface_2_1 = callback;
+
+    if (callback != nullptr) {
+        auto& syncInstance = GnssMeasurementSync::GetInstance();
+        syncInstance.SetEventsToWait(gnssMeasxExpectedBeforeLocation);
+
+        if (!mProvider) {
+            mProvider = std::make_unique<MeasurementProvider>();
+            mProvider->StartProviding();
+        }
+
+        mProvider->setMeasxCallback_2_1(mGnssMeasurementsCbIface_2_1);
+        mProvider->setEnabled(true);
+    }
+
+    return GnssMeasurementStatus::SUCCESS;
 }
 
 }  // namespace android::hardware::gnss::V2_1::renesas

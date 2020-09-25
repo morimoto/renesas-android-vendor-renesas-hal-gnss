@@ -51,18 +51,24 @@ void MeasurementProvider::Provide() {
     auto& syncInstance = GnssMeasurementSync::GetInstance();
 
     while (!mThreadExit) {
-        GnssData_2_0 data = {};
-        auto error = mBuilder->Build(data);
+        GnssData_2_1 data_2_1 = {};
+        GnssData_2_0 data_2_0 = {};
+        auto error = mBuilder->Build(data_2_1);
+
+        data_2_0 = DataV2_1ToDataV2_0(data_2_1);
 
         if (mEnabled && error == MBError::SUCCESS) {
             if (mGnssMeasurementsCbIface_1_0) {
-                mGnssMeasurementsCbIface_1_0->GnssMeasurementCb(DataV2_0ToDataV1_0(data));
+                mGnssMeasurementsCbIface_1_0->GnssMeasurementCb(DataV2_0ToDataV1_0(data_2_0));
             }
             if (mGnssMeasurementsCbIface_1_1) {
-                mGnssMeasurementsCbIface_1_1->gnssMeasurementCb(DataV2_0ToDataV1_1(data));
+                mGnssMeasurementsCbIface_1_1->gnssMeasurementCb(DataV2_0ToDataV1_1(data_2_0));
             }
             if (mGnssMeasurementsCbIface_2_0) {
-                mGnssMeasurementsCbIface_2_0->gnssMeasurementCb_2_0(data);
+                mGnssMeasurementsCbIface_2_0->gnssMeasurementCb_2_0(data_2_0);
+            }
+            if (mGnssMeasurementsCbIface_2_1) {
+                mGnssMeasurementsCbIface_2_1->gnssMeasurementCb_2_1(data_2_1);
             }
             syncInstance.NotifyEventOccured();
         }
@@ -84,11 +90,16 @@ void MeasurementProvider::setMeasxCallback_2_0(IGnssMeasxCb_2_0 measxCb) {
     mGnssMeasurementsCbIface_2_0 = measxCb;
 }
 
+void MeasurementProvider::setMeasxCallback_2_1(IGnssMeasxCb_2_1 measxCb)
+{
+    mGnssMeasurementsCbIface_2_1 = measxCb;
+}
+
 void MeasurementProvider::setEnabled(bool isEnabled) {
     mEnabled = isEnabled;
 }
 
-GnssData_1_0    MeasurementProvider::DataV2_0ToDataV1_0(const GnssData_2_0& data_2_0) {
+GnssData_1_0 MeasurementProvider::DataV2_0ToDataV1_0(const GnssData_2_0& data_2_0) {
     GnssData_1_0 data_1_0;
     data_1_0.measurementCount = data_2_0.measurements.size();
     for (size_t i = 0; i < data_2_0.measurements.size(); i++) {
@@ -98,7 +109,7 @@ GnssData_1_0    MeasurementProvider::DataV2_0ToDataV1_0(const GnssData_2_0& data
     return data_1_0;
 }
 
-GnssData_1_1    MeasurementProvider::DataV2_0ToDataV1_1(const GnssData_2_0& data_2_0) {
+GnssData_1_1 MeasurementProvider::DataV2_0ToDataV1_1(const GnssData_2_0& data_2_0) {
     GnssData_1_1 data_1_1;
     data_1_1.measurements.resize(data_2_0.measurements.size());
     for (size_t i = 0; i < data_2_0.measurements.size(); i++) {
@@ -106,6 +117,18 @@ GnssData_1_1    MeasurementProvider::DataV2_0ToDataV1_1(const GnssData_2_0& data
     }
     data_1_1.clock = data_2_0.clock;
     return data_1_1;
+}
+
+GnssData_2_0 MeasurementProvider::DataV2_1ToDataV2_0(const GnssData_2_1 &data_2_1)
+{
+    GnssData_2_0 data_2_0;
+    data_2_0.measurements.resize(data_2_1.measurements.size());
+    for (size_t i = 0; i < data_2_1.measurements.size(); i++) {
+        data_2_0.measurements[i] = data_2_1.measurements[i].v2_0;
+    }
+    data_2_0.clock=data_2_1.clock.v1_0;
+    data_2_0.elapsedRealtime = data_2_1.elapsedRealtime;
+    return data_2_0;
 }
 
 }

@@ -17,7 +17,7 @@
 #include "include/UbxNavTimeGps.h"
 
 using GnssData =
-    android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData;
+    android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData;
 
 // Difference between hardware clock epoch time and GPS epoch time in hours
 const long kGpsTimeBaseDifferenceHours = 87768;
@@ -49,20 +49,20 @@ UPError UbxNavTimeGps<GnssData*>::GetData(GnssData* out) {
         return UPError::InvalidData;
     }
 
-    out->clock.timeNs = GpsTimeToSystemTime(mParcel.week, mParcel.iTow) *
+    out->clock.v1_0.timeNs = GpsTimeToSystemTime(mParcel.week, mParcel.iTow) *
                             kNanoSecondsInOneSecond +
                         mParcel.fTow;
     // Full bias will be difference between system and GPS time
     // as receiver local time is a mapping of
     // the local 1 kHz reference onto a GNSS time-base - 9.1 Receiver Local Time
-    out->clock.fullBiasNs =
-        out->clock.timeNs -
+    out->clock.v1_0.fullBiasNs =
+        out->clock.v1_0.timeNs -
         GpsTimeInSeconds(mParcel.week, mParcel.iTow) * kNanoSecondsInOneSecond +
         mParcel.fTow;
-    out->clock.biasNs            = mParcel.fTow;
-    out->clock.biasUncertaintyNs = static_cast<double>(mParcel.tAcc);
-    out->clock.timeUncertaintyNs = static_cast<double>(mParcel.tAcc);
-    out->clock.leapSecond        = mParcel.leapS;
-    out->clock.gnssClockFlags    = mClockFlags;
+    out->clock.v1_0.biasNs            = mParcel.fTow;
+    out->clock.v1_0.biasUncertaintyNs = static_cast<double>(mParcel.tAcc);
+    out->clock.v1_0.timeUncertaintyNs = static_cast<double>(mParcel.tAcc);
+    out->clock.v1_0.leapSecond        = mParcel.leapS;
+    out->clock.v1_0.gnssClockFlags    = mClockFlags;
     return UPError::Success;
 }

@@ -56,6 +56,7 @@ MBError MeasurementBuilder::Build(GnssData& outData) {
         parser = elem.second;
 
         if (!parser->IsValid()) {
+            ALOGV("%s: parser with invalid data", __func__);
             return MBError::INVALID;
         }
 
