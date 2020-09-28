@@ -213,7 +213,7 @@ GMError GeneralManager::SetCallbackV2_1(const GnssCbPtr_2_1& cb) {
 
     mLocationProvider->setCallback_2_1(mGnssCallback_2_1);
 
-    if (GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
+    if (!mReceiver || GnssReceiverType::FakeReceiver != mReceiver->GetReceiverType()) {
         mSvInfoProvider->setCallback_2_1(mGnssCallback_2_1);
     }
 
