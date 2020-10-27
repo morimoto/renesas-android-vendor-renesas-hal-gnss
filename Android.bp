@@ -23,13 +23,26 @@ cc_binary {
         "android.hardware.gnss@1.1-service.renesas.xml",
         "android.hardware.gnss@2.1-service.renesas.xml"],
 
-    cflags: [
+    defaults: [
+        "hal_defaults",
+    ],
+
+    cpp_std: "gnu++17",
+
+    cppflags: [
         "-Werror",
         "-Wall",
         "-Wno-unused-parameter",
-        "-O0",
         "-fexceptions",
     ],
+
+    product_variables: {
+        eng: {
+           cppflags: [
+               "-ggdb",
+           ],
+        }
+    },
 
     srcs: [
         "source/AGnss.cpp",
