@@ -17,7 +17,7 @@
 #ifndef UBXPARSERCOMMON_H
 #define UBXPARSERCOMMON_H
 
-#include "include/IUbxParser.h"
+#include <IUbxParser.h>
 
 enum class Endianess : uint8_t {
     Little,

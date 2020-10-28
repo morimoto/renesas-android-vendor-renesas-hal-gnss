@@ -21,7 +21,7 @@
 
 #include <queue>
 
-#include "include/IGnssReceiver.h"
+#include <IGnssReceiver.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 class GeneralManager;

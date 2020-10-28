@@ -24,7 +24,7 @@
 #include <iomanip>
 #endif
 
-#include "include/GnssInfoBuilder.h"
+#include <GnssInfoBuilder.h>
 
 using std::chrono::steady_clock;
 using std::chrono::duration_cast;

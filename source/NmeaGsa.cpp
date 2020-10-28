@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/NmeaGsa.h"
+#include <NmeaGsa.h>
 
 template<>
 NPError NmeaGsa<SvInfoFixOutType>::GetData(SvInfoFixOutType out) {

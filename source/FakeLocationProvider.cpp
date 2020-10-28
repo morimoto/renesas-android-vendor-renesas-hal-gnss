@@ -17,7 +17,7 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasFakeLocationProvider"
 
-#include "include/FakeLocationProvider.h"
+#include <FakeLocationProvider.h>
 
 #include <log/log.h>
 

@@ -19,7 +19,7 @@
 
 #include <android/hardware/gnss/2.0/IGnssCallback.h>
 #include <android/hardware/gnss/2.1/IGnssCallback.h>
-#include "include/GnssVisibilityControl.h"
+#include <GnssVisibilityControl.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 using GnssCallback_1_0

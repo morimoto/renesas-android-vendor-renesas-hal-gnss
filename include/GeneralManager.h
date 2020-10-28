@@ -17,13 +17,13 @@
 #ifndef GENERALMANAGER_H
 #define GENERALMANAGER_H
 
-#include "include/Configurator.h"
-#include "include/GnssInfoProvider.h"
-#include "include/GnssMeasurement.h"
-#include "include/ILocationProvider.h"
-#include "include/IReader.h"
-#include "include/NmeaMsgHandler.h"
-#include "include/UbloxMsgHandler.h"
+#include <Configurator.h>
+#include <GnssInfoProvider.h>
+#include <GnssMeasurement.h>
+#include <ILocationProvider.h>
+#include <IReader.h>
+#include <NmeaMsgHandler.h>
+#include <UbloxMsgHandler.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

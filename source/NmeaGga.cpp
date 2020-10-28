@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/NmeaGga.h"
+#include <NmeaGga.h>
 
 #include <log/log.h>
 

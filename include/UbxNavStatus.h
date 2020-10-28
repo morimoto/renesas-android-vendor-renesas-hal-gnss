@@ -17,7 +17,7 @@
 #ifndef UBXNAVSTATUS_H
 #define UBXNAVSTATUS_H
 
-#include "include/UbxParserCommon.h"
+#include <UbxParserCommon.h>
 
 template <typename T>
 class UbxNavStatus : public UbxParserCommon<T> {

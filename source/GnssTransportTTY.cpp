@@ -17,7 +17,7 @@
 #define LOG_TAG "GnssRenesasHalTransportTTY"
 #define LOG_NDEBUG 1
 
-#include "include/GnssTransportTTY.h"
+#include <GnssTransportTTY.h>
 
 #include <libgpio.h>
 #include <log/log.h>

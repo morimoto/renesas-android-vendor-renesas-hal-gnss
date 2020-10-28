@@ -17,7 +17,7 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasLocationBuilder"
 
-#include "include/LocationBuilder.h"
+#include <LocationBuilder.h>
 
 #include <log/log.h>
 #include <utils/SystemClock.h>

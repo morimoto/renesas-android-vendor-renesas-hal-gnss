@@ -19,7 +19,7 @@
 
 #include <thread>
 
-#include "include/IReader.h"
+#include <IReader.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

@@ -17,7 +17,7 @@
 #ifndef NMEAPUBX00_H
 #define NMEAPUBX00_H
 
-#include "include/NmeaParserCommon.h"
+#include <NmeaParserCommon.h>
 
 using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/UbxNavTimeGps.h"
+#include <UbxNavTimeGps.h>
 
 using GnssData =
     android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData;

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "include/FakeReceiver.h"
+#include <FakeReceiver.h>
 
-#include "include/GnssTransportFake.h"
+#include <GnssTransportFake.h>
 
 namespace android::hardware::gnss::V2_1::renesas{
 

@@ -18,7 +18,7 @@
 #define LOG_TAG "GnssRenesasHalUbloxReceiver"
 #define LOG_NDEBUG 1
 
-#include "include/UbloxReceiver.h"
+#include <UbloxReceiver.h>
 
 #include <log/log.h>
 

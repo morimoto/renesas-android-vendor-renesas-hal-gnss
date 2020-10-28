@@ -16,7 +16,7 @@
 #define LOG_TAG "GnssRenesasVisibilityControl"
 #define LOG_NDEBUG 1
 
-#include "include/GnssVisibilityControl.h"
+#include <GnssVisibilityControl.h>
 
 #include <log/log.h>
 #include <utils/SystemClock.h>

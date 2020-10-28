@@ -17,7 +17,7 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasConfiguration"
 
-#include "include/GnssConfiguration.h"
+#include <GnssConfiguration.h>
 
 #include <log/log.h>
 

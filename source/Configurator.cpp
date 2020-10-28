@@ -17,7 +17,7 @@
 #define LOG_TAG "GnssRenesasHalConfigurator"
 #define LOG_NDEBUG 1
 
-#include "include/Configurator.h"
+#include <Configurator.h>
 
 #include <cutils/properties.h>
 
@@ -26,9 +26,9 @@
 #include <functional>
 #include <stdexcept>
 
-#include "include/MessageQueue.h"
-#include "include/PropNames.h"
-#include "include/UbloxReceiver.h"
+#include <MessageQueue.h>
+#include <PropNames.h>
+#include <UbloxReceiver.h>
 
 #ifdef BIG_ENDIAN_CPU
 static inline uint32_t cpu_to_le32(uint32_t value) {

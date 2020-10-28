@@ -17,7 +17,7 @@
 #ifndef UBXNAVCLOCK_H
 #define UBXNAVCLOCK_H
 
-#include "include/UbxParserCommon.h"
+#include <UbxParserCommon.h>
 
 // Using offsets according to the protocol description of UBX-NAV-CLOCK
 enum NavClockOffsets : uint8_t {

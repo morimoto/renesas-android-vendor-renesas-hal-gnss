@@ -19,7 +19,7 @@
 
 #include <log/log.h>
 
-#include "include/NmeaParserCommon.h"
+#include <NmeaParserCommon.h>
 
 using GnssSvFlags = ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvFlags;
 using ::android::hardware::gnss::V2_0::GnssConstellationType;

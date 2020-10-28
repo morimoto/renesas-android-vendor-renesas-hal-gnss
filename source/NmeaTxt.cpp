@@ -17,7 +17,7 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasHalNmeaTxt"
 
-#include "include/NmeaTxt.h"
+#include <NmeaTxt.h>
 
 template <>
 NPError NmeaTxt<std::string&>::GetData(std::string& out){

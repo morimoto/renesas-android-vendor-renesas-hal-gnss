@@ -17,7 +17,7 @@
 #ifndef UBXNAVTIMEGPS_H
 #define UBXNAVTIMEGPS_H
 
-#include "include/UbxParserCommon.h"
+#include <UbxParserCommon.h>
 
 using GnssCF =
     android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssClockFlags;

@@ -17,7 +17,7 @@
 #ifndef DEFAULTRECEIVER_H
 #define DEFAULTRECEIVER_H
 
-#include "include/GnssReceiverTTY.h"
+#include <GnssReceiverTTY.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

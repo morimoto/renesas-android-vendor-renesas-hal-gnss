@@ -17,7 +17,7 @@
 #ifndef FAKERECEIVER_H
 #define FAKERECEIVER_H
 
-#include "include/GnssReceiver.h"
+#include <GnssReceiver.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

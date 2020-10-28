@@ -17,8 +17,8 @@
 #ifndef LOCATIONPROVIDER_H
 #define LOCATIONPROVIDER_H
 
-#include "include/LocationBuilder.h"
-#include "include/LocationProviderBase.h"
+#include <LocationBuilder.h>
+#include <LocationProviderBase.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

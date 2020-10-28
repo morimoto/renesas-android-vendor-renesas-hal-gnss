@@ -22,8 +22,8 @@
 #include <hidl/HidlTransportSupport.h>
 #include <log/log.h>
 
-#include "include/GeneralManager.h"
-#include "include/Gnss.h"
+#include <GeneralManager.h>
+#include <Gnss.h>
 
 //TODO: try to use LazyServiceRegistrar registrar();
 

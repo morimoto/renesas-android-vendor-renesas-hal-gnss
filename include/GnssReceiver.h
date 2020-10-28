@@ -17,7 +17,7 @@
 #ifndef GNSSRECEIVER_H
 #define GNSSRECEIVER_H
 
-#include "include/IGnssReceiver.h"
+#include <IGnssReceiver.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

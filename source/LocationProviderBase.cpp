@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/LocationProviderBase.h"
+#include <LocationProviderBase.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/NmeaGsv.h"
+#include <NmeaGsv.h>
 
 using GnssSvInfo
     = ::android::hardware::gnss::V2_1::IGnssCallback::GnssSvInfo;

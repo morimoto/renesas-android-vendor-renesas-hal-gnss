@@ -17,7 +17,7 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasBatching"
 
-#include "include/GnssBatching.h"
+#include <GnssBatching.h>
 
 #include <log/log.h>
 

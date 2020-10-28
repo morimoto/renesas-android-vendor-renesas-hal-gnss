@@ -19,8 +19,8 @@
 
 #include <thread>
 
-#include "include/IUbxParser.h"
-#include "include/MessageQueue.h"
+#include <IUbxParser.h>
+#include <MessageQueue.h>
 
 enum UbxSyncByte : uint8_t {
     UbxSync1 = 0xb5,

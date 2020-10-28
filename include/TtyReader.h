@@ -19,8 +19,8 @@
 
 #include <thread>
 
-#include "include/IGnssReceiver.h"
-#include "include/IReader.h"
+#include <IGnssReceiver.h>
+#include <IReader.h>
 
 using namespace android::hardware::gnss::V2_1::renesas;
 

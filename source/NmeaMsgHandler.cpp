@@ -17,16 +17,16 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasNmeaMsgHandler"
 
-#include "include/NmeaMsgHandler.h"
+#include <NmeaMsgHandler.h>
 
 #include <log/log.h>
 
-#include "include/NmeaGga.h"
-#include "include/NmeaGsa.h"
-#include "include/NmeaGsv.h"
-#include "include/NmeaPubx00.h"
-#include "include/NmeaRmc.h"
-#include "include/NmeaTxt.h"
+#include <NmeaGga.h>
+#include <NmeaGsa.h>
+#include <NmeaGsv.h>
+#include <NmeaPubx00.h>
+#include <NmeaRmc.h>
+#include <NmeaTxt.h>
 
 NMHError ValidateParcel(std::string& in);
 

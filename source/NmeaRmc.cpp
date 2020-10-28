@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/NmeaRmc.h"
+#include <NmeaRmc.h>
 
 #include <log/log.h>
 

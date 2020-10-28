@@ -17,9 +17,9 @@
 #ifndef GNSS_H
 #define GNSS_H
 
-#include "include/GeneralManager.h"
-#include "include/GnssBatching.h"
-#include "include/GnssConfiguration.h"
+#include <GeneralManager.h>
+#include <GnssBatching.h>
+#include <GnssConfiguration.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

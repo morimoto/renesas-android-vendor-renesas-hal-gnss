@@ -19,8 +19,8 @@
 
 #include <android/hardware/gnss/2.1/IGnssMeasurement.h>
 
-#include "include/IUbxParser.h"
-#include "include/MessageQueue.h"
+#include <IUbxParser.h>
+#include <MessageQueue.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

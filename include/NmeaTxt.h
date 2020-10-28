@@ -19,7 +19,7 @@
 
 #include <log/log.h>
 
-#include "include/NmeaParserCommon.h"
+#include <NmeaParserCommon.h>
 
 template <typename T>
 class NmeaTxt: public NmeaParserCommon<T>{

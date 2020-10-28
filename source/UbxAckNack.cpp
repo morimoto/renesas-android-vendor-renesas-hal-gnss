@@ -17,7 +17,7 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasHalUbxAckNack"
 
-#include "include/UbxAckNack.h"
+#include <UbxAckNack.h>
 
 #include <log/log.h>
 

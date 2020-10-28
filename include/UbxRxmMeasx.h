@@ -22,7 +22,7 @@
 
 #include <vector>
 
-#include "include/UbxParserCommon.h"
+#include <UbxParserCommon.h>
 
 /* From u-blox 8 / u-blox M8 Receiver Description - Manual
  * 33.18.2 UBX-RXM-MEASX (0x02 0x14)

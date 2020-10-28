@@ -17,7 +17,7 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasImpl"
 
-#include "include/Gnss.h"
+#include <Gnss.h>
 
 namespace android {
 namespace hardware {

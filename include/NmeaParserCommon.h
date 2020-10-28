@@ -17,7 +17,7 @@
 #ifndef NMEAPARSERCOMMON_H
 #define NMEAPARSERCOMMON_H
 
-#include "include/INmeaParser.h"
+#include <INmeaParser.h>
 
 #define NP_CH(FUNC) status=FUNC; if(NPError::Success!=status) return status
 

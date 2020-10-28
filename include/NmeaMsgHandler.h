@@ -19,8 +19,8 @@
 
 #include <thread>
 
-#include "include/INmeaParser.h"
-#include "include/MessageQueue.h"
+#include <INmeaParser.h>
+#include <MessageQueue.h>
 
 enum class NMHError : uint8_t {
     Success,

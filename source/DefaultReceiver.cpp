@@ -17,7 +17,7 @@
 #define LOG_TAG "GnssRenesasHalDefaultReceiver"
 #define LOG_NDEBUG 1
 
-#include "include/DefaultReceiver.h"
+#include <DefaultReceiver.h>
 
 #include <log/log.h>
 

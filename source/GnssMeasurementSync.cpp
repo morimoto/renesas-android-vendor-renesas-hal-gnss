@@ -17,7 +17,7 @@
 #define LOG_TAG "GnssRenesasMeasurementSync"
 #define LOG_NDEBUG 1
 
-#include "include/GnssMeasurementSync.h"
+#include <GnssMeasurementSync.h>
 
 GnssMeasurementSync::GnssMeasurementSync() : mEventsToWait(0) {}
 

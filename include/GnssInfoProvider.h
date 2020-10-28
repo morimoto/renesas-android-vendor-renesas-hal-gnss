@@ -17,7 +17,7 @@
 #ifndef GNSSINFOPROVIDER_H
 #define GNSSINFOPROVIDER_H
 
-#include "include/GnssInfoBuilder.h"
+#include <GnssInfoBuilder.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

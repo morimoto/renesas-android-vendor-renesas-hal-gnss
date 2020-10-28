@@ -17,7 +17,7 @@
 #define LOG_TAG "GnssRenesasHalTransportFake"
 #define LOG_NDEBUG 1
 
-#include "include/GnssTransportFake.h"
+#include <GnssTransportFake.h>
 
 #include <log/log.h>
 

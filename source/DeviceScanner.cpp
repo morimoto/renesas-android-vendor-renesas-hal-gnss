@@ -17,7 +17,7 @@
 #define LOG_TAG "GnssRenesasHalDeviceScanner"
 #define LOG_NDEBUG 1
 
-#include "include/DeviceScanner.h"
+#include <DeviceScanner.h>
 
 #include <cutils/properties.h>
 #include <log/log.h>
@@ -28,12 +28,12 @@
 
 #include <fstream>
 
-#include "include/DefaultReceiver.h"
-#include "include/FakeReceiver.h"
-#include "include/GeneralManager.h"
-#include "include/PropNames.h"
-#include "include/UbloxReceiver.h"
-#include "include/UbxMonVer.h"
+#include <DefaultReceiver.h>
+#include <FakeReceiver.h>
+#include <GeneralManager.h>
+#include <PropNames.h>
+#include <UbloxReceiver.h>
+#include <UbxMonVer.h>
 
 static const int badFd = -1;
 static const int bufSize = 4096;

@@ -20,7 +20,7 @@
 #include <atomic>
 #include <thread>
 
-#include "include/ILocationProvider.h"
+#include <ILocationProvider.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

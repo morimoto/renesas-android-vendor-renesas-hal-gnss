@@ -19,7 +19,7 @@
 
 #include <log/log.h>
 
-#include "include/NmeaParserCommon.h"
+#include <NmeaParserCommon.h>
 
 //TODO(g.chabukiani): add doxygen, check all over the project
 template <typename T>

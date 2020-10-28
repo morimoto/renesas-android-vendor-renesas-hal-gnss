@@ -17,7 +17,7 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasHalUbxMonVer"
 
-#include "include/UbxMonVer.h"
+#include <UbxMonVer.h>
 
 template <>
 UPError UbxMonVer<monVerOut>::GetData(monVerOut out) {

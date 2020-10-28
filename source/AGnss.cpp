@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/AGnss.h"
+#include <AGnss.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 // Methods from ::android::hardware::gnss::V2_0::IAGnss follow.

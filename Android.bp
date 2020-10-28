@@ -36,6 +36,10 @@ cc_binary {
         "-fexceptions",
     ],
 
+    local_include_dirs: [
+        "include",
+    ],
+
     product_variables: {
         eng: {
            cppflags: [

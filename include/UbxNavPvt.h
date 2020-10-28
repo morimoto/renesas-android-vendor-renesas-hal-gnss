@@ -17,7 +17,7 @@
 #ifndef UBXNAVPVT_H
 #define UBXNAVPVT_H
 
-#include "include/UbxParserCommon.h"
+#include <UbxParserCommon.h>
 
 template <typename T>
 class UbxNavPvt : public UbxParserCommon<T> {

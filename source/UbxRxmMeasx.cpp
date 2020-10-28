@@ -16,7 +16,7 @@
 
 #define LOG_TAG "GnssRenesasUbxRxmMeasxImpl"
 
-#include "include/UbxRxmMeasx.h"
+#include <UbxRxmMeasx.h>
 
 using GnssData =
     android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData;

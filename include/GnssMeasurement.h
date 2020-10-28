@@ -17,7 +17,7 @@
 #ifndef GNSSMEASUREMENT_H
 #define GNSSMEASUREMENT_H
 
-#include "include/MeasurementProvider.h"
+#include <MeasurementProvider.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

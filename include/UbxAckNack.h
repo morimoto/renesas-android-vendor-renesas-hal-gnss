@@ -17,7 +17,7 @@
 #ifndef UBXACKNACK_H
 #define UBXACKNACK_H
 
-#include "include/UbxParserCommon.h"
+#include <UbxParserCommon.h>
 
 template <typename T>
 class UbxAckNack : public UbxParserCommon<T> {

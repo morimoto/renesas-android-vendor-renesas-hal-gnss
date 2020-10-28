@@ -19,7 +19,7 @@
 
 #include <fstream>
 
-#include "include/GnssTransport.h"
+#include <GnssTransport.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

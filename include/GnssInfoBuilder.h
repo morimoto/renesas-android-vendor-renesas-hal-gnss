@@ -19,8 +19,8 @@
 
 #include <thread>
 
-#include "include/INmeaParser.h"
-#include "include/MessageQueue.h"
+#include <INmeaParser.h>
+#include <MessageQueue.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

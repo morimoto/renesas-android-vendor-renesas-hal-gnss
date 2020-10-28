@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-#include "include/UbxParserCommon.h"
+#include <UbxParserCommon.h>
 
 template <typename ClassType>
 class UbxMonVer : public UbxParserCommon<ClassType> {

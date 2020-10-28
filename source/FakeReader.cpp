@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "include/FakeReader.h"
+#include <FakeReader.h>
 
 #include <utility>
 
-#include "include/MessageQueue.h"
+#include <MessageQueue.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

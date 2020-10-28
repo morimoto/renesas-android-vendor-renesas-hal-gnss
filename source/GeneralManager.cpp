@@ -17,15 +17,15 @@
 #define LOG_TAG "GnssRenesasHal"
 #define LOG_NDEBUG 1
 
-#include "include/GeneralManager.h"
+#include <GeneralManager.h>
 
 #include <android-base/logging.h>
 
-#include "include/DeviceScanner.h"
-#include "include/FakeLocationProvider.h"
-#include "include/FakeReader.h"
-#include "include/LocationProvider.h"
-#include "include/TtyReader.h"
+#include <DeviceScanner.h>
+#include <FakeLocationProvider.h>
+#include <FakeReader.h>
+#include <LocationProvider.h>
+#include <TtyReader.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

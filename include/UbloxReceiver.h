@@ -19,7 +19,7 @@
 
 #include <cmath>
 
-#include "include/GnssReceiverTTY.h"
+#include <GnssReceiverTTY.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

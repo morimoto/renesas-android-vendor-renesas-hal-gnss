@@ -19,8 +19,8 @@
 
 #include <log/log.h>
 
-#include "include/IGnssReceiver.h"
-#include "include/IUbxParser.h"
+#include <IGnssReceiver.h>
+#include <IUbxParser.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

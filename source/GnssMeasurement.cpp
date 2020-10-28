@@ -17,11 +17,11 @@
 #define LOG_NDEBUG 1
 #define LOG_TAG "GnssRenesasMeasurement"
 
-#include "include/GnssMeasurement.h"
+#include <GnssMeasurement.h>
 
 #include <log/log.h>
 
-#include "include/GnssMeasurementSync.h"
+#include <GnssMeasurementSync.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

@@ -17,8 +17,8 @@
 #ifndef FAKELOCATIONPROVIDER_H
 #define FAKELOCATIONPROVIDER_H
 
-#include "include/FakeLocationBuilder.h"
-#include "include/LocationProviderBase.h"
+#include <FakeLocationBuilder.h>
+#include <LocationProviderBase.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

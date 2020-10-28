@@ -17,7 +17,7 @@
 #ifndef IGNSSRECEIVER_H
 #define IGNSSRECEIVER_H
 
-#include "include/GnssTransport.h"
+#include <GnssTransport.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

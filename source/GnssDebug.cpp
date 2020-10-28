@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/GnssDebug.h"
+#include <GnssDebug.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 // Methods from ::android::hardware::gnss::V1_0::IGnssDebug follow.

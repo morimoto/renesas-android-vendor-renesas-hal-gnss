@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/GnssReceiver.h"
+#include <GnssReceiver.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

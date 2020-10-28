@@ -19,8 +19,8 @@
 
 #include <android/hardware/gnss/2.0/types.h>
 
-#include "include/IReader.h"
-#include "include/MessageQueue.h"
+#include <IReader.h>
+#include <MessageQueue.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 

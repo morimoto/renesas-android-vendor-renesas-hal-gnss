@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "include/MessageQueue.h"
+#include <MessageQueue.h>
 
 MessageQueue& MessageQueue::GetInstance() {
     static MessageQueue instance;

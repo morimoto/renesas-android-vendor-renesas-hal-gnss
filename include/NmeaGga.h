@@ -17,7 +17,7 @@
 #ifndef NMEAGGA_H
 #define NMEAGGA_H
 
-#include "include/NmeaParserCommon.h"
+#include <NmeaParserCommon.h>
 
 using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 
