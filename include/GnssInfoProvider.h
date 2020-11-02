@@ -17,6 +17,8 @@
 #ifndef GNSSINFOPROVIDER_H
 #define GNSSINFOPROVIDER_H
 
+#include <unordered_map>
+
 #include <GnssInfoBuilder.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
@@ -51,9 +53,9 @@ private:
     GnssInfoProvider(GnssInfoProvider&) = delete;
     GnssInfoProvider& operator=(const GnssInfoProvider&) = delete;
     ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvStatus
-        SvInfoV2_1To_V1_0(SvInfoList v2_1);
+        SvInfoV2_1To_V1_0(const SvInfoList& v2_1);
     std::vector<::android::hardware::gnss::V2_0::IGnssCallback::GnssSvInfo>
-        SvInfoV2_1To_V2_0(SvInfoList v2_1);
+        SvInfoV2_1To_V2_0(const SvInfoList& v2_1);
 
     GnssCallback_1_0 mGnssCallback_1_0;
     GnssCallback_1_1 mGnssCallback_1_1;
@@ -64,6 +66,7 @@ private:
     std::thread mGnssSvInfoProvidingThread;
     std::atomic<bool> mThreadExit;
     std::atomic<bool> mEnabled;
+    std::unordered_map<std::string, std::function<void(const SvInfoList&)>> mProviders;
 };
 
 } // namespace android::hardware::gnss::V2_1::renesas

@@ -57,6 +57,11 @@ public:
     UMHError StopProcessing();
 
 protected:
+    std::string UbxToString();
+    UMHError ACKMsgParser();
+    UMHError MONMsgParser();
+    UMHError NAVMsgParser();
+    UMHError RXMMsgParser();
     UMHError SelectParser();
     UMHError VerifyCheckSum(const std::vector<char>& parcel,
                             const uint16_t& len);

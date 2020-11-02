@@ -28,77 +28,86 @@ static std::string printLog(const std::vector<char>& in,
 static const int maxReadRetries = 5;
 static const int tryInterval = 50;
 
-TtyReader::TtyReader(std::shared_ptr<Transport> transport) :
-    mTransport(transport),
-    mExitThread(false) {
+TtyReader::TtyReader(std::shared_ptr<Transport> transport):
+        mTransport(transport),
+        mEndianType(mTransport->GetEndianType()),
+        mFirstByteOffset(mEndianType == Endian::Little ? 0u : 1u),
+        mSecondByteOffset(mEndianType == Endian::Little ? 1u : 0u),
+        mExitThread(false) {
     ALOGV("%s", __func__);
-    mEndianType = mTransport->GetEndianType();
 }
 
 TtyReader::~TtyReader() {
     Stop();
 }
 
-void TtyReader::ReadingLoop() {
+void TtyReader::SendToMsgHandler(const std::shared_ptr<std::vector<char>>& parcel,
+                                 const SupportedProtocol& protocol) {
     MessageQueue& pipe = MessageQueue::GetInstance();
+
+    switch (protocol) {
+        case SupportedProtocol::NMEA0183: {
+            // send to nmea msg handler
+            auto toSend = std::make_shared<nmeaParcel_t>(parcel);
+            ALOGV("[%s] nmea %s [size = %zu]",
+                  __func__, printLog(*parcel, false).c_str(), parcel->size());
+            pipe.Push<std::shared_ptr<nmeaParcel_t>>(toSend);
+            break;
+        }
+        case SupportedProtocol::UbxBinaryProtocol: {
+            // send to ublx msg handler
+            auto toSend = std::make_shared<ubxParcel_t>(parcel, mUbxPayloadLen.lenUint);
+            ALOGV("[%s] ublx %s [size = %zu]",
+                  __func__, printLog(*parcel).c_str(), parcel->size());
+            pipe.Push<std::shared_ptr<ubxParcel_t>>(toSend);
+            break;
+        }
+        default:
+            // Unexpected!
+            ALOGW("[%s] Some unexpected protocol", __func__);
+            break;
+    }
+}
+
+void TtyReader::ReadingLoop() {
     int readTry = 0;
+    auto parcel = std::make_shared<std::vector<char>>();
 
     while (!mExitThread) {
-        auto parcel = std::make_shared<std::vector<char>>();
         SupportedProtocol protocol = SupportedProtocol::UnknownProtocol;
-        RDError result = RDError::InternalError;
 
-        while (!mExitThread && RDError::Success != result) {
-            if (TError::Success != mTransport->Read(*parcel)) {
-                result = RDError::TransportError;
-                std::this_thread::sleep_for(std::chrono::milliseconds(tryInterval));
-                ++readTry;
-                break;
+        if (TError::Success != mTransport->Read(*parcel)) {
+            ALOGI("%s, Failed to read, %d", __func__, readTry);
+            std::this_thread::sleep_for(std::chrono::milliseconds(tryInterval));
+            if (maxReadRetries == ++readTry) {
+                ALOGE("%s, Failed to read, %d", __func__, readTry);
+                if (nullptr != mDeathNotificationCallback) {
+                    mDeathNotificationCallback();
+                }
+                return;
             }
+            continue;
+        }
 
-            result = HandleInput(parcel->back(), protocol);
-
-            if (RDError::Reset == result ) {
+        switch (HandleInput(parcel->back(), protocol)) {
+            case RDError::Reset:
                 ALOGV("%s, incomplete or lost - %s", __func__, printLog(*parcel).c_str());
                 //previous message was incomplete or lost,
                 //reset current parcel and continue as from begin
                 ResetReader();
                 parcel->clear();
-            }
+                break;
 
-            readTry = 0;
+            case RDError::Success:
+                SendToMsgHandler(parcel, protocol);
+                parcel = std::make_shared<std::vector<char>>();
+                ResetReader();
+                break;
+
+            default:
+                readTry = 0;
+                break;
         }
-
-        if (RDError::Success == result) {
-            if (SupportedProtocol::NMEA0183 == protocol) {
-                // send to nmea msg handler
-                auto toSend = std::make_shared<nmeaParcel_t>(parcel);
-                ALOGV("[%s] nmea %s [size = %zu]",
-                      __func__, printLog(*parcel, false).c_str(), parcel->size());
-                pipe.Push<std::shared_ptr<nmeaParcel_t>>(toSend);
-            } else if (SupportedProtocol::UbxBinaryProtocol == protocol) {
-                // send to ublx msg handler
-                auto toSend = std::make_shared<ubxParcel_t>
-                              (parcel, mUbxPayloadLen.lenUint);
-                ALOGV("[%s] ublx %s [size = %zu]",
-                      __func__, printLog(*parcel).c_str(), parcel->size());
-                pipe.Push<std::shared_ptr<ubxParcel_t>>(toSend);
-            } else if (SupportedProtocol::UnknownProtocol != protocol)  {
-                // Unexpected!
-                ALOGW("[%s] Some unexpected protocol", __func__);
-            }
-        } else if (maxReadRetries == readTry) {
-            ALOGE("%s, Failed to read, %d", __func__, readTry);
-
-            if (nullptr != mDeathNotificationCallback) {
-                mDeathNotificationCallback();
-            }
-
-            // TODO(g.chabukiani): Reader should be destroyed
-            return;
-        }
-
-        ResetReader();
     }
 
     ALOGV("%s, Exit Thread", __func__);
@@ -132,37 +141,43 @@ static std::string printLog(const std::vector<char>& in, const bool asHex) {
 
 RDError TtyReader::CaptureParcel(const char& ch, SupportedProtocol& protocol) {
     switch (mReaderState) {
-    case ReaderState::WAITING: {
-        return RDError::Reset;
-    }
-
-    case ReaderState::CAPTURING_UBX: {
-        ++mReaderUbxParcelOffset;
-
-        if (mReaderUbxParcelOffset == mUbxPayloadLen.lenUint +
-            ubxHeaderAndChecksumLen) {
-            //Ubx parcel is full.
-            ALOGV("%s, Capturing UBLX - SUCCESS", __func__);
-            protocol = SupportedProtocol::UbxBinaryProtocol;
-            return RDError::Success;
+        case ReaderState::WAITING: {
+            return RDError::Reset;
         }
 
-        break;
-    }
+        case ReaderState::CAPTURING_UBX: {
+            if (ubxLengthFirstByteOffset == mReaderUbxParcelOffset) {
+                mUbxPayloadLen.lenBytes[mFirstByteOffset] = ch;
+            } else if (ubxLengthSecondByteOffset == mReaderUbxParcelOffset) {
+                mUbxPayloadLen.lenBytes[mSecondByteOffset] = ch;
+            }
 
-    case ReaderState::CAPTURING_NMEA: {
-        if (mNmeaEndParcelNewLine == ch) {
-            ALOGV("%s, Capturing NMEA - SUCCESS", __func__);
-            protocol = SupportedProtocol::NMEA0183;
-            return RDError::Success;
+            ++mReaderUbxParcelOffset;
+            if (mReaderUbxParcelOffset == mUbxPayloadLen.lenUint +
+                                              ubxHeaderAndChecksumLen) {
+                //Ubx parcel is full.
+                ALOGV("%s, Capturing UBLX - SUCCESS", __func__);
+                protocol = SupportedProtocol::UbxBinaryProtocol;
+                return RDError::Success;
+            }
+
+            break;
         }
 
-        break;
-    }
+        case ReaderState::CAPTURING_NMEA: {
+            if (mNmeaEndParcelNewLine == ch) {
+                ALOGV("%s, Capturing NMEA - SUCCESS", __func__);
+                protocol = SupportedProtocol::NMEA0183;
+                return RDError::Success;
+            }
 
-    default: {
-        ++mReaderUbxParcelOffset;
-    }
+            break;
+        }
+
+        default: {
+            ++mReaderUbxParcelOffset;
+            break;
+        }
     }
 
     return RDError::Capturing;
@@ -175,29 +190,41 @@ void TtyReader::ResetReader() {
 }
 
 RDError TtyReader::HandleInput(const char& ch, SupportedProtocol& protocol) {
-    if (mNmeaBeginParcel == ch &&
-        ReaderState::CAPTURING_NMEA == mReaderState) {
-        ALOGV("%s, Capturing NMEA - RESET", __func__);
-        // Missed end of message CR LF ? Reset the reader
-        return RDError::Reset;
-    } else if (mNmeaBeginParcel == ch &&
-               ReaderState::WAITING == mReaderState) {
-        mReaderState = ReaderState::CAPTURING_NMEA;
-    } else if (static_cast<char>(UbxSyncByte::UbxSync1) == ch
-               && ReaderState::WAITING == mReaderState) {
-        mReaderState = ReaderState::WAITING_UBX_SYNC2;
-    } else if (static_cast<char>(UbxSyncByte::UbxSync2) == ch
-               && ReaderState::WAITING_UBX_SYNC2 == mReaderState) {
-        mReaderState = ReaderState::CAPTURING_UBX;
-    } else if (ReaderState::CAPTURING_UBX == mReaderState) {
-        if (ubxLengthFirstByteOffset == mReaderUbxParcelOffset) {
-            mUbxPayloadLen.lenBytes[(mEndianType == Endian::Little ?
-                                     mLittleEndianFirsByteOffset :
-                                     mBigEndianFistByteOffset)] = ch;
-        } else if (ubxLengthSecondByteOffset == mReaderUbxParcelOffset) {
-            mUbxPayloadLen.lenBytes[(mEndianType == Endian::Little ?
-                                     mLittleEndianSecondByteOffset :
-                                     mBigEndianSecondByteOffset)] = ch;
+    switch (mReaderState) {
+        case ReaderState::WAITING: {
+            if (mNmeaBeginParcel == ch) {
+                mReaderState = ReaderState::CAPTURING_NMEA;
+            } else if (static_cast<char>(UbxSyncByte::UbxSync1) == ch) {
+                mReaderState = ReaderState::WAITING_UBX_SYNC2;
+            }
+
+            break;
+        }
+
+        case ReaderState::WAITING_UBX_SYNC2: {
+            if (static_cast<char>(UbxSyncByte::UbxSync2) == ch) {
+                mReaderState = ReaderState::CAPTURING_UBX;
+            } else {
+                ALOGV("%s, Capturing UBX - RESET", __func__);
+                // Missed UbxSync2 ? Reset the reader
+                return RDError::Reset;
+            }
+
+            break;
+        }
+
+        case ReaderState::CAPTURING_NMEA: {
+            if (mNmeaBeginParcel == ch) {
+                ALOGV("%s, Capturing NMEA - RESET", __func__);
+                // Missed end of message CR LF ? Reset the reader
+                return RDError::Reset;
+            }
+
+            break;
+        }
+
+        default: {
+            break;
         }
     }
 

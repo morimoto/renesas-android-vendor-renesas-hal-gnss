@@ -78,6 +78,9 @@ private:
         float carrierFrequencyHz;
     } parcel_t;
 
+    void ProcessGpsSbasQzssSvid(repeated_t& block);
+    void ProcessGalileoSvid(repeated_t& block);
+    void ProcessGlonassSvid(repeated_t& block);
     void ProcessSvid(repeated_t& block);
 
     constexpr static const std::array<size_t, NmeaVersion::AMOUNT>
@@ -91,6 +94,16 @@ private:
     static constexpr float B1BandFrequency = 1561.098f;
     static constexpr float L1GlonassBandFrequency = 1602.562f;
     static constexpr float scale = 1000000.0;
+
+    static constexpr std::pair<int16_t, int16_t> GALILEO_SvId{1, 36};
+    static constexpr std::pair<int16_t, int16_t> GLONASS_SvId{65, 88};
+    static constexpr std::pair<int16_t, int16_t> GPS_SvId{1, 32};
+    static constexpr std::pair<int16_t, int16_t> SBAS_SvId{33, 64};
+    static constexpr std::pair<int16_t, int16_t> SBAS2_SvId{152, 158};
+    static constexpr std::pair<int16_t, int16_t> QZSS_SvId{193, 202};
+    static constexpr int16_t GLONASS_shift = 64;
+    static constexpr int16_t SBAS_shift = 87;
+    static constexpr int16_t SBAS2_shift = 31;
 
     const char* mPayload;
     const size_t mPayloadLen;
@@ -249,34 +262,68 @@ NPError NmeaGsv<T>::ParseRepeatedBlocks(const std::vector<std::string>& in) {
 template <typename T>
 void NmeaGsv<T>::ProcessSvid(repeated_t& block) {
     block.orig_svid = block.svid;
-    if (block.svid >= 1 && block.svid <= 32 &&
-            mParcel.gnssId == NmeaConstellationId::GPS_SBAS_QZSS) {
-        block.constellation = GnssConstellationType::GPS;
-    } else if (block.svid >= 1 && block.svid <= 36 &&
-                    mParcel.gnssId == NmeaConstellationId::GALILEO) {
-        block.constellation = GnssConstellationType::GALILEO;
-    } else if (mParcel.gnssId == NmeaConstellationId::GLONASS) {
-        block.constellation = GnssConstellationType::GLONASS;
-        if (65 <= block.svid && 88 >= block.svid) {
-            block.svid -= 64;
-        } else {
-            block.svid = 93; //TODO
-        }
-    } else if (mParcel.gnssId == NmeaConstellationId::BEIDOU) {
-        block.constellation = GnssConstellationType::BEIDOU;
-    } else if ((block.svid >=  33) && (block.svid <=  64)) {
-        block.constellation = GnssConstellationType::SBAS;
-        block.svid += 87;
-    } else if ((block.svid >= 152) && (block.svid <= 158)) {
-        block.constellation = GnssConstellationType::SBAS;
-        block.svid += 31;
-    } else if ((block.svid >= 193) && (block.svid <= 197)) {
-        block.constellation = GnssConstellationType::QZSS;
-    } else {
-        if (mParcel.gnssId != NmeaConstellationId::ANY) {
+    block.constellation = GnssConstellationType::UNKNOWN;
+    switch (mParcel.gnssId) {
+        case NmeaConstellationId::GPS_SBAS_QZSS:
+            ProcessGpsSbasQzssSvid(block);
+            break;
+        case NmeaConstellationId::GALILEO:
+            ProcessGalileoSvid(block);
+            break;
+        case NmeaConstellationId::GLONASS:
+            ProcessGlonassSvid(block);
+            break;
+        default:
             ALOGW("Unknown constellation type with Svid = %d", block.svid);
-        }
-        block.constellation = GnssConstellationType::UNKNOWN;
+            break;
+    }
+}
+
+template <typename T>
+void NmeaGsv<T>::ProcessGpsSbasQzssSvid(repeated_t& block) {
+    switch (block.svid) {
+        case GPS_SvId.first ... GPS_SvId.second:
+            block.constellation = GnssConstellationType::GPS;
+            break;
+        case SBAS_SvId.first ... SBAS_SvId.second:
+            block.constellation = GnssConstellationType::SBAS;
+            block.svid += SBAS_shift;
+            break;
+        case SBAS2_SvId.first ... SBAS2_SvId.second:
+            block.constellation = GnssConstellationType::SBAS;
+            block.svid += SBAS2_shift;
+            break;
+        case QZSS_SvId.first ... QZSS_SvId.second:
+            block.constellation = GnssConstellationType::QZSS;
+            break;
+        default:
+            ALOGW("Unexpected Svid = %d", block.svid);
+            break;
+    }
+}
+
+template <typename T>
+void NmeaGsv<T>::ProcessGalileoSvid(repeated_t& block) {
+    switch (block.svid) {
+        case GALILEO_SvId.first ... GALILEO_SvId.second:
+            block.constellation = GnssConstellationType::GALILEO;
+            break;
+        default:
+            ALOGW("Unexpected Svid = %d", block.svid);
+            break;
+    }
+}
+
+template <typename T>
+void NmeaGsv<T>::ProcessGlonassSvid(repeated_t& block) {
+    block.constellation = GnssConstellationType::GLONASS;
+    switch (block.svid) {
+        case GLONASS_SvId.first ... GLONASS_SvId.second:
+            block.svid -= GLONASS_shift;
+            break;
+        default:
+            block.svid = 93;  //TODO
+            break;
     }
 }
 

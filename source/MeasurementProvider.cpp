@@ -52,23 +52,11 @@ void MeasurementProvider::Provide() {
 
     while (!mThreadExit) {
         GnssData_2_1 data_2_1 = {};
-        GnssData_2_0 data_2_0 = {};
         auto error = mBuilder->Build(data_2_1);
 
-        data_2_0 = DataV2_1ToDataV2_0(data_2_1);
-
         if (mEnabled && error == MBError::SUCCESS) {
-            if (mGnssMeasurementsCbIface_1_0) {
-                mGnssMeasurementsCbIface_1_0->GnssMeasurementCb(DataV2_0ToDataV1_0(data_2_0));
-            }
-            if (mGnssMeasurementsCbIface_1_1) {
-                mGnssMeasurementsCbIface_1_1->gnssMeasurementCb(DataV2_0ToDataV1_1(data_2_0));
-            }
-            if (mGnssMeasurementsCbIface_2_0) {
-                mGnssMeasurementsCbIface_2_0->gnssMeasurementCb_2_0(data_2_0);
-            }
-            if (mGnssMeasurementsCbIface_2_1) {
-                mGnssMeasurementsCbIface_2_1->gnssMeasurementCb_2_1(data_2_1);
+            for (auto provider : mProviders) {
+                provider.second(data_2_1);
             }
             syncInstance.NotifyEventOccured();
         }
@@ -79,28 +67,57 @@ void MeasurementProvider::Provide() {
 }
 
 void MeasurementProvider::setMeasxCallback_1_0(IGnssMeasxCb_1_0 measxCb) {
+    static const std::string providerName = {"GnssMeasxCb_1_0"};
+
     mGnssMeasurementsCbIface_1_0 = measxCb;
+    mProviders[providerName] = [this](const GnssData_2_1& data_2_1) {
+        if (mGnssMeasurementsCbIface_1_0) {
+            mGnssMeasurementsCbIface_1_0->GnssMeasurementCb(DataV2_1ToDataV1_0(data_2_1));
+        }
+    };
 }
 
 void MeasurementProvider::setMeasxCallback_1_1(IGnssMeasxCb_1_1 measxCb) {
+    static const std::string providerName = {"GnssMeasxCb_1_1"};
+
     mGnssMeasurementsCbIface_1_1 = measxCb;
+    mProviders[providerName] = [this](const GnssData_2_1& data_2_1) {
+        if (mGnssMeasurementsCbIface_1_1) {
+            mGnssMeasurementsCbIface_1_1->gnssMeasurementCb(DataV2_1ToDataV1_1(data_2_1));
+        }
+    };
 }
 
 void MeasurementProvider::setMeasxCallback_2_0(IGnssMeasxCb_2_0 measxCb) {
+    static const std::string providerName = {"GnssMeasxCb_2_0"};
+
     mGnssMeasurementsCbIface_2_0 = measxCb;
+    mProviders[providerName] = [this](const GnssData_2_1& data_2_1) {
+        if (mGnssMeasurementsCbIface_2_0) {
+            mGnssMeasurementsCbIface_2_0->gnssMeasurementCb_2_0(DataV2_1ToDataV2_0(data_2_1));
+        }
+    };
 }
 
 void MeasurementProvider::setMeasxCallback_2_1(IGnssMeasxCb_2_1 measxCb)
 {
+    static const std::string providerName = {"GnssMeasxCb_2_1"};
+
     mGnssMeasurementsCbIface_2_1 = measxCb;
+    mProviders[providerName] = [this](const GnssData_2_1& data_2_1) {
+        if (mGnssMeasurementsCbIface_2_1) {
+            mGnssMeasurementsCbIface_2_1->gnssMeasurementCb_2_1(data_2_1);
+        }
+    };
 }
 
 void MeasurementProvider::setEnabled(bool isEnabled) {
     mEnabled = isEnabled;
 }
 
-GnssData_1_0 MeasurementProvider::DataV2_0ToDataV1_0(const GnssData_2_0& data_2_0) {
+GnssData_1_0 MeasurementProvider::DataV2_1ToDataV1_0(const GnssData_2_1& data_2_1) {
     GnssData_1_0 data_1_0;
+    GnssData_2_0 data_2_0 = {DataV2_1ToDataV2_0(data_2_1)};
     data_1_0.measurementCount = data_2_0.measurements.size();
     for (size_t i = 0; i < data_2_0.measurements.size(); i++) {
         data_1_0.measurements[i] = data_2_0.measurements[i].v1_1.v1_0;
@@ -109,8 +126,9 @@ GnssData_1_0 MeasurementProvider::DataV2_0ToDataV1_0(const GnssData_2_0& data_2_
     return data_1_0;
 }
 
-GnssData_1_1 MeasurementProvider::DataV2_0ToDataV1_1(const GnssData_2_0& data_2_0) {
+GnssData_1_1 MeasurementProvider::DataV2_1ToDataV1_1(const GnssData_2_1& data_2_1) {
     GnssData_1_1 data_1_1;
+    GnssData_2_0 data_2_0 = {DataV2_1ToDataV2_0(data_2_1)};
     data_1_1.measurements.resize(data_2_0.measurements.size());
     for (size_t i = 0; i < data_2_0.measurements.size(); i++) {
         data_1_1.measurements[i] = data_2_0.measurements[i].v1_1;

@@ -37,8 +37,7 @@ void SplitLine(std::string line, std::vector<std::string> &out) {
 
     out.clear();
 
-    while (!line.empty())
-    {
+    while (!line.empty()) {
         if ((end = line.find(",")) < 0) {
             separator = false;
             end = static_cast<int>(line.length());
@@ -56,10 +55,9 @@ void FakeLocationProvider::LoadFakeTxt() {
 
     fakeStream.open(fakeRoute, std::fstream::in);
 
-
     if (!fakeStream.is_open()) {
         ALOGE("Failed to open route file '%s', err=%d", fakeRoute.c_str(), errno);
-        return ;
+        return;
     }
 
     while (!fakeStream.eof()) {
@@ -87,7 +85,7 @@ void FakeLocationProvider::LoadFakeTxt() {
 }
 
 void FakeLocationProvider::Provide() {
-size_t pt_idx = 0;
+    size_t pt_idx = 0;
 
     while (!mThreadExit) {
         std::queue<LocationData> data;
@@ -102,38 +100,7 @@ size_t pt_idx = 0;
 
         if (mEnabled && error == FLBError::SUCCESS) {
             while (!data.empty()) {
-                if (mGnssCallback_1_0) {
-                    ALOGV("%s, Provide fake location callback_1_0", __func__);
-                    auto ret = mGnssCallback_1_0->gnssLocationCb(data.front().v1_0);
-
-                    if (!ret.isOk()) {
-                        ALOGE("%s: Unable to invoke gnssLocationCb_1_0", __func__);
-                    }
-                }
-                if (mGnssCallback_1_1) {
-                    ALOGV("%s, Provide fake location callback_1_1", __func__);
-                    auto ret = mGnssCallback_1_1->gnssLocationCb(data.front().v1_0);
-
-                    if (!ret.isOk()) {
-                        ALOGE("%s: Unable to invoke gnssLocationCb_1_1", __func__);
-                    }
-                }
-                if (mGnssCallback_2_0) {
-                    ALOGV("%s, Provide fake location callback_2_0", __func__);
-                    auto ret = mGnssCallback_2_0->gnssLocationCb_2_0(data.front());
-
-                    if (!ret.isOk()) {
-                        ALOGE("%s: Unable to invoke gnssLocationCb_2_0", __func__);
-                    }
-                }
-                if (mGnssCallback_2_1) {
-                    ALOGV("%s, Provide fake location callback_2_1", __func__);
-                    auto ret = mGnssCallback_2_1->gnssLocationCb_2_0(data.front());
-
-                    if (!ret.isOk()) {
-                        ALOGE("%s: Unable to invoke gnssLocationCb_2_1", __func__);
-                    }
-                }
+                CallProviders(data.front());
                 data.pop();
                 usleep(mUpdateIntervalUs);
             }

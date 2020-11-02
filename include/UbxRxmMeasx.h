@@ -372,10 +372,10 @@ UPError UbxRxmMeasx<ClassType>::GetTowAccForGnssId(const UbxGnssId inGnssId,
         return UPError::InvalidData;
     }
 
-    uint16_t towAccMs  = 0;
+    uint16_t towAccMs = 0;
 
     switch (inGnssId) {
-    case UbxGnssId::GPS:
+    case UbxGnssId::GPS ... UbxGnssId::GALILEO:
         towAccMs = mParcel.single.gpsTOWacc;
         break;
 
@@ -389,11 +389,6 @@ UPError UbxRxmMeasx<ClassType>::GetTowAccForGnssId(const UbxGnssId inGnssId,
 
     case UbxGnssId::BEIDOU:
         towAccMs = mParcel.single.bdsTOWacc;
-        break;
-
-    case UbxGnssId::SBAS:
-    case UbxGnssId::GALILEO:
-        towAccMs = mParcel.single.gpsTOWacc;
         break;
 
     default:

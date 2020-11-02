@@ -28,8 +28,30 @@
 #include <UbxNavTimeGps.h>
 #include <UbxRxmMeasx.h>
 
+#include <iomanip>
+#include <sstream>
+
 using GnssData =
     android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData;
+
+std::string UbxMsgHandler::UbxToString() {
+    std::stringstream sstr;
+
+    sstr << std::showbase << std::hex
+         << "message class ID: " << static_cast<uint16_t>(mParcel.rxClass) << ", "
+         << "message ID: " << static_cast<uint16_t>(mParcel.rxId) << ", "
+         << std::dec
+         << "payload length: " << mParcel.lenght << ", "
+         << std::hex
+         << "payload: [";
+    for (int i = 0; i < mParcel.lenght; ++i) {
+        sstr << " " << static_cast<uint16_t>(mParcel.msgPayload[i]);
+    }
+
+    sstr << "], message checksum: " << static_cast<int16_t>(mParcel.rxChecksumA)
+         << " "                     << static_cast<int16_t>(mParcel.rxChecksumB);
+    return sstr.str();
+}
 
 UbxMsgHandler::UbxMsgHandler(const UbxProtocolVersion& protocol) :
     mExitThread(false),
@@ -80,56 +102,141 @@ typedef int outType;
 
 UMHError UbxMsgHandler::SelectParser() {
     ALOGV("%s", __func__);
-    MessageQueue& instance = MessageQueue::GetInstance();
 
-    if (UbxClass::ACK == mParcel.rxClass && UbxId::ACK == mParcel.rxId) {
-        AckQueueType sp = std::make_shared<UbxAckNack<AckOutType>>
-                        (mParcel.msgPayload,
-                        mParcel.lenght,
-                        UbxMsg::ACK_ACK);
-        instance.Push<AckQueueType>(sp);
-    } else if (UbxClass::ACK == mParcel.rxClass
-                && UbxId::NACK == mParcel.rxId) {
-        ALOGV("%s, nack", __func__);
-        AckQueueType sp = std::make_shared<UbxAckNack<AckOutType>>
-                        (mParcel.msgPayload,
-                        mParcel.lenght,
-                        UbxMsg::ACK_NACK);
-        instance.Push<AckQueueType>(sp);
-    } else if (UbxClass::NAV == mParcel.rxClass
-                    && UbxId::TIMEGPS == mParcel.rxId) {
-        auto sp = std::make_shared<UbxNavTimeGps<GnssData*>>(mParcel.msgPayload,
-                  mParcel.lenght);
-        instance.Push<std::shared_ptr<IUbxParser<GnssData*>>>(sp);
-    } else if (UbxClass::NAV == mParcel.rxClass
-                    && UbxId::CLOCK == mParcel.rxId) {
-        auto sp = std::make_shared<UbxNavClock<GnssData*>>(mParcel.msgPayload,
-                  mParcel.lenght);
-        instance.Push<std::shared_ptr<IUbxParser<GnssData*>>>(sp);
-    } else if (UbxClass::NAV == mParcel.rxClass
-                    && UbxId::STATUS == mParcel.rxId) {
-        auto sp = std::make_shared<UbxNavStatus<GnssData*>>(mParcel.msgPayload,
-                  mParcel.lenght);
-        instance.Push<std::shared_ptr<IUbxParser<GnssData*>>>(sp);
-    } else if (UbxClass::NAV == mParcel.rxClass
-                    && UbxId::PVT == mParcel.rxId) {
-        auto sp = std::make_shared<UbxNavPvt<outType>>(mParcel.msgPayload,
-                  mParcel.lenght);
-        instance.Push<std::shared_ptr<IUbxParser<outType>>>(sp);
-    } else if (UbxClass::RXM == mParcel.rxClass
-                    && UbxId::MEASX == mParcel.rxId) {
-        auto sp = std::make_shared<UbxRxmMeasx<GnssData*>>(mParcel.msgPayload,
-                  mParcel.lenght);
-        instance.Push<std::shared_ptr<IUbxParser<GnssData*>>>(sp);
-    } else if (UbxClass::MON == mParcel.rxClass
-                    && UbxId::VER == mParcel.rxId) {
-        MonVerQueueType sp = std::make_shared<UbxMonVer<monVerOut>>
-                            (mParcel.msgPayload,
-                            mParcel.lenght);
-        instance.Push<MonVerQueueType>(sp);
-    } else {
-        //TODO(g.chabukiani): handle incorrect messages
-        return UMHError::InternalError;
+    switch (mParcel.rxClass) {
+        case UbxClass::ACK: {
+            ACKMsgParser();
+            break;
+        }
+
+        case UbxClass::NAV: {
+            NAVMsgParser();
+            break;
+        }
+
+        case UbxClass::RXM: {
+            RXMMsgParser();
+            break;
+        }
+
+        case UbxClass::MON: {
+            MONMsgParser();
+            break;
+        }
+
+        default: {
+            ALOGV("[%s] Some unexpected message class ID: %s", __func__, UbxToString().c_str());
+            return UMHError::InternalError;
+        }
+    }
+
+    return UMHError::Success;
+}
+
+UMHError UbxMsgHandler::ACKMsgParser() {
+    switch (mParcel.rxId) {
+        case UbxId::ACK: {
+            AckQueueType sp = std::make_shared<UbxAckNack<AckOutType>>(
+                mParcel.msgPayload,
+                mParcel.lenght,
+                UbxMsg::ACK_ACK);
+            mPipe.Push<AckQueueType>(sp);
+            break;
+        }
+
+        case UbxId::NACK: {
+            ALOGV("%s, nack", __func__);
+            AckQueueType sp = std::make_shared<UbxAckNack<AckOutType>>(
+                mParcel.msgPayload,
+                mParcel.lenght,
+                UbxMsg::ACK_NACK);
+            mPipe.Push<AckQueueType>(sp);
+            break;
+        }
+
+        default: {
+            ALOGV("[%s] Some unexpected message ID: %s", __func__, UbxToString().c_str());
+            return UMHError::FailedToProcess;
+        }
+    }
+
+    return UMHError::Success;
+}
+
+UMHError UbxMsgHandler::NAVMsgParser() {
+    switch (mParcel.rxId) {
+        case UbxId::TIMEGPS: {
+            auto sp = std::make_shared<UbxNavTimeGps<GnssData*>>(
+                mParcel.msgPayload,
+                mParcel.lenght);
+            mPipe.Push<std::shared_ptr<IUbxParser<GnssData*>>>(sp);
+            break;
+        }
+
+        case UbxId::CLOCK: {
+            auto sp = std::make_shared<UbxNavClock<GnssData*>>(
+                mParcel.msgPayload,
+                mParcel.lenght);
+            mPipe.Push<std::shared_ptr<IUbxParser<GnssData*>>>(sp);
+            break;
+        }
+
+        case UbxId::STATUS: {
+            auto sp = std::make_shared<UbxNavStatus<GnssData*>>(
+                mParcel.msgPayload,
+                mParcel.lenght);
+            mPipe.Push<std::shared_ptr<IUbxParser<GnssData*>>>(sp);
+            break;
+        }
+
+        case UbxId::PVT: {
+            auto sp = std::make_shared<UbxNavPvt<outType>>(
+                mParcel.msgPayload,
+                mParcel.lenght);
+            mPipe.Push<std::shared_ptr<IUbxParser<outType>>>(sp);
+            break;
+        }
+
+        default: {
+            ALOGV("[%s] Some unexpected message ID: %s", __func__, UbxToString().c_str());
+            return UMHError::FailedToProcess;
+        }
+    }
+
+    return UMHError::Success;
+}
+
+UMHError UbxMsgHandler::RXMMsgParser() {
+    switch (mParcel.rxId) {
+        case UbxId::MEASX: {
+            auto sp = std::make_shared<UbxRxmMeasx<GnssData*>>(
+                mParcel.msgPayload,
+                mParcel.lenght);
+            mPipe.Push<std::shared_ptr<IUbxParser<GnssData*>>>(sp);
+            break;
+        }
+        default: {
+            ALOGV("[%s] Some unexpected message ID: %s", __func__, UbxToString().c_str());
+            return UMHError::FailedToProcess;
+        }
+    }
+
+    return UMHError::Success;
+}
+
+UMHError UbxMsgHandler::MONMsgParser() {
+    switch (mParcel.rxId) {
+        case UbxId::VER: {
+            MonVerQueueType sp = std::make_shared<UbxMonVer<monVerOut>>(
+                mParcel.msgPayload,
+                mParcel.lenght);
+            mPipe.Push<MonVerQueueType>(sp);
+            break;
+        }
+        default: {
+            ALOGV("[%s] Some unexpected message ID: %s", __func__, UbxToString().c_str());
+            return UMHError::FailedToProcess;
+        }
     }
 
     return UMHError::Success;
@@ -139,7 +246,7 @@ UMHError UbxMsgHandler::VerifyCheckSum(const std::vector<char>& parcel,
                                        const uint16_t& len) {
     auto begin = parcel.begin() + classOffset;
     auto end = parcel.end() - endLeftShifCrc;
-    std::for_each(begin, end, [this] (const char& ch) {
+    std::for_each(begin, end, [this](const char& ch) {
         mParcel.rxChecksumA += static_cast<uint8_t>(ch);
         mParcel.rxChecksumB += mParcel.rxChecksumA;
     });

@@ -18,6 +18,7 @@
 #define MEASUREMENTPROVIDER_H
 
 #include <thread>
+#include <unordered_map>
 
 #include <MeasurementBuilder.h>
 
@@ -49,8 +50,8 @@ private:
     MeasurementProvider(MeasurementProvider&) = delete;
     MeasurementProvider& operator=(const MeasurementProvider&) = delete;
     void Provide();
-    GnssData_1_0  DataV2_0ToDataV1_0(const GnssData_2_0& v2_0);
-    GnssData_1_1  DataV2_0ToDataV1_1(const GnssData_2_0& v2_0);
+    GnssData_1_0  DataV2_1ToDataV1_0(const GnssData_2_1& v2_1);
+    GnssData_1_1  DataV2_1ToDataV1_1(const GnssData_2_1& v2_1);
     GnssData_2_0  DataV2_1ToDataV2_0(const GnssData_2_1& v2_1);
 
     std::unique_ptr<MeasurementBuilder> mBuilder;
@@ -63,6 +64,7 @@ private:
     std::mutex mCallbackMutex;
     std::condition_variable mCallbackCond;
     std::atomic<bool> mEnabled;
+    std::unordered_map<std::string, std::function<void(const GnssData_2_1&)>> mProviders;
 };
 
 } //namespace android::hardware::gnss::V2_1::renesas

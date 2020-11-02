@@ -13,8 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define LOG_NDEBUG 1
+#define LOG_TAG "GnssRenesasLocationProviderBase"
 
 #include <LocationProviderBase.h>
+
+#include <log/log.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
 
@@ -51,19 +55,85 @@ void LocationProviderBase::SetUpdateInterval(uint32_t newInterval) {
 }
 
 void LocationProviderBase::setCallback_1_0(GnssCallback_1_0& cb) {
+    static const std::string providerName = {"GnssCallback_1_0"};
+
     mGnssCallback_1_0 = cb;
+    mProviders[providerName] = [this](const LocationData& location) {
+        if (mGnssCallback_1_0) {
+            ALOGV("%s, Provide location callback_1_0", __PRETTY_FUNCTION__);
+            auto ret = mGnssCallback_1_0->gnssLocationCb(location.v1_0);
+
+            if (!ret.isOk()) {
+                ALOGE("%s: Unable to invoke gnssLocationCb_1_0", __func__);
+            }
+        }
+    };
 }
 
 void LocationProviderBase::setCallback_1_1(GnssCallback_1_1& cb) {
+    static const std::string providerName = {"GnssCallback_1_1"};
+
     mGnssCallback_1_1 = cb;
+    mProviders[providerName] = [this](const LocationData& location) {
+        if (mGnssCallback_1_1) {
+            ALOGV("%s, Provide location callback_1_1", __PRETTY_FUNCTION__);
+            auto ret = mGnssCallback_1_1->gnssLocationCb(location.v1_0);
+
+            if (!ret.isOk()) {
+                ALOGE("%s: Unable to invoke gnssLocationCb_1_1", __func__);
+            }
+        }
+    };
 }
 
 void LocationProviderBase::setCallback_2_0(GnssCallback_2_0& cb) {
+    static const std::string providerName = {"GnssCallback_2_0"};
+
     mGnssCallback_2_0 = cb;
+    mProviders[providerName] = [this](const LocationData& location) {
+        if (mGnssCallback_2_0) {
+            ALOGV("%s, Provide location callback_2_0", __PRETTY_FUNCTION__);
+            auto ret = mGnssCallback_2_0->gnssLocationCb_2_0(location);
+
+            if (!ret.isOk()) {
+                ALOGE("%s: Unable to invoke gnssLocationCb_2_0", __func__);
+                return;
+            }
+
+            if (mGnssVisibilityControl) {
+                mGnssVisibilityControl->sendNfwNotificationMsg(
+                    mGnssCallback_2_0->descriptor);
+            }
+        }
+    };
 }
 
 void LocationProviderBase::setCallback_2_1(GnssCallback_2_1& cb) {
+    static const std::string providerName = {"GnssCallback_2_1"};
+
     mGnssCallback_2_1 = cb;
+    mProviders[providerName] = [this](const LocationData& location) {
+        if (mGnssCallback_2_1) {
+            ALOGV("%s, Provide location callback_2_1", __PRETTY_FUNCTION__);
+            auto ret = mGnssCallback_2_1->gnssLocationCb_2_0(location);
+
+            if (!ret.isOk()) {
+                ALOGE("%s: Unable to invoke gnssLocationCb_2_1", __func__);
+                return;
+            }
+
+            if (mGnssVisibilityControl) {
+                mGnssVisibilityControl->sendNfwNotificationMsg(
+                    mGnssCallback_2_1->descriptor);
+            }
+        }
+    };
+}
+
+void LocationProviderBase::CallProviders(const LocationData& location) {
+    for (auto provider : mProviders) {
+        provider.second(location);
+    }
 }
 
 void LocationProviderBase::SetEnabled(bool isEnabled) {
@@ -71,8 +141,8 @@ void LocationProviderBase::SetEnabled(bool isEnabled) {
 }
 
 void LocationProviderBase::setGnssVisibilityControl(
-        sp<GnssVisibilityControlV1_0>& gnssVisibilityControl){
+        sp<GnssVisibilityControlV1_0>& gnssVisibilityControl) {
     mGnssVisibilityControl = gnssVisibilityControl;
 }
 
-} // namespace android::hardware::gnss::V2_1::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas

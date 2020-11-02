@@ -19,6 +19,7 @@
 
 #include <atomic>
 #include <thread>
+#include <unordered_map>
 
 #include <ILocationProvider.h>
 
@@ -28,6 +29,7 @@ using GnssCallback_1_0 = android::sp<android::hardware::gnss::V1_0::IGnssCallbac
 using GnssCallback_1_1 = android::sp<android::hardware::gnss::V1_1::IGnssCallback>;
 using GnssCallback_2_0 = android::sp<android::hardware::gnss::V2_0::IGnssCallback>;
 using GnssCallback_2_1 = android::sp<android::hardware::gnss::V2_1::IGnssCallback>;
+using LocationData     = android::hardware::gnss::V2_0::GnssLocation;
 
 class LocationProviderBase : public ILocationProvider {
 public:
@@ -49,6 +51,7 @@ protected:
      * \brief Provide
      */
     virtual void Provide() = 0;
+    void CallProviders(const LocationData& location);
 
     std::atomic<bool> mThreadExit;
     std::thread mGnssLocationThread;
@@ -62,6 +65,7 @@ protected:
 private:
     LocationProviderBase(LocationProviderBase&) = delete;
     LocationProviderBase& operator=(const LocationProviderBase&) = delete;
+    std::unordered_map<std::string, std::function<void(const LocationData&)>> mProviders;
 };
 
 } // namespace android::hardware::gnss::V2_1::renesas

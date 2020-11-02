@@ -24,6 +24,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <map>
+
 namespace android::hardware::gnss::V2_1::renesas {
 
 static constexpr uint32_t badBaudRate = 0;
@@ -60,6 +62,15 @@ TError GnssTransportTTY::SetUp() {
     ALOGI("%s, baudrate: %u for fd %d (%s)", __func__, mBaudRate, mFd,
           GetPath().c_str());
     struct termios ios;
+    static const std::map<uint32_t, decltype(B2400)> BaudRateMap = {
+        {2400, B2400},
+        {4800, B4800},
+        {9600, B9600},
+        {19200, B19200},
+        {38400, B38400},
+        {57600, B57600},
+        {115200, B115200},
+    };
 
     if (tcdrain(mFd)) {
         ALOGW("tcdrain has failed! This is not fatal, but can result in "
@@ -72,47 +83,13 @@ TError GnssTransportTTY::SetUp() {
     ios.c_oflag = 0;
     ios.c_lflag = 0;  // disable ECHO, ICANON, etc...
 
+    auto speed = BaudRateMap.find(mBaudRate);
     // Set baudrate
-    switch (mBaudRate) {
-        case 2400: {
-            ios.c_cflag |= B2400;
-            break;
-        }
-
-        case 4800: {
-            ios.c_cflag |= B4800;
-            break;
-        }
-
-        case 9600: {
-            ios.c_cflag |= B9600;
-            break;
-        }
-
-        case 19200: {
-            ios.c_cflag |= B19200;
-            break;
-        }
-
-        case 38400: {
-            ios.c_cflag |= B38400;
-            break;
-        }
-
-        case 57600: {
-            ios.c_cflag |= B57600;
-            break;
-        }
-
-        case 115200: {
-            ios.c_cflag |= B115200;
-            break;
-        }
-
-        default: {
-            ios.c_cflag |= B9600;
-            ALOGW("Unsupported baud rate %d.. setting default 9600", mBaudRate);
-        }
+    if (speed != BaudRateMap.end()) {
+        ios.c_cflag |= speed->second;
+    } else {
+        ios.c_cflag |= B9600;
+        ALOGW("Unsupported baud rate %d.. setting default 9600", mBaudRate);
     }
 
     if (::tcsetattr(mFd, TCSANOW, &ios)) {

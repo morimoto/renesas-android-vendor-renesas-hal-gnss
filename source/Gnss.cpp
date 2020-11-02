@@ -138,7 +138,7 @@ GnssImpl::getExtensionGnssMeasurement() {
         return nullptr;
     }
 
-    return mGeneralManager->getExtensionGnssMeasurement_v2_0(); {};
+    return mGeneralManager->getExtensionGnssMeasurement_v2_0();
 }
 
 Return<sp<::android::hardware::gnss::V1_0::IGnssNavigationMessage>>

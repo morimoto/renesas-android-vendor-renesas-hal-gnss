@@ -51,20 +51,20 @@ private:
         uint16_t lenUint;
     };
 
-    const uint8_t mLittleEndianFirsByteOffset = 0u;
-    const uint8_t mLittleEndianSecondByteOffset = 1u;
-    const uint8_t mBigEndianFistByteOffset = 1u;
-    const uint8_t mBigEndianSecondByteOffset = 0u;
+    const std::shared_ptr<Transport> mTransport;
+    const Endian  mEndianType;
+    const uint8_t mFirstByteOffset;
+    const uint8_t mSecondByteOffset;
 
     cbPtr mDeathNotificationCallback;
     std::thread mReadingLoop;
-    std::shared_ptr<Transport> mTransport;
     std::atomic<bool> mExitThread;
 
     UbxPayloadLen mUbxPayloadLen = {};
     ReaderState mReaderState = ReaderState::WAITING;
     size_t mReaderUbxParcelOffset = 0u;
-    Endian mEndianType = Endian::Unset;
+    void SendToMsgHandler(const std::shared_ptr<std::vector<char>>& parcel,
+                          const SupportedProtocol& protocol);
 };
 
 #endif // TTYREADER_H
