@@ -27,39 +27,103 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * \brief General manager error return type
+ */
 enum class GMError : uint8_t {
+    /**
+     * \brief Success
+     */
     SUCCESS,
+    /**
+     * \brief Internl error
+     */
     INTERNAL,
+    /**
+     * \brief No receiver found
+     */
     NO_RECEIVER,
+    /**
+     * \brief Other error
+     */
     FAIL,
 };
 
+/**
+ * \brief Gnss receiver status
+ */
 enum class GnssReceiverStatus : uint8_t {
+    /**
+     * \brief wait for receiver
+     */
     WAIT_FOR_RECEIVER,
+    /**
+     * \brief receiver found
+     */
     RECEIVER_FOUND,
+    /**
+     * \brief wait for setup
+     */
     WAIT_FOR_SETUP,
+    /**
+     * \brief setup done
+     */
     SETUP_DONE,
+    /**
+     * \brief wait for configuration
+     */
     WAIT_FOR_CONFIG,
+    /**
+     * \brief configuration finished
+     */
     CONFIG_DONE,
+    /**
+     * \brief ready
+     */
     READY = CONFIG_DONE,
 };
 
 class DeviceScanner;
 class GnssImpl;
 
+/**
+ * \brief General manager class
+ *
+ */
 class GeneralManager {
 public:
+    /**
+     * \brief GNSS callback ptr V1_0
+     */
     using GnssCbPtr_1_0 = android::sp<android::hardware::gnss::V1_0::IGnssCallback>;
+
+    /**
+     * \brief GNSS callback ptr V1_1
+     */
     using GnssCbPtr_1_1 = android::sp<android::hardware::gnss::V1_1::IGnssCallback>;
+
+    /**
+     * \brief GNSS callback ptr V2_0
+     */
     using GnssCbPtr_2_0 = android::sp<android::hardware::gnss::V2_0::IGnssCallback>;
+
+    /**
+     * \brief GNSS callback ptr V2_1
+     */
     using GnssCbPtr_2_1 = android::sp<android::hardware::gnss::V2_1::IGnssCallback>;
+
+    /**
+     * \brief GNSS hal implementation
+     */
     using GnssHalImpl = android::hardware::gnss::V2_1::renesas::GnssImpl;
 
-    /*!
-     * \brief GeneralManager
-     * \param gnssHal
+    /**
+     * @brief Construct a new General Manager object
      */
     GeneralManager();
+    /**
+     * @brief Destroy the General Manager object
+     */
     ~GeneralManager();
 
     /*!
@@ -102,10 +166,25 @@ public:
      */
     GMError CleanUpCb();
 
+    /**
+     * @brief Set the Update Period object
+     *
+     * @param updateIntervalMs
+     */
     void setUpdatePeriod(uint32_t updateIntervalMs);
 
+    /**
+     * @brief Get the ExtensionGnssMeasurement v2 0 object
+     *
+     * @return sp<android::hardware::gnss::V2_0::IGnssMeasurement>
+     */
     sp<android::hardware::gnss::V2_0::IGnssMeasurement> getExtensionGnssMeasurement_v2_0();
 
+    /**
+     * @brief Get the ExtensionGnssMeasurement v2 1 object
+     *
+     * @return sp<android::hardware::gnss::V2_1::IGnssMeasurement>
+     */
     sp<android::hardware::gnss::V2_1::IGnssMeasurement> getExtensionGnssMeasurement_v2_1();
 
     /*!
@@ -159,6 +238,11 @@ protected:
      */
     GMError SetupMeasurementProvider();
 
+    /**
+     * @brief Setup SvInfo Provider
+     *
+     * @return GMError
+     */
     GMError SetupSvInfoProvider();
 
 private:
@@ -185,7 +269,7 @@ private:
     std::unique_ptr<UbxMsgHandler> mUbxMsgHandler;
     std::unique_ptr<NmeaMsgHandler> mNmeaMsgHandler;
 
-    uint32_t mUpdateIntervalUs = 1000 * 1000; // set default interval to 1 sec
+    uint32_t mUpdateIntervalUs = 1000 * 1000;  // set default interval to 1 sec
 
     GnssReceiverStatus mReceiverStatus;
     std::thread mReceiverInfoThread;
@@ -214,9 +298,8 @@ private:
 
         return GMError::SUCCESS;
     }
-
 };
 
-} //namespace android::hardware::gnss::V2_1::renesas
+}  //namespace android::hardware::gnss::V2_1::renesas
 
-#endif // GENERALMANAGER_H
+#endif  // GENERALMANAGER_H

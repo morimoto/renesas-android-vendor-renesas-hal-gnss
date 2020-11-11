@@ -19,14 +19,41 @@
 
 #include <NmeaParserCommon.h>
 
+/**
+ * @brief Gnss Location Flags
+ */
 using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 
+/**
+ * @brief Nmea Rmc parser implemenatation
+ *
+ * @tparam T
+ */
 template <typename T>
 class NmeaRmc : public NmeaParserCommon<T> {
 public:
+    /**
+     * @brief Construct a new Nmea Rmc object
+     *
+     */
     NmeaRmc();
+
+    /**
+     * @brief Construct a new Nmea Rmc object
+     *
+     * @param in
+     * @param inLen
+     * @param protocol
+     */
     NmeaRmc(const char* in, const size_t& inLen,
             const NmeaVersion& protocol);
+
+    /**
+     * @brief Construct a new Nmea Rmc object
+     *
+     * @param in
+     * @param protocol
+     */
     NmeaRmc(std::string& in, const NmeaVersion& protocol);
     ~NmeaRmc() override {}
 
@@ -36,14 +63,58 @@ public:
     bool IsValid() override;
 
 protected:
+    /**
+     * @brief Parse
+     *
+     * @return NPError
+     */
     NPError Parse();
-    NPError Parse(std::string& in);
+
+    /**
+     * @brief Parse Common
+     *
+     * @param rmc
+     * @return NPError
+     */
     NPError ParseCommon(std::vector<std::string>& rmc);
+
+    /**
+     * @brief Validate Parcel
+     *
+     * @return NPError
+     */
     NPError ValidateParcel();
+
+    /**
+     * @brief Set the Time object
+     *
+     * @param date
+     * @param time
+     * @return NPError
+     */
     NPError SetTime(const std::string& date, const std::string& time);
+
+    /**
+     * @brief Set the Location
+     *
+     * @param lat
+     * @param lon
+     * @param northSouth
+     * @param eastWest
+     * @return NPError
+     */
     NPError SetLocation(const std::string& lat, const std::string& lon,
-                const std::string& northSouth, const std::string& eastWest);
+                        const std::string& northSouth, const std::string& eastWest);
+
+    /**
+     * @brief Set the Motion
+     *
+     * @param speed
+     * @param cog
+     * @return NPError
+     */
     NPError SetMotion(const std::string& speed, const std::string& cog);
+    NPError Parse(std::string& in) override;
 
 private:
     typedef struct Parcel {
@@ -69,23 +140,23 @@ private:
     };
 
     constexpr static const std::array<size_t, NmeaVersion::AMOUNT>
-                mRmcPartsAmount = {13, 14, 14};
-    constexpr static const float knotToKmph = 1.852f; //knots to km per hour
-    constexpr static const float mpsToKmph = 3.6f; //km/h to m/h
-    constexpr static const unsigned int secsPerHour = 3600; // seconds per hour
+        mRmcPartsAmount = {13, 14, 14};
+    constexpr static const float knotToKmph = 1.852f;        //knots to km per hour
+    constexpr static const float mpsToKmph = 3.6f;           //km/h to m/h
+    constexpr static const unsigned int secsPerHour = 3600;  // seconds per hour
     static const NmeaMsgType mType = NmeaMsgType::RMC;
     static const int minutesPerDegree = 60;
     static const std::string statusActive;
     static const std::string mWest;
     static const std::string mSouth;
     static constexpr float speedAccUblox7 =
-        0.1f; // m/s according to NEO-7 datasheet
+        0.1f;  // m/s according to NEO-7 datasheet
     static constexpr float bearingAccUblox7 =
-        0.5f; // degrees according to NEO-7 datasheet
+        0.5f;  // degrees according to NEO-7 datasheet
     static constexpr float speedAccUblox8 =
-        0.05f; // m/s according to NEO-8 datasheet
+        0.05f;  // m/s according to NEO-8 datasheet
     static constexpr float bearingAccUblox8 =
-        0.3f; // degrees according to NEO-8 datasheet
+        0.3f;  // degrees according to NEO-8 datasheet
 
     const char* mPayload;
     const size_t mPayloadLen;
@@ -110,16 +181,14 @@ template <typename T>
 const std::string NmeaRmc<T>::mSouth = "S";
 
 template <typename T>
-NmeaRmc<T>::NmeaRmc() :
-    mPayload(nullptr),
-    mPayloadLen(0) {
+NmeaRmc<T>::NmeaRmc() : mPayload(nullptr),
+                        mPayloadLen(0) {
 }
 
 template <typename T>
-NmeaRmc<T>::NmeaRmc(std::string& in, const NmeaVersion& protocol) :
-    mPayload(in.c_str()),
-    mPayloadLen(in.size()),
-    mCurrentProtocol(protocol) {
+NmeaRmc<T>::NmeaRmc(std::string& in, const NmeaVersion& protocol) : mPayload(in.c_str()),
+                                                                    mPayloadLen(in.size()),
+                                                                    mCurrentProtocol(protocol) {
     if (NPError::Success == Parse(in)) {
         SetConstants();
         mIsValid = true;
@@ -128,10 +197,9 @@ NmeaRmc<T>::NmeaRmc(std::string& in, const NmeaVersion& protocol) :
 
 template <typename T>
 NmeaRmc<T>::NmeaRmc(const char* in, const size_t& inLen,
-                    const NmeaVersion& protocol) :
-    mPayload(in),
-    mPayloadLen(inLen),
-    mCurrentProtocol(protocol) {
+                    const NmeaVersion& protocol) : mPayload(in),
+                                                   mPayloadLen(inLen),
+                                                   mCurrentProtocol(protocol) {
     if (NPError::Success == Parse()) {
         SetConstants();
         mIsValid = true;
@@ -141,24 +209,24 @@ NmeaRmc<T>::NmeaRmc(const char* in, const size_t& inLen,
 template <typename T>
 void NmeaRmc<T>::SetConstants() {
     switch (mCurrentProtocol) {
-    case NmeaVersion::NMEAv23:
-        mSpeedAccuracy = speedAccUblox7;
-        mBearingAccuracy = bearingAccUblox7;
-        mFlags |= GnssLocationFlags::HAS_SPEED_ACCURACY |
-                  GnssLocationFlags::HAS_BEARING_ACCURACY;
-        break;
+        case NmeaVersion::NMEAv23:
+            mSpeedAccuracy = speedAccUblox7;
+            mBearingAccuracy = bearingAccUblox7;
+            mFlags |= GnssLocationFlags::HAS_SPEED_ACCURACY |
+                      GnssLocationFlags::HAS_BEARING_ACCURACY;
+            break;
 
-    case NmeaVersion::NMEAv41:
-        mSpeedAccuracy = speedAccUblox8;
-        mBearingAccuracy = bearingAccUblox8;
-        mFlags |= GnssLocationFlags::HAS_SPEED_ACCURACY |
-                  GnssLocationFlags::HAS_BEARING_ACCURACY;
-        break;
+        case NmeaVersion::NMEAv41:
+            mSpeedAccuracy = speedAccUblox8;
+            mBearingAccuracy = bearingAccUblox8;
+            mFlags |= GnssLocationFlags::HAS_SPEED_ACCURACY |
+                      GnssLocationFlags::HAS_BEARING_ACCURACY;
+            break;
 
-    default:
-        mSpeedAccuracy = 0.0;
-        mBearingAccuracy = 0.0;
-        break;
+        default:
+            mSpeedAccuracy = 0.0;
+            mBearingAccuracy = 0.0;
+            break;
     }
 }
 
@@ -312,4 +380,4 @@ NPError NmeaRmc<T>::ValidateParcel() {
     return NPError::Success;
 }
 
-#endif // NMEARMC_H
+#endif  // NMEARMC_H

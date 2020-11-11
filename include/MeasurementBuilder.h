@@ -24,17 +24,49 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief Error return type
+ */
 enum MBError : int8_t {
+    /**
+     * @brief Message with measurements was built successfully
+     */
     SUCCESS = 0,
-    INCOMPLETE = -100,  // some messages are missing
-    INVALID = -101,     // some messages are invalid
-    EMPTY = -102        // no parsers in MessageQueue
+
+    /**
+     * @brief some messages are missing
+     */
+    INCOMPLETE = -100,
+
+    /**
+     * @brief some messages are invalid
+     */
+    INVALID = -101,
+
+    /**
+     * @brief no parsers in MessageQueue
+     */
+    EMPTY = -102
 };
 
+/**
+ * @brief Gnss Data
+ */
 typedef android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData GnssData;
+
+/**
+ * @brief MBType
+ */
 typedef std::shared_ptr<IUbxParser<GnssData*>> MBType;
+
+/**
+ * @brief MBParserMap
+ */
 typedef std::map<UbxMsg, MBType> MBParserMap;
 
+/**
+ * @brief Measurement Builder implementation
+ */
 class MeasurementBuilder {
 public:
     /*!

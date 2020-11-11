@@ -19,15 +19,40 @@
 
 #include <NmeaParserCommon.h>
 
+/**
+ * @brief GnssLocationFlags
+ */
 using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 
-//TODO(g.chabukiani): add doxygen, check all over the project
+/**
+ * @brief NmeaGga
+ *
+ * @tparam T
+ */
 template <typename T>
 class NmeaGga : public NmeaParserCommon<T> {
 public:
+    /**
+     * @brief Construct a new Nmea Gga object
+     */
     NmeaGga();
+
+    /**
+     * @brief Construct a new Nmea Gga object
+     *
+     * @param in
+     * @param inLen
+     * @param protocol
+     */
     NmeaGga(const char* in, const size_t& inLen,
             const NmeaVersion& protocol);
+
+    /**
+     * @brief Construct a new Nmea Gga object
+     *
+     * @param in
+     * @param protocol
+     */
     NmeaGga(std::string& in, NmeaVersion& protocol);
     ~NmeaGga() override {}
 
@@ -35,11 +60,38 @@ public:
     NmeaVersion GetProtocolVersion() override;
     NPError GetData(T out) override;
     bool IsValid() override;
+
 protected:
+    /**
+     * @brief Parse
+     *
+     * @return NPError
+     */
     NPError Parse();
-    NPError Parse(std::string& in);
+
+    /**
+     * @brief Parse
+     *
+     * @param in
+     * @return NPError
+     */
+    NPError Parse(std::string& in) override;
+
+    /**
+     * @brief ParseCommon
+     *
+     * @param gga
+     * @return NPError
+     */
     NPError ParseCommon(std::vector<std::string>& gga);
+
+    /**
+     * @brief Validate Parcel
+     *
+     * @return NPError
+     */
     NPError ValidateParcel();
+
 private:
     typedef struct Parcel {
         double altitude;
@@ -52,7 +104,7 @@ private:
     };
 
     constexpr static const std::array<size_t, NmeaVersion::AMOUNT>
-            mGgaPartsAmount = {15, 15, 15};
+        mGgaPartsAmount = {15, 15, 15};
     static const NmeaMsgType mType = NmeaMsgType::GGA;
 
     const char* mPayload;
@@ -65,28 +117,24 @@ private:
 };
 
 template <typename T>
-NmeaGga<T>::NmeaGga() :
-    mPayload(nullptr),
-    mPayloadLen(0) {
+NmeaGga<T>::NmeaGga() : mPayload(nullptr),
+                        mPayloadLen(0) {
 }
 
 template <typename T>
-NmeaGga<T>::NmeaGga(std::string& in, NmeaVersion& protocol) :
-    mPayload(in.c_str()),
-    mPayloadLen(in.size()),
-    mCurrentProtocol(protocol) {
+NmeaGga<T>::NmeaGga(std::string& in, NmeaVersion& protocol) : mPayload(in.c_str()),
+                                                              mPayloadLen(in.size()),
+                                                              mCurrentProtocol(protocol) {
     if (NPError::Success == Parse(in)) {
         mIsValid = true;
     }
 }
 
-
 template <typename T>
 NmeaGga<T>::NmeaGga(const char* in, const size_t& inLen,
-                    const NmeaVersion& protocol) :
-    mPayload(in),
-    mPayloadLen(inLen),
-    mCurrentProtocol(protocol) {
+                    const NmeaVersion& protocol) : mPayload(in),
+                                                   mPayloadLen(inLen),
+                                                   mCurrentProtocol(protocol) {
     if (NPError::Success == Parse()) {
         mIsValid = true;
     }
@@ -106,7 +154,6 @@ template <typename T>
 NPError NmeaGga<T>::GetData([[maybe_unused]] T out) {
     return NPError::Success;
 }
-
 
 template <typename T>
 bool NmeaGga<T>::IsValid() {
@@ -165,4 +212,4 @@ NPError NmeaGga<T>::ValidateParcel() {
     return NPError::Success;
 }
 
-#endif // NMEAGGA_H
+#endif  // NMEAGGA_H

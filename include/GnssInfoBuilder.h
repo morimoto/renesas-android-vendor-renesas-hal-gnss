@@ -24,22 +24,73 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief IBError
+ */
 enum class IBError : int8_t {
+    /**
+     * @brief SUCCESS
+     */
     SUCCESS = 0,
-    INCOMPLETE = -100,  // some messages are missing
-    INVALID = -101,     // some messages are invalid
-    UNEXPECTED = -102,  // unexpected message (out of range)
+
+    /**
+     * @brief INCOMPLETE - some messages are missing
+     */
+    INCOMPLETE = -100,
+
+    /**
+     * @brief INVALID - some messages are invalid
+     */
+    INVALID = -101,
+
+    /**
+     * @brief UNEXPECTED - unexpected message (out of range)
+     */
+    UNEXPECTED = -102,
 };
 
-
+/**
+ * @brief GnssInfoBuilder
+ */
 class GnssInfoBuilder {
 public:
+    /**
+     * @brief Construct a new Gnss Info Builder object
+     */
     GnssInfoBuilder();
+
+    /**
+     * @brief Destroy the Gnss Info Builder object
+     */
     ~GnssInfoBuilder();
+
+    /**
+     * @brief Build gnss info data
+     *
+     * @param outData - gnss info data
+     * @return IBError
+     */
     IBError Build(SvInfoList& outData);
 protected:
+    /**
+     * @brief Get the Satellite object
+     *
+     * @param out
+     * @param expectedMsgNum
+     * @return IBError
+     */
     IBError GetSatellite(SvInfoOutType out, uint8_t expectedMsgNum);
+
+    /**
+     * @brief Get the Fix Satellites object
+     *
+     */
     void GetFixSatellites();
+
+    /**
+     * @brief Get the Satellites object
+     *
+     */
     void GetSatellites();
 private:
     GnssInfoBuilder(GnssInfoBuilder&) = delete;

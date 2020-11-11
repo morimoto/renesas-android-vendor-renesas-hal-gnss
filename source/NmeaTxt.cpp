@@ -20,7 +20,7 @@
 #include <NmeaTxt.h>
 
 template <>
-NPError NmeaTxt<std::string&>::GetData(std::string& out){
+NPError NmeaTxt<std::string&>::GetData(std::string& out) {
     if (!mIsValid) {
         return NPError::InvalidData;
     }

@@ -17,25 +17,52 @@
 #ifndef NMEATXT_H
 #define NMEATXT_H
 
-#include <log/log.h>
-
 #include <NmeaParserCommon.h>
 
+#include <log/log.h>
+
+/**
+ * @brief Nmea Txt parser implementation
+ *
+ * @tparam T
+ */
 template <typename T>
-class NmeaTxt: public NmeaParserCommon<T>{
+class NmeaTxt : public NmeaParserCommon<T> {
 public:
+    /**
+     * @brief Construct a new Nmea Txt object
+     *
+     * @param in
+     * @param protocol
+     */
     NmeaTxt(std::string& in, const NmeaVersion& protocol);
-    ~NmeaTxt() override {};
+    ~NmeaTxt() override{};
 
     NmeaMsgType GetMsgType() override;
     NmeaVersion GetProtocolVersion() override;
     NPError GetData(T out) override;
     bool IsValid() override;
+    /**
+     * @brief Print Message
+     */
     void PrintMsg();
+
 protected:
+    /**
+     * @brief Parse
+     *
+     * @return NPError
+     */
     NPError Parse();
-    NPError Parse(std::string& in);
+
+    /**
+     * @brief ParseMsg
+     *
+     * @param in
+     * @return NPError
+     */
     NPError ParseMsg(std::vector<std::string>& in);
+    NPError Parse(std::string& in) override;
 
 private:
     enum TxtOfst {
@@ -45,7 +72,7 @@ private:
         msgText   = 4
     };
 
-    typedef struct {
+    typedef struct Parcel {
         uint8_t msgAmount;
         uint8_t curMsgNum;
         uint8_t msgType;
@@ -63,10 +90,9 @@ private:
 };
 
 template <typename T>
-NmeaTxt<T>::NmeaTxt(std::string& in, const NmeaVersion& protocol) :
-    mPayload(in.c_str()),
-    mPayloadLen(in.size()),
-    mCurrentProtocol(protocol) {
+NmeaTxt<T>::NmeaTxt(std::string& in, const NmeaVersion& protocol) : mPayload(in.c_str()),
+                                                                    mPayloadLen(in.size()),
+                                                                    mCurrentProtocol(protocol) {
     if (NPError::Success == Parse(in)) {
         mIsValid = true;
     }
@@ -134,4 +160,4 @@ NPError NmeaTxt<T>::ParseMsg(std::vector<std::string>& in) {
     return NPError::Success;
 }
 
-#endif // NMEATXT_H
+#endif  // NMEATXT_H

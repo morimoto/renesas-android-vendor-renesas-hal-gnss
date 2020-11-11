@@ -17,46 +17,97 @@
 #ifndef DEVICESCANNER_H
 #define DEVICESCANNER_H
 
+#include <IGnssReceiver.h>
 #include <usb-scanner/UsbScanner.h>
 
 #include <queue>
 
-#include <IGnssReceiver.h>
-
 namespace android::hardware::gnss::V2_1::renesas {
 class GeneralManager;
 
+/**
+ * @brief TargetDevice Priority enum class
+ */
 enum class Priority : uint8_t {
+    /**
+     * @brief Fake
+     */
     Fake = 1,
+    /**
+     * @brief Requested
+     */
     Requested,
+    /**
+     * @brief UbxUsb
+     */
     UbxUsb,
+    /**
+     * @brief UbxNative
+     */
     UbxNative,
+    /**
+     * @brief Default
+     */
     Default,
 };
 
+/**
+ * @brief TargetDevice enum class
+ */
 enum class DSError : uint8_t {
+    /**
+     * @brief Success
+     */
     Success,
+    /**
+     * @brief NoReceiver
+     */
     NoReceiver,
+    /**
+     * @brief UnsupportedReceiver
+     */
     UnsupportedReceiver,
+    /**
+     * @brief FakeReceiver
+     */
     FakeReceiver,
+    /**
+     * @brief NoPredefinedReceiver
+     */
     NoPredefinedReceiver,
+    /**
+     * @brief InternalError
+     */
     InternalError,
 };
 
+/**
+ * @brief TargetDevice enum class
+ */
 enum class TargetDevice : uint8_t {
+    /**
+     * @brief Salvator
+     */
     Salvator,
+    /**
+     * @brief Kingfisher
+     */
     Kingfisher,
+    /**
+     * @brief Unknown
+     */
     Unknown,
 };
 
+/**
+ * @brief DeviceScanner class
+ */
 class DeviceScanner {
     typedef struct Receiver {
         std::shared_ptr<IGnssReceiver> receiver;
         Priority priority;
     } receiver_t;
 
-    //TODO(g.chabukiani): check if this comparison is expected,
-    //(maybe should be [left < right])
     struct Compare {
         bool operator()(const receiver_t& left, const receiver_t& right) const {
             return left.priority > right.priority;
@@ -64,8 +115,18 @@ class DeviceScanner {
     };
 
     using receiversQueue_t = std::priority_queue<receiver_t, std::vector<receiver_t>, Compare>;
+
 public:
+    /**
+     * @brief Construct a new Device Scanner object
+     *
+     * @param gManager
+     */
     DeviceScanner(GeneralManager* gManager);
+
+    /**
+     * @brief Destroy the Device Scanner object
+     */
     virtual ~DeviceScanner();
 
     /*!
@@ -114,7 +175,7 @@ protected:
      * \brief Check if device supported
      * \return
      */
-    bool IsSupportedDevice(DevId &devId);
+    bool IsSupportedDevice(DevId& devId);
 
     /*!
      * \brief ProcessPredefinedSettings
@@ -215,6 +276,6 @@ private:
     receiversQueue_t mReceivers;
     UsbScanner mUscanner;
 };
-} //namespace android::hardware::gnss::V2_1::renesas
+}  //namespace android::hardware::gnss::V2_1::renesas
 
-#endif // DEVICESCANNER_H
+#endif  // DEVICESCANNER_H

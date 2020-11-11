@@ -22,8 +22,17 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief Gnss Receiver TTY class
+ *
+ */
 class GnssReceiverTTY : public GnssReceiver {
 public:
+    /**
+     * @brief Construct a new Gnss Receiver TTY object
+     *
+     * @param transport
+     */
     GnssReceiverTTY(GnssTransportTTY* transport)
         : GnssReceiver(transport) {}
 

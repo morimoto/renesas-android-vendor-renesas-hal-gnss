@@ -22,12 +22,22 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief Fake location provider class
+ */
 class FakeLocationProvider : public LocationProviderBase {
 public:
+    /**
+     * @brief Construct a new Fake Location Provider object
+     *
+     * @param interval update inteval
+     */
     FakeLocationProvider(uint32_t interval);
     virtual ~FakeLocationProvider() override = default;
+
 protected:
     void Provide() override;
+
 private:
     FakeLocationProvider(FakeLocationProvider&) = delete;
     FakeLocationProvider& operator=(const FakeLocationProvider&) = delete;
@@ -37,6 +47,6 @@ private:
     std::vector<fakeLocationPoint_t> mFakePoints;
 };
 
-} // namespace android::hardware::gnss::V2_1::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
 
-#endif // FAKELOCATIONPROVIDER_H
+#endif  // FAKELOCATIONPROVIDER_H

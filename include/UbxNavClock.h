@@ -20,14 +20,41 @@
 #include <UbxParserCommon.h>
 
 // Using offsets according to the protocol description of UBX-NAV-CLOCK
+/**
+ * @brief Nav Clock Offsets
+ */
 enum NavClockOffsets : uint8_t {
+    /**
+     * @brief iTow offset
+     */
     iTow = 0,
+
+    /**
+     * @brief clock Bias offset
+     */
     clockBias = 4,
+
+    /**
+     * @brief clock Drift offset
+     */
     clockDrift = 8,
+
+    /**
+     * @brief time Accuracy offset
+     */
     timeAccuracy = 12,
+
+    /**
+     * @brief freq Accuracy Estimate offset
+     */
     freqAccuracyEstimate = 16,
 };
 
+/**
+ * @brief Ubx Nav Clock parser implementation
+ *
+ * @tparam T
+ */
 template <typename T>
 class UbxNavClock : public UbxParserCommon<T> {
 public:

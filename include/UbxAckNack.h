@@ -19,6 +19,11 @@
 
 #include <UbxParserCommon.h>
 
+/**
+ * @brief Ubx Ack/Nack
+ *
+ * @tparam T
+ */
 template <typename T>
 class UbxAckNack : public UbxParserCommon<T> {
 public:
@@ -45,7 +50,7 @@ public:
      * \param out
      * \return
      */
-    UPError GetData([[maybe_unused]]T out) override;
+    UPError GetData([[maybe_unused]] T out) override;
 
     /*!
      * \brief IsValid
@@ -87,19 +92,16 @@ private:
     bool mIsValid = false;
 };
 
-
 template <typename T>
-UbxAckNack<T>::UbxAckNack() :
-    mPayload(nullptr),
-    mPayloadLen(0u) {
+UbxAckNack<T>::UbxAckNack() : mPayload(nullptr),
+                              mPayloadLen(0u) {
 }
 
 template <typename T>
 UbxAckNack<T>::UbxAckNack(const char* in, const size_t& size,
-                          const UbxMsg& msgType) :
-    mPayload(reinterpret_cast<const uint8_t*>(in)),
-    mPayloadLen(size),
-    mType(msgType) {
+                          const UbxMsg& msgType) : mPayload(reinterpret_cast<const uint8_t*>(in)),
+                                                   mPayloadLen(size),
+                                                   mType(msgType) {
     if (UPError::Success == Parse()) {
         mIsValid = true;
     }
@@ -114,7 +116,7 @@ UbxMsg UbxAckNack<T>::GetMsgType() {
 }
 
 template <typename T>
-UPError UbxAckNack<T>::GetData([[maybe_unused]]T out) {
+UPError UbxAckNack<T>::GetData([[maybe_unused]] T out) {
     if (!mIsValid) {
         return UPError::InvalidData;
     }
@@ -138,4 +140,4 @@ UPError UbxAckNack<T>::Parse() {
     return UPError::Success;
 }
 
-#endif // UBXACKNACK_H
+#endif  // UBXACKNACK_H

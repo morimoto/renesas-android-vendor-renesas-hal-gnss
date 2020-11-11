@@ -21,12 +21,24 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief IGnssMeasurementCallback_1_0
+ */
 using IGnssMeasurementCallback_1_0
     = android::hardware::gnss::V1_0::IGnssMeasurementCallback;
+/**
+ * @brief IGnssMeasurementCallback_1_1
+ */
 using IGnssMeasurementCallback_1_1
     = android::hardware::gnss::V1_1::IGnssMeasurementCallback;
+/**
+ * @brief IGnssMeasurementCallback_2_0
+ */
 using IGnssMeasurementCallback_2_0
     = android::hardware::gnss::V2_0::IGnssMeasurementCallback;
+/**
+ * @brief IGnssMeasurementCallback_2_1
+ */
 using IGnssMeasurementCallback_2_1
     = android::hardware::gnss::V2_1::IGnssMeasurementCallback;
 using ::android::hardware::hidl_array;
@@ -37,8 +49,14 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
+/**
+ * @brief Gnss measurement class
+ */
 class GnssMeasurement : public android::hardware::gnss::V2_1::IGnssMeasurement {
 public:
+    /**
+     * @brief Construct a new Gnss Measurement object
+     */
     GnssMeasurement() {};
     ~GnssMeasurement() override;
     // Methods from ::android::hardware::gnss::V1_0::IGnssMeasurement follow.

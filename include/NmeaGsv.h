@@ -21,15 +21,41 @@
 
 #include <NmeaParserCommon.h>
 
+/**
+ * @brief GnssSvFlags
+ */
 using GnssSvFlags = ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvFlags;
 using ::android::hardware::gnss::V2_0::GnssConstellationType;
-//TODO(g.chabukiani): add doxygen, check all over the project
+
+/**
+ * @brief Nmea Gsv parser implementation
+ *
+ * @tparam T
+ */
 template <typename T>
 class NmeaGsv : public NmeaParserCommon<T> {
 public:
+    /**
+     * @brief Construct a new Nmea Gsv object
+     */
     NmeaGsv();
+
+    /**
+     * @brief Construct a new Nmea Gsv object
+     *
+     * @param in
+     * @param inLen
+     * @param protocol
+     */
     NmeaGsv(const char* in, const size_t& inLen,
             const NmeaVersion& protocol);
+
+    /**
+     * @brief Construct a new Nmea Gsv object
+     *
+     * @param in
+     * @param protocol
+     */
     NmeaGsv(std::string& in, const NmeaVersion& protocol);
     ~NmeaGsv() override {}
 
@@ -38,13 +64,52 @@ public:
     NPError GetData(T out) override;
     bool IsValid() override;
 protected:
+    /**
+     * @brief Parse
+     *
+     * @return NPError
+     */
     NPError Parse();
-    NPError Parse(std::string& in);
+
+    /**
+     * @brief Parse Common
+     *
+     * @param gsv
+     * @return NPError
+     */
     NPError ParseCommon(std::vector<std::string>& gsv);
+
+    /**
+     * @brief Parse Single Block
+     *
+     * @param in
+     * @return NPError
+     */
     NPError ParseSingleBlock(const std::vector<std::string>& in);
+
+    /**
+     * @brief Parse Repeated Blocks
+     *
+     * @param in
+     * @return NPError
+     */
     NPError ParseRepeatedBlocks(const std::vector<std::string>& in);
+
+    /**
+     * @brief Parse Repeated Block
+     *
+     * @param in
+     * @return NPError
+     */
     NPError ParseRepeatedBlock(std::vector<std::string>::const_iterator in);
+
+    /**
+     * @brief Validate Parcel
+     *
+     * @return NPError
+     */
     NPError ValidateParcel();
+    NPError Parse(std::string& in) override;
 
 private:
     enum GsvOfst {

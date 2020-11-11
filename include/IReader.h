@@ -21,32 +21,98 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief return error type
+ */
 enum class RDError : uint8_t {
+    /**
+     * @brief Success
+     */
     Success,
+
+    /**
+     * @brief Transport Error
+     */
     TransportError,
+
+    /**
+     * @brief Invalid Input
+     */
     InvalidInput,
+
+    /**
+     * @brief Internal Error
+     */
     InternalError,
+
+    /**
+     * @brief Capturing
+     */
     Capturing,
+
+    /**
+     * @brief Reset
+     */
     Reset,
 };
 
+/**
+ * @brief Fake Location Points
+ */
 typedef struct FakeLocationPoints {
+    /**
+     * @brief latitude
+     */
     double latitude;
+
+    /**
+     * @brief longitude
+     */
     double longitude;
+
+    /**
+     * @brief speed
+     */
     float speed;
 } fakeLocationPoint_t;
 
 //TODO(g.chabukiani): change return type,
 //specify it with specified callback class/function
+/**
+ * @brief cbPtr
+ */
 typedef int (*cbPtr)();
 
-
+/**
+ * @brief IReader
+ */
 class IReader {
 public:
+    /**
+     * @brief Destroy the IReader object
+     */
     virtual ~IReader() {};
 
+    /**
+     * @brief Start
+     *
+     * @return RDError
+     */
     virtual RDError Start() = 0;
+
+    /**
+     * @brief Stop
+     *
+     * @return RDError
+     */
     virtual RDError Stop() = 0;
+
+    /**
+     * @brief Set Notification Callback object
+     *
+     * @param notificationCb
+     * @return RDError
+     */
     virtual RDError SetUpNotificationCallback(cbPtr notificationCb) = 0;
 };
 

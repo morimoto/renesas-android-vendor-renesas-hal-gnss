@@ -31,20 +31,62 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
-
+/**
+ * @brief GNSS implementation class
+ */
 class GnssImpl : public IGnss {
 public:
+    /**
+     * @brief IGnssCbV1_1
+     */
     using IGnssCbV1_1 = ::android::hardware::gnss::V1_1::IGnssCallback;
-    using IGnssCbV2_0 = ::android::hardware::gnss::V2_0::IGnssCallback;
-    using IGnssMeasurementV1_1 =
-                        ::android::hardware::gnss::V1_1::IGnssMeasurement;
-    using IGnssMeasurementV2_0 =
-                        ::android::hardware::gnss::V2_0::IGnssMeasurement;
 
+    /**
+     * @brief IGnssCbV2_0
+     */
+    using IGnssCbV2_0 = ::android::hardware::gnss::V2_0::IGnssCallback;
+
+    /**
+     * @brief IGnssMeasurementV1_1
+     */
+    using IGnssMeasurementV1_1 =
+        ::android::hardware::gnss::V1_1::IGnssMeasurement;
+
+    /**
+     * @brief IGnssMeasurementV2_0
+     */
+    using IGnssMeasurementV2_0 =
+        ::android::hardware::gnss::V2_0::IGnssMeasurement;
+
+    /**
+     * @brief Set the General Manager object
+     *
+     * @param genManager
+     * @return ::android::status_t
+     */
     ::android::status_t SetGeneralManager(const std::shared_ptr<GeneralManager>
                                           genManager);
+    /**
+     * @brief cleanup
+     *
+     * @return Return<void>
+     */
     Return<void> cleanup() override;
+
+    /**
+     * @brief Set the Callback 1 1 object
+     *
+     * @param callback callback ptr
+     * @return Return<bool>
+     */
     Return<bool> setCallback_1_1(const sp<IGnssCbV1_1>& callback) override;
+
+    /**
+     * @brief Set the Callback 2 0 object
+     *
+     * @param callback
+     * @return Return<bool>
+     */
     Return<bool> setCallback_2_0(const sp<IGnssCbV2_0>& callback) override;
 
     Return<bool> start() override;
@@ -99,7 +141,7 @@ public:
     // Methods from ::android::hardware::gnss::V1_1::IGnss follow.
     Return<bool> setPositionMode_1_1(
         ::android::hardware::gnss::V1_0::IGnss::GnssPositionMode mode,
-        ::android::hardware::gnss::V1_0::IGnss::GnssPositionRecurrence 
+        ::android::hardware::gnss::V1_0::IGnss::GnssPositionRecurrence
         recurrence, uint32_t minIntervalMs, uint32_t preferredAccuracyMeters,
         uint32_t preferredTimeMs, bool lowPowerMode) override;
     Return<sp<::android::hardware::gnss::V1_1::IGnssConfiguration>>

@@ -24,8 +24,16 @@
 
 using namespace android::hardware::gnss::V2_1::renesas;
 
+/**
+ * @brief TtyReader implementation
+ */
 class TtyReader : public IReader {
 public:
+    /**
+     * @brief Construct a new Tty Reader object
+     *
+     * @param transport
+     */
     TtyReader(std::shared_ptr<Transport> transport);
     ~TtyReader() override;
 
@@ -34,9 +42,35 @@ public:
     RDError SetUpNotificationCallback(cbPtr notificationCb) override;
 protected:
     TtyReader() = delete;
+
+    /**
+     * @brief Reading Loop
+     *
+     */
     void ReadingLoop();
+
+    /**
+     * @brief Handle Input
+     *
+     * @param ch input char
+     * @param protocol
+     * @return RDError
+     */
     RDError HandleInput(const char& ch, SupportedProtocol& protocol);
+
+    /**
+     * @brief Reset Reader
+     *
+     */
     void ResetReader();
+
+    /**
+     * @brief Capture Parcel
+     *
+     * @param ch
+     * @param protocol
+     * @return RDError
+     */
     RDError CaptureParcel(const char& ch, SupportedProtocol& protocol);
 private:
     enum class ReaderState : uint8_t {

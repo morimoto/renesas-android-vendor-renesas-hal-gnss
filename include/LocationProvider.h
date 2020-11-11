@@ -22,8 +22,16 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief Location Provider implementation
+ */
 class LocationProvider : public LocationProviderBase {
 public:
+    /**
+     * @brief Construct a new Location Provider object
+     *
+     * @param interval
+     */
     LocationProvider(uint32_t interval);
     virtual ~LocationProvider() override = default;
 protected:

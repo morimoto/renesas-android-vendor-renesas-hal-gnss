@@ -24,39 +24,74 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief GNSS location data
+ */
 using LocationData = ::android::hardware::gnss::V2_0::GnssLocation;
+
+/**
+ * @brief FLBType
+ */
 typedef std::shared_ptr<fakeLocationPoint_t> FLBType;
 
+/**
+ * @brief return type
+ */
 enum class FLBError : int8_t {
+    /**
+     * @brief message with location was built successfully
+     */
     SUCCESS = 0,
+    /**
+     * @brief some messages from receivers are missing
+     */
     INCOMPLETE = -100,  // some messages are missing
-    INVALID = -101,     // some messages are invalid
+    /**
+     * @brief received GNSS data is invalid
+     */
+    INVALID = -101,  // some messages are invalid
 };
 
+/**
+ * @brief Fake location builder class
+ *
+ */
 class FakeLocationBuilder {
 public:
-    /*!
-     * \brief   Constructor
+    /**
+     * @brief   Constructor
      */
     FakeLocationBuilder();
 
-    /*!
-     * \brief   Destructoor
+    /**
+     * @brief   Destructoor
      */
     ~FakeLocationBuilder() = default;
 
-    /*!
-     * \brief   Builds message with GNSS location data
+    /**
+     * @brief   Builds message with GNSS location data
      *          of messages collected from receivers
      *
-     * \param   outData  The structure to be filled with location data
+     * @param   outData  The structure to be filled with location data
      *
-     * \return  SUCCESS - message with location was built successfully,
+     * @return  SUCCESS - message with location was built successfully,
      *          INCOMPLETE - some messages from receivers are missing,
      *          INVALID - received GNSS data is invalid
      */
     FLBError Build(std::queue<LocationData>& outData);
-    FLBError Build(fakeLocationPoint_t& pt_from,\
+
+    /**
+     * @brief Builds message with GNSS location data
+     *       of messages collected from file
+     *
+     * @param pt_from
+     * @param pt_to
+     * @param outData The structure to be filled with location data
+     * @return  SUCCESS - message with location was built successfully,
+     *          INCOMPLETE - some messages from receivers are missing,
+     *          INVALID - received GNSS data is invalid
+     */
+    FLBError Build(fakeLocationPoint_t& pt_from,
             fakeLocationPoint_t& pt_to, std::queue<LocationData>& outData);
 private:
     FakeLocationBuilder(FakeLocationBuilder&) = delete;

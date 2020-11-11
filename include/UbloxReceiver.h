@@ -23,14 +23,39 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief ProductId
+ */
 enum class ProductId : uint16_t {
+    /**
+     * @brief Ublox4 Id
+     */
     Ublox4 = 0x01a4,
+
+    /**
+     * @brief Ublox5 Id
+     */
     Ublox5 = 0x01a5,
+
+    /**
+     * @brief Ublox6 Id
+     */
     Ublox6 = 0x01a6,
+
+    /**
+     * @brief Ublox7 Id
+     */
     Ublox7 = 0x01a7,
+
+    /**
+     * @brief Ublox8 Id
+     */
     Ublox8 = 0x01a8,
 };
 
+/**
+ * @brief Ublox Receiver implementation
+ */
 class UbloxReceiver : public GnssReceiverTTY {
 public:
     /*!
@@ -42,6 +67,12 @@ public:
     UbloxReceiver(uint16_t vendorId, uint16_t productId, const std::string& path,
                   const GnssReceiverType& type);
 
+    /**
+     * @brief Construct a new Ublox Receiver object
+     *
+     * @param path
+     * @param type
+     */
     UbloxReceiver(const std::string& path, const GnssReceiverType& type);
 
     /*!
@@ -114,6 +145,13 @@ public:
     */
     RError SetVendor();
 
+    /**
+     * @brief Get the Ubx Protocol Version object
+     *
+     * @tparam T
+     * @param out
+     * @return RError
+     */
     template <typename T>
     RError GetUbxProtocolVersion(T& out);
 

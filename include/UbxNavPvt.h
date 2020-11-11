@@ -19,9 +19,20 @@
 
 #include <UbxParserCommon.h>
 
+/**
+ * @brief Ubx NavPvt parser implementation
+ *
+ * @tparam T
+ */
 template <typename T>
 class UbxNavPvt : public UbxParserCommon<T> {
 public:
+    /**
+     * @brief Construct a new Ubx Nav Pvt object
+     *
+     * @param in
+     * @param inLen
+     */
     UbxNavPvt(const char* in, const size_t& inLen);
     ~UbxNavPvt() override {}
 
@@ -30,11 +41,32 @@ public:
     bool IsValid() override;
 
 protected:
+    /**
+     * @brief Construct a new Ubx Nav Pvt object
+     *
+     */
     UbxNavPvt();
-    UPError Parse();
-    UPError ParseSingleBlock();
-    UPError ValidateParcel();
 
+    /**
+     * @brief Parse
+     *
+     * @return UPError
+     */
+    UPError Parse();
+
+    /**
+     * @brief Parse Single Block
+     *
+     * @return UPError
+     */
+    UPError ParseSingleBlock();
+
+    /**
+     * @brief Validate Parcel
+     *
+     * @return UPError
+     */
+    UPError ValidateParcel();
 
 private:
     typedef struct NavPvt {
@@ -81,14 +113,13 @@ private:
 
 template <typename T>
 UbxNavPvt<T>::UbxNavPvt(const char* in, const size_t& inLen) :
-    mPayload(reinterpret_cast<const uint8_t*>(in)),
-    mPayloadLen(inLen) {
+        mPayload(reinterpret_cast<const uint8_t*>(in)),
+        mPayloadLen(inLen) {
 }
 
 template <typename T>
-UbxNavPvt<T>::UbxNavPvt() :
-    mPayload(nullptr),
-    mPayloadLen(0) {
+UbxNavPvt<T>::UbxNavPvt() : mPayload(nullptr),
+                            mPayloadLen(0) {
 }
 
 template <typename T>
@@ -122,22 +153,24 @@ UPError UbxNavPvt<T>::ParseSingleBlock() {
     mParcel.flag1 = mPayload[flag1Offset];
     mParcel.flag2 = mPayload[flag2Offset];
     mParcel.numSvs = mPayload[numSvsOffset];
-    mParcel.lon = this->template GetValue<int32_t>(&mPayload[lonOffset]);
-    mParcel.lat = this->template GetValue<int32_t>(&mPayload[latOffset]);
+    mParcel.lon = this->template GetValue<int32_t>
+        (&mPayload[lonOffset]);
+    mParcel.lat = this->template GetValue<int32_t>
+        (&mPayload[latOffset]);
     mParcel.heightMSL = this->template GetValue<int32_t>
-    (&mPayload[heightMSLOffset]);
+        (&mPayload[heightMSLOffset]);
     mParcel.horizontalAcc = this->template GetValue<uint32_t>
-    (&mPayload[horizontalAccOffset]);
+        (&mPayload[horizontalAccOffset]);
     mParcel.verticalAcc = this->template GetValue<uint32_t>
-    (&mPayload[verticalAccOffset]);
+        (&mPayload[verticalAccOffset]);
     mParcel.groundSpeed = this->template GetValue<int32_t>
-    (&mPayload[groundSpeedOffset]);
+        (&mPayload[groundSpeedOffset]);
     mParcel.headingOfMotion = this->template GetValue<int32_t>
-    (&mPayload[headingOfMotionOffset]);
+        (&mPayload[headingOfMotionOffset]);
     mParcel.speedAcc = this->template GetValue<uint32_t>(
-                                                &mPayload[speedAccOffset]);
+        &mPayload[speedAccOffset]);
     mParcel.headingAcc = this->template GetValue<uint32_t>
-    (&mPayload[headingAccOffset]);
+        (&mPayload[headingAccOffset]);
     return ValidateParcel();
 }
 
@@ -147,4 +180,4 @@ UPError UbxNavPvt<T>::ValidateParcel() {
     return UPError::Success;
 }
 
-#endif // UBXNAVPVT_H
+#endif  // UBXNAVPVT_H

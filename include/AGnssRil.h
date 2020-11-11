@@ -29,6 +29,12 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
+/**
+ * Extended interface for AGNSS RIL support. An Assisted GNSS Radio Interface
+ * Layer interface allows the GNSS chipset to request radio interface layer
+ * information from Android platform. Examples of such information are reference
+ * location, unique subscriber ID, phone number string and network availability changes.
+ */
 struct AGnssRil : public android::hardware::gnss::V2_0::IAGnssRil {
     Return<void> setCallback(const
         sp<::android::hardware::gnss::V1_0::IAGnssRilCallback>&

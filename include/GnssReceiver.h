@@ -21,12 +21,40 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief Gnss Receiver class
+ *
+ */
 class GnssReceiver : public IGnssReceiver {
 public:
+    /**
+     * @brief Construct a new Gnss Receiver object
+     *
+     * @param transport
+     */
     GnssReceiver(Transport* transport);
+
+    /**
+     * @brief Get the Transport object
+     *
+     * @return std::shared_ptr<Transport>
+     */
     virtual std::shared_ptr<Transport> GetTransport() override;
+
+    /**
+     * @brief HasFeature
+     *
+     * @param ftr feature
+     * @return true
+     * @return false
+     */
     bool HasFeature(const Feature ftr) const;
 protected:
+    /**
+     * @brief Set the Feature object
+     *
+     * @param ftr feature
+     */
     void SetFeature(const Feature ftr) override;
 private:
     GnssReceiver(const GnssReceiver&) = delete;

@@ -21,6 +21,10 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief DefaultReceiver class
+ *
+ */
 class DefaultReceiver : public GnssReceiverTTY {
 public:
     /*!
@@ -35,8 +39,8 @@ public:
      * \param productId
      * \param path
      */
-    DefaultReceiver(uint16_t vendorId, uint16_t productId, const std::string&
-                    path, const GnssReceiverType& type);
+    DefaultReceiver(uint16_t vendorId, uint16_t productId,
+                    const std::string& path, const GnssReceiverType& type);
 
     /*!
      * \brief ~DefaultReceiver
@@ -123,7 +127,7 @@ public:
      * \return
      */
     RError SetSecondMajorConstellation([[maybe_unused]] const std::string&
-                                       constellation) override;
+                                           constellation) override;
     /*!
      * \brief SetSbasStatus
      * \param status
@@ -168,6 +172,6 @@ private:
     SupportedProtocol mProtocol = SupportedProtocol::NMEA0183;
 };
 
-} // namespace android::hardware::gnss::V2_1::renesas
+}  // namespace android::hardware::gnss::V2_1::renesas
 
-#endif // DEFAULTRECEIVER_H
+#endif  // DEFAULTRECEIVER_H

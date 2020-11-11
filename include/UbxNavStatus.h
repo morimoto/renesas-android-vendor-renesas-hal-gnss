@@ -19,6 +19,11 @@
 
 #include <UbxParserCommon.h>
 
+/**
+ * @brief Ubx Nav Status parser implementation
+ *
+ * @tparam T
+ */
 template <typename T>
 class UbxNavStatus : public UbxParserCommon<T> {
 public:
@@ -100,17 +105,15 @@ private:
     bool mIsValid = false;
 };
 
-
 template <typename T>
-UbxNavStatus<T>::UbxNavStatus() :
-    mPayload(nullptr),
-    mPayloadLen(0u) {
+UbxNavStatus<T>::UbxNavStatus() : mPayload(nullptr),
+                                  mPayloadLen(0u) {
 }
 
 template <typename T>
-UbxNavStatus<T>::UbxNavStatus(const char* in, const size_t& size) :
-    mPayload(reinterpret_cast<const uint8_t*>(in)),
-    mPayloadLen(size) {
+UbxNavStatus<T>::UbxNavStatus(const char* in, const size_t& size) : 
+        mPayload(reinterpret_cast<const uint8_t*>(in)),
+        mPayloadLen(size) {
     if (UPError::Success == Parse()) {
         mIsValid = true;
     }
@@ -126,7 +129,7 @@ UbxMsg UbxNavStatus<T>::GetMsgType() {
 
 template <typename T>
 UPError UbxNavStatus<T>::GetData(T out) {
-    (void) out;
+    (void)out;
     return UPError::Success;
 }
 
@@ -148,9 +151,9 @@ UPError UbxNavStatus<T>::Parse() {
 template <typename T>
 UPError UbxNavStatus<T>::ParseSingleBlock() {
     mParcel.iTow = this->template GetValue<uint32_t>
-    (&mPayload[NavStatusOffsets::iTowOffset]);
+        (&mPayload[NavStatusOffsets::iTowOffset]);
     mParcel.msss = this->template GetValue<uint32_t>
-    (&mPayload[NavStatusOffsets::msssOffset]);
+        (&mPayload[NavStatusOffsets::msssOffset]);
     return ValidateParcel();
 }
 
@@ -162,4 +165,4 @@ UPError UbxNavStatus<T>::ValidateParcel() {
     return UPError::Success;
 }
 
-#endif // UBXNAVSTATUS_H
+#endif  // UBXNAVSTATUS_H

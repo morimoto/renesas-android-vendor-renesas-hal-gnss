@@ -24,26 +24,104 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief IGnssMeasxCb 1.0
+ */
 using IGnssMeasxCb_1_0 = ::android::sp<android::hardware::gnss::V1_0::IGnssMeasurementCallback>;
+
+/**
+ * @brief IGnssMeasxCb 1.1
+ */
 using IGnssMeasxCb_1_1 = ::android::sp<android::hardware::gnss::V1_1::IGnssMeasurementCallback>;
+
+/**
+ * @brief IGnssMeasxCb 2.0
+ */
 using IGnssMeasxCb_2_0 = ::android::sp<android::hardware::gnss::V2_0::IGnssMeasurementCallback>;
+
+/**
+ * @brief IGnssMeasxCb 2.1
+ */
 using IGnssMeasxCb_2_1 = ::android::sp<android::hardware::gnss::V2_1::IGnssMeasurementCallback>;
+
+/**
+ * @brief GnssData 1.0
+ */
 using GnssData_1_0 = android::hardware::gnss::V1_0::IGnssMeasurementCallback::GnssData;
+
+/**
+ * @brief GnssData 1.1
+ */
 using GnssData_1_1 = android::hardware::gnss::V1_1::IGnssMeasurementCallback::GnssData;
+
+/**
+ * @brief GnssData 2.0
+ */
 using GnssData_2_0 = android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssData;
+
+/**
+ * @brief GnssData 2.1
+ */
 using GnssData_2_1 = android::hardware::gnss::V2_1::IGnssMeasurementCallback::GnssData;
 
+/**
+ * @brief Measurement Provider implementation
+ */
 class MeasurementProvider {
 public:
+    /**
+     * @brief Construct a new Measurement Provider object
+     */
     MeasurementProvider();
+
+    /**
+     * @brief Destroy the Measurement Provider object
+     */
     ~MeasurementProvider() = default;
 
+    /**
+     * @brief Start Providing
+     */
     void StartProviding();
+
+    /**
+     * @brief Stop Providing
+     */
     void StopProviding();
+
+    /**
+     * @brief Set the MeasxCallback 1.0 object
+     *
+     * @param measxCb
+     */
     void setMeasxCallback_1_0(IGnssMeasxCb_1_0 measxCb);
+
+    /**
+     * @brief Set the MeasxCallback 1.1 object
+     *
+     * @param measxCb
+     */
     void setMeasxCallback_1_1(IGnssMeasxCb_1_1 measxCb);
+
+    /**
+     * @brief Set the MeasxCallback 2.0 object
+     *
+     * @param measxCb
+     */
     void setMeasxCallback_2_0(IGnssMeasxCb_2_0 measxCb);
+
+    /**
+     * @brief Set the MeasxCallback 2.1 object
+     *
+     * @param measxCb
+     */
     void setMeasxCallback_2_1(IGnssMeasxCb_2_1 measxCb);
+
+    /**
+     * @brief Set the Enabled
+     *
+     * @param isEnabled
+     */
     void setEnabled(bool isEnabled);
 
 private:

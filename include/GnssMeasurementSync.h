@@ -19,16 +19,42 @@
 
 #include <atomic>
 
+/**
+ * @brief GnssMeasurementSync
+ */
 class GnssMeasurementSync {
 public:
     ~GnssMeasurementSync() = default;
+
+    /**
+     * @brief Get the Instance object
+     *
+     * @return GnssMeasurementSync&
+     */
     static GnssMeasurementSync& GetInstance() {
         static GnssMeasurementSync instance;
         return instance;
     }
 
+    /**
+     * @brief Set the Events To Wait object
+     *
+     * @param numEvents
+     */
     void SetEventsToWait(int8_t numEvents);
+
+    /**
+     * @brief Ready
+     *
+     * @return true
+     * @return false
+     */
     bool Ready();
+
+    /**
+     * @brief Notify Event Occured
+     *
+     */
     void NotifyEventOccured();
 
 private:

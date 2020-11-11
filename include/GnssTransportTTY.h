@@ -21,8 +21,17 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief Gnss Transport TTY class implementation
+ *
+ */
 class GnssTransportTTY: public Transport {
 public:
+    /**
+     * @brief Construct a new Gnss Transport TTY object
+     *
+     * @param filePath
+     */
     GnssTransportTTY(const std::string &filePath);
 
      /*!
@@ -58,6 +67,12 @@ protected:
     TError Open() override;
     TError Close() override;
     TError WriteData(const std::vector<uint8_t> &toWrite) override;
+
+    /**
+     * @brief Reset receiver
+     *
+     * @return TError
+     */
     virtual TError ResetReceiver();
     char ReadByte(TError& errCode) override;
 private:

@@ -22,25 +22,61 @@
 #include <GnssVisibilityControl.h>
 
 namespace android::hardware::gnss::V2_1::renesas {
+/**
+ * @brief GnssCallback_1_0
+ */
 using GnssCallback_1_0
     = ::android::sp<::android::hardware::gnss::V1_0::IGnssCallback>;
+
+/**
+ * @brief GnssCallback_1_1
+ */
 using GnssCallback_1_1
     = ::android::sp<::android::hardware::gnss::V1_1::IGnssCallback>;
+
+/**
+ * @brief GnssCallback_2_0
+ */
 using GnssCallback_2_0
     = ::android::sp<::android::hardware::gnss::V2_0::IGnssCallback>;
+
+/**
+ * @brief GnssCallback_2_1
+ */
 using GnssCallback_2_1
     = ::android::sp<::android::hardware::gnss::V2_1::IGnssCallback>;
+
+/**
+ * @brief GnssVisibilityControlV1_0
+ */
 using GnssVisibilityControlV1_0 =
                     ::android::hardware::gnss::visibility_control::V1_0
                             ::renesas::GnssVisibilityControl;
 
+/**
+ * @brief LPError
+ *
+ */
 enum class LPError : uint8_t {
+    /**
+     * @brief SUCCESS
+     */
     SUCCESS,
+
+    /**
+     * @brief FAIL
+     */
     FAIL,
+
+    /**
+     * @brief INTERNAL_ERROR
+     */
     INTERNAL_ERROR,
 };
 
-
+/**
+ * @brief ILocationProvider
+ */
 class ILocationProvider {
 public:
     /*!
@@ -57,18 +93,53 @@ public:
      */
     virtual LPError StopProviding() = 0;
 
+    /**
+     * @brief Set the Callback 1.0
+     *
+     * @param cb
+     */
     virtual void setCallback_1_0(GnssCallback_1_0& cb) = 0;
 
+    /**
+     * @brief Set the Callback 1.1
+     *
+     * @param cb
+     */
     virtual void setCallback_1_1(GnssCallback_1_1& cb) = 0;
 
+    /**
+     * @brief Set the Callback 2.0
+     *
+     * @param cb
+     */
     virtual void setCallback_2_0(GnssCallback_2_0& cb) = 0;
 
+    /**
+     * @brief Set the Callback 2.1
+     *
+     * @param cb
+     */
     virtual void setCallback_2_1(GnssCallback_2_1& cb) = 0;
 
+    /**
+     * @brief Set the Update Interval
+     *
+     * @param newInterval
+     */
     virtual void SetUpdateInterval(uint32_t newInterval) = 0;
 
+    /**
+     * @brief Set the Enabled
+     *
+     * @param isEnabled
+     */
     virtual void SetEnabled(bool isEnabled) = 0;
 
+    /**
+     * @brief Set the Gnss Visibility Control
+     *
+     * @param gnssVisibilityControl
+     */
     virtual void setGnssVisibilityControl(
         sp<GnssVisibilityControlV1_0>& gnssVisibilityControl) = 0;
 

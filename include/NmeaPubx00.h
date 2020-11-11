@@ -19,14 +19,42 @@
 
 #include <NmeaParserCommon.h>
 
+/**
+ * @brief Gnss Location Flags
+ *
+ */
 using GnssLocationFlags = android::hardware::gnss::V1_0::GnssLocationFlags;
 
+/**
+ * @brief NmeaPubx00
+ *
+ * @tparam T
+ */
 template <typename T>
 class NmeaPubx00 : public NmeaParserCommon<T> {
 public:
+    /**
+     * @brief Construct a new Nmea Pubx00 object
+     *
+     */
     NmeaPubx00();
+
+    /**
+     * @brief Construct a new Nmea Pubx00 object
+     *
+     * @param in
+     * @param inLen
+     * @param protocol
+     */
     NmeaPubx00(const char* in, const size_t& inLen,
                const NmeaVersion& protocol);
+
+    /**
+     * @brief Construct a new Nmea Pubx00 object
+     *
+     * @param in
+     * @param protocol
+     */
     NmeaPubx00(std::string& in, const NmeaVersion& protocol);
     ~NmeaPubx00() override {}
 
@@ -34,11 +62,31 @@ public:
     NmeaVersion GetProtocolVersion() override;
     NPError GetData(T out) override;
     bool IsValid() override;
+
 protected:
+    /**
+     * @brief Parse
+     *
+     * @return NPError
+     */
     NPError Parse();
-    NPError Parse(std::string& in);
+
+    /**
+     * @brief Parse Common
+     *
+     * @param in
+     * @return NPError
+     */
     NPError ParseCommon(const std::vector<std::string>& in);
+
+    /**
+     * @brief Validate Parcel
+     *
+     * @return NPError
+     */
     NPError ValidateParcel();
+    NPError Parse(std::string& in) override;
+
 private:
     typedef struct Parcel {
         float horizontalAcc;
@@ -52,7 +100,7 @@ private:
     };
 
     constexpr static const std::array<size_t, NmeaVersion::AMOUNT>
-    mPubx00PartsAmount = {21, 21, 21};
+        mPubx00PartsAmount = {21, 21, 21};
     static const NmeaMsgType mType = NmeaMsgType::PUBX00;
     static const std::string mPubx00MsgId;
 
@@ -69,16 +117,14 @@ template <typename T>
 const std::string NmeaPubx00<T>::mPubx00MsgId = "00";
 
 template <typename T>
-NmeaPubx00<T>::NmeaPubx00() :
-    mPayload(nullptr),
-    mPayloadLen(0) {
+NmeaPubx00<T>::NmeaPubx00() : mPayload(nullptr),
+                              mPayloadLen(0) {
 }
 
 template <typename T>
-NmeaPubx00<T>::NmeaPubx00(std::string& in, const NmeaVersion& protocol) :
-    mPayload(in.c_str()),
-    mPayloadLen(in.size()),
-    mCurrentProtocol(protocol) {
+NmeaPubx00<T>::NmeaPubx00(std::string& in, const NmeaVersion& protocol) : mPayload(in.c_str()),
+                                                                          mPayloadLen(in.size()),
+                                                                          mCurrentProtocol(protocol) {
     if (NPError::Success == Parse(in)) {
         mIsValid = true;
     }
@@ -86,10 +132,9 @@ NmeaPubx00<T>::NmeaPubx00(std::string& in, const NmeaVersion& protocol) :
 
 template <typename T>
 NmeaPubx00<T>::NmeaPubx00(const char* in, const size_t& inLen,
-                          const NmeaVersion& protocol) :
-    mPayload(in),
-    mPayloadLen(inLen),
-    mCurrentProtocol(protocol) {
+                          const NmeaVersion& protocol) : mPayload(in),
+                                                         mPayloadLen(inLen),
+                                                         mCurrentProtocol(protocol) {
     if (NPError::Success == Parse()) {
         mIsValid = true;
     }
@@ -112,7 +157,6 @@ NPError NmeaPubx00<T>::GetData(T out) {
     return NPError::Success;
 }
 
-
 template <typename T>
 bool NmeaPubx00<T>::IsValid() {
     return mIsValid;
@@ -128,12 +172,12 @@ NPError NmeaPubx00<T>::ParseCommon(const std::vector<std::string>& pubx) {
         return NPError::InvalidData;
     }
 
-    if (pubx[horizontalAccuracyOfst].length() > 0 ) {
+    if (pubx[horizontalAccuracyOfst].length() > 0) {
         mParcel.horizontalAcc = std::stof(pubx[horizontalAccuracyOfst]);
         mFlags |= GnssLocationFlags::HAS_HORIZONTAL_ACCURACY;
     }
 
-    if (pubx[verticalAccuracyOfst].length() > 0 ) {
+    if (pubx[verticalAccuracyOfst].length() > 0) {
         mParcel.verticalAcc = std::stof(pubx[verticalAccuracyOfst]);
         mFlags |= GnssLocationFlags::HAS_VERTICAL_ACCURACY;
     }
@@ -170,4 +214,4 @@ NPError NmeaPubx00<T>::ValidateParcel() {
     return NPError::Success;
 }
 
-#endif // NMEAPUBX00_H
+#endif  // NMEAPUBX00_H

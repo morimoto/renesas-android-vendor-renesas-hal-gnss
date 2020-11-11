@@ -19,20 +19,42 @@
 
 #include <INmeaParser.h>
 
-#define NP_CH(FUNC) status=FUNC; if(NPError::Success!=status) return status
+#define NP_CH(FUNC) \
+    status = FUNC;  \
+    if (NPError::Success != status) return status
 
+/**
+ * @brief NmeaParserCommon
+ *
+ * @tparam T
+ */
 template <typename T>
 class NmeaParserCommon : public INmeaParser<T> {
 public:
     NmeaParserCommon() = default;
     virtual ~NmeaParserCommon() override = default;
+
 protected:
+    /**
+     * @brief Parse
+     *
+     * @param in
+     * @return NPError
+     */
     virtual NPError Parse(std::string& in) {
         if (in.empty()) {
             return NPError::IncompletePacket;
         }
         return NPError::Success;
     };
+
+    /**
+     * @brief Split message
+     *
+     * @param in
+     * @param out
+     * @return NPError
+     */
     NPError Split(std::string& in, std::vector<std::string>& out);
 };
 
@@ -63,4 +85,4 @@ NPError NmeaParserCommon<T>::Split(std::string& in,
     return NPError::Success;
 }
 
-#endif // NMEAPARSERCOMMON_H
+#endif  // NMEAPARSERCOMMON_H

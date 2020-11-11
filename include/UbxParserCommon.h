@@ -19,19 +19,52 @@
 
 #include <IUbxParser.h>
 
+/**
+ * @brief Endianess
+ */
 enum class Endianess : uint8_t {
+    /**
+     * @brief Little endian
+     */
     Little,
+
+    /**
+     * @brief Big endian
+     */
     Big,
+
+    /**
+     * @brief Unset
+     */
     Unset,
 };
 
+/**
+ * @brief native
+ */
 static Endianess native = Endianess::Unset;
 
+/**
+ * @brief Ubx Parser Common implementation
+ *
+ * @tparam ClassType
+ */
 template <typename ClassType>
 class UbxParserCommon : public IUbxParser<ClassType> {
 public:
+    /**
+     * @brief Construct a new Ubx Parser Common object
+     */
     UbxParserCommon();
+
+    /**
+     * @brief Destroy the Ubx Parser Common object
+     */
     virtual ~UbxParserCommon() {}
+
+    /**
+     * @brief ms To Ns Multiplier
+     */
     static const int64_t msToNsMultiplier = 1000000;
 
 protected:

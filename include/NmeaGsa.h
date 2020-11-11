@@ -17,17 +17,39 @@
 #ifndef NMEAGSA_H
 #define NMEAGSA_H
 
+#include <NmeaParserCommon.h>
 #include <log/log.h>
 
-#include <NmeaParserCommon.h>
-
-//TODO(g.chabukiani): add doxygen, check all over the project
+/**
+ * @brief Nmea Gsa message parser
+ *
+ * @tparam T
+ */
 template <typename T>
 class NmeaGsa : public NmeaParserCommon<T> {
 public:
+    /**
+     * @brief Construct a new Nmea Gsa object
+     *
+     */
     NmeaGsa();
+
+    /**
+     * @brief Construct a new Nmea Gsa object
+     *
+     * @param in
+     * @param inLen
+     * @param protocol
+     */
     NmeaGsa(const char* in, const size_t& inLen,
             const NmeaVersion& protocol);
+
+    /**
+     * @brief Construct a new Nmea Gsa object
+     *
+     * @param in
+     * @param protocol
+     */
     NmeaGsa(std::string& in, const NmeaVersion& protocol);
     ~NmeaGsa() override {}
 
@@ -35,11 +57,30 @@ public:
     NmeaVersion GetProtocolVersion() override;
     NPError GetData(T out) override;
     bool IsValid() override;
+
 protected:
+    /**
+     * @brief Parse
+     *
+     * @return NPError
+     */
     NPError Parse();
-    NPError Parse(std::string& in) override;
+
+    /**
+     * @brief ParseCommon
+     *
+     * @param gsa
+     * @return NPError
+     */
     NPError ParseCommon(std::vector<std::string>& gsa);
+
+    /**
+     * @brief Validate Parcel
+     *
+     * @return NPError
+     */
     NPError ValidateParcel();
+    NPError Parse(std::string& in) override;
 
 private:
     typedef struct Parcel {
@@ -49,14 +90,14 @@ private:
 
     enum GsaOfst : size_t {
         talkerId = 0,
-        SvBegin = 3, // Start of repeated block (12 times)
-        SvEnd = 15,  // End of repeated block
+        SvBegin = 3,  // Start of repeated block (12 times)
+        SvEnd = 15,   // End of repeated block
         SystemId = 18,
     };
 
     static const NmeaMsgType mType = NmeaMsgType::GSA;
     constexpr static const std::array<size_t, NmeaVersion::AMOUNT>
-            mGsaPartsAmount = {18, 19, 19};
+        mGsaPartsAmount = {18, 19, 19};
 
     const char* mPayload;
     const size_t mPayloadLen;
@@ -64,20 +105,17 @@ private:
     NmeaVersion mCurrentProtocol = NmeaVersion::NMEAv23;
     bool mIsValid = false;
     parcel_t mParcel;
-
 };
 
 template <typename T>
-NmeaGsa<T>::NmeaGsa() :
-    mPayload(nullptr),
-    mPayloadLen(0) {
+NmeaGsa<T>::NmeaGsa() : mPayload(nullptr),
+                        mPayloadLen(0) {
 }
 
 template <typename T>
-NmeaGsa<T>::NmeaGsa(std::string& in, const NmeaVersion& protocol) :
-    mPayload(in.c_str()),
-    mPayloadLen(in.size()),
-    mCurrentProtocol(protocol) {
+NmeaGsa<T>::NmeaGsa(std::string& in, const NmeaVersion& protocol) : mPayload(in.c_str()),
+                                                                    mPayloadLen(in.size()),
+                                                                    mCurrentProtocol(protocol) {
     if (NPError::Success == Parse(in)) {
         mIsValid = true;
     }
@@ -85,10 +123,9 @@ NmeaGsa<T>::NmeaGsa(std::string& in, const NmeaVersion& protocol) :
 
 template <typename T>
 NmeaGsa<T>::NmeaGsa(const char* in, const size_t& inLen,
-                    const NmeaVersion& protocol) :
-    mPayload(in),
-    mPayloadLen(inLen),
-    mCurrentProtocol(protocol) {
+                    const NmeaVersion& protocol) : mPayload(in),
+                                                   mPayloadLen(inLen),
+                                                   mCurrentProtocol(protocol) {
     if (NPError::Success == Parse()) {
         mIsValid = true;
     }
@@ -103,7 +140,6 @@ template <typename T>
 NmeaVersion NmeaGsa<T>::GetProtocolVersion() {
     return mCurrentProtocol;
 }
-
 
 //TODO(g.chabukiani): implement get data
 template <typename T>
@@ -175,4 +211,4 @@ NPError NmeaGsa<T>::ValidateParcel() {
     return NPError::Success;
 }
 
-#endif // NMEAGSA_H
+#endif  // NMEAGSA_H

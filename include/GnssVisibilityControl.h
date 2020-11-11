@@ -34,14 +34,29 @@ using ::android::hardware::hidl_string;
 using ::android::hardware::hidl_vec;
 using ::android::hardware::Return;
 using ::android::hardware::Void;
+
+/**
+ * @brief NfwNotification
+ *
+ */
 using NfwNotification = V1_0::IGnssVisibilityControlCallback::NfwNotification;
 
+/**
+ * @brief Gnss Visibility Control renesas implementation
+ *
+ */
 class GnssVisibilityControl : public IGnssVisibilityControl {
 public:
     GnssVisibilityControl() = default;
     ~GnssVisibilityControl() = default;
 
+    /**
+     * @brief sendNfwNotificationMsg
+     *
+     * @param pkgName
+     */
     void sendNfwNotificationMsg(const std::string& pkgName);
+
     /*
     *   Methods from ::android::hardware::gnss::visibility_control::
     *       V1_0::IGnssVisibilityControl follow.

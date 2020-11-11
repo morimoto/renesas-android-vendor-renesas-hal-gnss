@@ -23,6 +23,10 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * \brief Fake reader class
+ *
+ */
 class FakeReader : public IReader {
 public:
     FakeReader() = default;

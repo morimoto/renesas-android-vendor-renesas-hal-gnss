@@ -24,14 +24,35 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief LBParserMap
+ */
 typedef std::map<NmeaMsgType, LocationQueueType> LBParserMap;
 
+/**
+ * @brief Location nuilder return error type
+ */
 enum class LBError : int8_t {
+    /**
+     * @brief Sccess
+     */
     SUCCESS = 0,
-    INCOMPLETE = -100,  // some messages are missing
-    INVALID = -101,     // some messages are invalid
+
+    /**
+     * @brief some messages are missing
+     */
+    INCOMPLETE = -100,
+
+    /**
+     * @brief some messages are invalid
+     */
+    INVALID = -101,
 };
 
+/**
+ * @brief Location Builder implementation
+ *
+ */
 class LocationBuilder {
 public:
     /*!
@@ -56,7 +77,16 @@ public:
      */
     LBError Build(LocationData& outData);
 protected:
+    /**
+     * @brief Add Extra Info
+     *
+     * @param outData
+     */
     void AddExtraInfo(LocationData& outData);
+
+    /**
+     * @brief Process Extra info
+     */
     void ProcessExtraInfo();
 private:
     LocationBuilder(LocationBuilder&) = delete;

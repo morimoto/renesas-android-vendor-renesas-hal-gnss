@@ -23,18 +23,50 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief Gnss Transport Fake class implementation
+ */
 class GnssTransportFake : public Transport {
 public:
+
+    /**
+     * @brief Construct a new Gnss Transport Fake object
+     *
+     * @param dataFilePath
+     */
     GnssTransportFake(const std::string &dataFilePath);
     /*!
      * \brief Open
      * \return
      */
     TError Open() override;
+
+    /**
+     * @brief Close
+     *
+     * @return TError
+     */
     TError Close() override;
+
+    /**
+     * @brief Write Data
+     *
+     * @param toWrite
+     * @return TError
+     */
     TError WriteData(const std::vector<uint8_t> &toWrite) override;
+
+    /**
+     * @brief Read Byte
+     *
+     * @param errCode
+     * @return char
+     */
     char ReadByte(TError& errCode) override;
 protected:
+    /**
+     * @brief fake location data Stream
+     */
     std::ifstream fakeStream;
 };
 

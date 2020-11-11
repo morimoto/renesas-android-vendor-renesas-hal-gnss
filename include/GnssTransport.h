@@ -23,21 +23,66 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief Endianness
+ */
 enum class Endian : uint8_t {
+
+    /**
+     * @brief Little-endian
+     */
     Little,
+
+    /**
+     * @brief Big-endian
+     */
     Big,
+
+    /**
+     * @brief Initial value
+     */
     Unset,
 };
 
+/**
+ * @brief Transport return error type
+ *
+ */
 enum class TError : uint8_t {
+    /**
+     * @brief Success
+     */
     Success,
+
+    /**
+     * @brief Failed To Read
+     */
     FailedToRead,
+
+    /**
+     * @brief Failed To Write
+     */
     FailedToWrite,
+
+    /**
+     * @brief Transport Ready
+     */
     TransportReady,
+
+    /**
+     * @brief Transport Not Ready
+     */
     TransportNotReady,
+
+    /**
+     * @brief Internal Error
+     */
     InternalError,
 };
 
+/**
+ * @brief Transport class implemetation
+ */
 class Transport {
 public:
 
@@ -133,9 +178,24 @@ protected:
     template <std::size_t size>
     TError AddCheckSum(const std::array<uint8_t, size>& payload,
                        std::vector<uint8_t>& out);
+
+    /**
+     * @brief Construct a new Transport object
+     *
+     * @param filePath
+     */
     Transport(const std::string &filePath);
 
-    std::mutex readLock, writeLock;
+    /**
+     * @brief read Lock mutex
+     */
+    std::mutex readLock;
+
+    /**
+     * @brief write Lock mutex
+     *
+     */
+    std::mutex writeLock;
 private:
     Transport(Transport const&) = delete;
     Transport& operator=(Transport const&) = delete;

@@ -22,32 +22,119 @@
 #include <INmeaParser.h>
 #include <MessageQueue.h>
 
+/**
+ * @brief return error type
+ */
 enum class NMHError : uint8_t {
+    /**
+     * @brief Success
+     */
     Success,
+
+    /**
+     * @brief Internal Error
+     */
     InternalError,
+
+    /**
+     * @brief Failed To Process
+     */
     FailedToProcess,
+
+    /**
+     * @brief No Crc
+     */
     NoCrc,
+
+    /**
+     * @brief Bad Crc
+     */
     BadCrc,
 };
 
+/**
+ * @brief Nmea Parcel
+ */
 typedef struct NmeaParcel {
+    /**
+     * @brief Construct a new Nmea Parcel object
+     *
+     * @param inSp
+     */
     NmeaParcel(const std::shared_ptr<std::vector<char>>& inSp) :
         sp(inSp) {}
+    /**
+     * @brief sp
+     */
     std::shared_ptr<std::vector<char>> sp;
 } nmeaParcel_t;
 
+/**
+ * @brief Nmea Msg Handler
+ *
+ */
 class NmeaMsgHandler {
 public:
+    /**
+     * @brief Construct a new Nmea Msg Handler object
+     *
+     * @param protocol
+     */
     NmeaMsgHandler(const NmeaVersion& protocol);
+
+    /**
+     * @brief Construct a new Nmea Msg Handler object
+     */
     NmeaMsgHandler();
+
+    /**
+     * @brief Destroy the Nmea Msg Handler object
+     */
     ~NmeaMsgHandler();
+
+    /**
+     * @brief Update Protocol Version
+     *
+     * @param protocol
+     * @return NMHError
+     */
     NMHError UpdateProtocolVersion(const NmeaVersion& protocol);
+
+    /**
+     * @brief Start Processing
+     *
+     * @return NMHError
+     */
     NMHError StartProcessing();
+
+    /**
+     * @brief Stop Processing
+     *
+     * @return NMHError
+     */
     NMHError StopProcessing();
 
 protected:
+    /**
+     * @brief Select Parser
+     *
+     * @param in
+     * @return NMHError
+     */
     NMHError SelectParser(std::string& in);
+
+    /**
+     * @brief Verify CheckSum
+     *
+     * @param parcel
+     * @return NMHError
+     */
     NMHError VerifyCheckSum(nmeaParcel_t& parcel);
+
+    /**
+     * @brief Processing Loop
+     *
+     */
     void ProcessingLoop();
 
 private:

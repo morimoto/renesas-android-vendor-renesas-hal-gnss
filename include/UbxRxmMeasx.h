@@ -17,12 +17,11 @@
 #ifndef UBXRXMMEASX_H
 #define UBXRXMMEASX_H
 
+#include <UbxParserCommon.h>
 #include <android/hardware/gnss/2.0/types.h>
 #include <log/log.h>
 
 #include <vector>
-
-#include <UbxParserCommon.h>
 
 /* From u-blox 8 / u-blox M8 Receiver Description - Manual
  * 33.18.2 UBX-RXM-MEASX (0x02 0x14)
@@ -31,19 +30,54 @@
  * Description: Satellite Measurements for RRLP
 */
 
-using ::android::hardware::gnss::V2_1::IGnssMeasurementCallback;
 using ::android::hardware::gnss::V2_0::GnssConstellationType;
+using ::android::hardware::gnss::V2_1::IGnssMeasurementCallback;
 
+/**
+ * @brief GnssMs
+ */
 typedef IGnssMeasurementCallback::GnssMeasurementState GnssMs;
+
+/**
+ * @brief GnssMI
+ */
 typedef IGnssMeasurementCallback::GnssMultipathIndicator GnssMI;
+
+/**
+ * @brief GnssADRS
+ */
 typedef IGnssMeasurementCallback::GnssAccumulatedDeltaRangeState GnssADRS;
+
+/**
+ * @brief GnssMF
+ */
 typedef IGnssMeasurementCallback::GnssMeasurementFlags GnssMF;
+
+/**
+ * @brief GnssMeasx
+ */
 typedef IGnssMeasurementCallback::GnssMeasurement GnssMeasx;
 
+/**
+ * @brief Ubx Rxm Measx parser implementation
+ *
+ * @tparam ClassType
+ */
 template <typename ClassType>
 class UbxRxmMeasx : public UbxParserCommon<ClassType> {
 public:
+    /**
+     * @brief Construct a new Ubx Rxm Measx object
+     *
+     * @param in
+     * @param inLen
+     */
     UbxRxmMeasx(const char* in, const size_t& inLen);
+
+    /**
+     * @brief Construct a new Ubx Rxm Measx object
+     *
+     */
     UbxRxmMeasx();
     ~UbxRxmMeasx() override;
 
@@ -52,10 +86,43 @@ public:
     bool IsValid() override;
 
 protected:
+    /**
+     * @brief Parse
+     *
+     * @return UPError
+     */
     UPError Parse();
+
+    /**
+     * @brief Parse Single Block
+     *
+     * @param in
+     * @return UPError
+     */
     UPError ParseSingleBlock(const uint8_t* in);
+
+    /**
+     * @brief Parse Repeated Blocks
+     *
+     * @param in
+     * @param inLen
+     * @return UPError
+     */
     UPError ParseRepeatedBlocks(const uint8_t* in, const size_t inLen);
+
+    /**
+     * @brief Parse Repeated Block
+     *
+     * @param in
+     * @return UPError
+     */
     UPError ParseRepeatedBlock(const uint8_t* in);
+
+    /**
+     * @brief Validate Parcel
+     *
+     * @return UPError
+     */
     UPError ValidateParcel();
 
     /*!
@@ -104,6 +171,12 @@ protected:
      */
     uint8_t GetValidSvidForGnssId(const UbxGnssId inGnssId, uint8_t svid);
 
+    /**
+     * @brief Get the Carrier Frequency From Gnss Id object
+     *
+     * @param inGnssId
+     * @return float
+     */
     float GetCarrierFrequencyFromGnssId(const UbxGnssId inGnssId);
 
 private:
@@ -196,15 +269,14 @@ private:
 };
 
 template <typename ClassType>
-UbxRxmMeasx<ClassType>::UbxRxmMeasx() :
-    mPayload(nullptr),
-    mPayloadLen(0) {
+UbxRxmMeasx<ClassType>::UbxRxmMeasx() : mPayload(nullptr),
+                                        mPayloadLen(0) {
 }
 
 template <typename ClassType>
 UbxRxmMeasx<ClassType>::UbxRxmMeasx(const char* in, const size_t& inLen) :
-    mPayload(reinterpret_cast<const uint8_t*>(in)),
-    mPayloadLen(inLen) {
+        mPayload(reinterpret_cast<const uint8_t*>(in)),
+        mPayloadLen(inLen) {
     if (UPError::Success == Parse()) {
         mIsValid = true;
     }
@@ -245,21 +317,21 @@ UPError UbxRxmMeasx<ClassType>::ParseSingleBlock(const uint8_t* in) {
         mParcel.single.version = in[RxmMeasxOffsets::version];
         mParcel.single.numSvs = in[RxmMeasxOffsets::numSvs];
         mParcel.single.gpsTOW = this->template GetValue<uint32_t>
-        (&in[RxmMeasxOffsets::gpsTOW]);
+            (&in[RxmMeasxOffsets::gpsTOW]);
         mParcel.single.glonassTOW = this->template GetValue<uint32_t>
-        (&in[RxmMeasxOffsets::glonassTOW]);
+            (&in[RxmMeasxOffsets::glonassTOW]);
         mParcel.single.bdsTOW = this->template GetValue<uint32_t>
-        (&in[RxmMeasxOffsets::bdsTOW]);
+            (&in[RxmMeasxOffsets::bdsTOW]);
         mParcel.single.qzssTOW = this->template GetValue<uint32_t>
-        (&in[RxmMeasxOffsets::qzssTOW]);
+            (&in[RxmMeasxOffsets::qzssTOW]);
         mParcel.single.gpsTOWacc = this->template GetValue<uint16_t>
-        (&in[RxmMeasxOffsets::gpsTOWacc]);
+            (&in[RxmMeasxOffsets::gpsTOWacc]);
         mParcel.single.glonassTOWacc = this->template GetValue<uint16_t>
-        (&in[RxmMeasxOffsets::glonassTOWacc]);
+            (&in[RxmMeasxOffsets::glonassTOWacc]);
         mParcel.single.bdsTOWacc = this->template GetValue<uint16_t>
-        (&in[RxmMeasxOffsets::bdsTOWacc]);
+            (&in[RxmMeasxOffsets::bdsTOWacc]);
         mParcel.single.qzssTOWacc = this->template GetValue<uint16_t>
-        (&in[RxmMeasxOffsets::qzssTOWacc]);
+            (&in[RxmMeasxOffsets::qzssTOWacc]);
         mParcel.single.TOWset = in[RxmMeasxOffsets::TOWset];
         result = UPError::Success;
     }
@@ -269,7 +341,7 @@ UPError UbxRxmMeasx<ClassType>::ParseSingleBlock(const uint8_t* in) {
 
 template <typename ClassType>
 UPError UbxRxmMeasx<ClassType>::ParseRepeatedBlocks(const uint8_t* in,
-        const size_t inLen) {
+                                                    const size_t inLen) {
     UPError result = UPError::BadInputParameter;
 
     if (nullptr == in) {
@@ -305,7 +377,7 @@ UPError UbxRxmMeasx<ClassType>::ParseRepeatedBlock(const uint8_t* in) {
     block.cn0 = in[RxmMeasxOffsets::cn0];
     block.multipath = in[RxmMeasxOffsets::multipath];
     block.pseudoRangeRate = this->template GetValue<int32_t>
-    (&in[RxmMeasxOffsets::pseudorangeRate]);
+        (&in[RxmMeasxOffsets::pseudorangeRate]);
     mParcel.repeated.push_back(block);
     return UPError::Success;
 }
@@ -322,51 +394,51 @@ UPError UbxRxmMeasx<ClassType>::ValidateParcel() {
 //should fix it on validation step
 template <typename ClassType>
 UPError UbxRxmMeasx<ClassType>::GetTowForGnssId(const UbxGnssId inGnssId,
-        int64_t& outTow, uint32_t& outState) {
+                                                int64_t& outTow, uint32_t& outState) {
     GnssMs state;
 
     switch (inGnssId) {
-    case UbxGnssId::GPS:
-        outTow = mParcel.single.gpsTOW;
-        state = GnssMs::STATE_TOW_DECODED;
-        break;
+        case UbxGnssId::GPS:
+            outTow = mParcel.single.gpsTOW;
+            state = GnssMs::STATE_TOW_DECODED;
+            break;
 
-    case UbxGnssId::GLONASS:
-        outTow = mParcel.single.glonassTOW;
-        state = GnssMs::STATE_TOW_DECODED;
-        break;
+        case UbxGnssId::GLONASS:
+            outTow = mParcel.single.glonassTOW;
+            state = GnssMs::STATE_TOW_DECODED;
+            break;
 
-    case UbxGnssId::QZSS:
-        outTow = mParcel.single.qzssTOW;
-        state = GnssMs::STATE_TOW_DECODED;
-        break;
+        case UbxGnssId::QZSS:
+            outTow = mParcel.single.qzssTOW;
+            state = GnssMs::STATE_TOW_DECODED;
+            break;
 
-    case UbxGnssId::BEIDOU:
-        outTow = mParcel.single.bdsTOW;
-        state = GnssMs::STATE_TOW_DECODED;
-        break;
+        case UbxGnssId::BEIDOU:
+            outTow = mParcel.single.bdsTOW;
+            state = GnssMs::STATE_TOW_DECODED;
+            break;
 
-    case UbxGnssId::SBAS:
-    case UbxGnssId::GALILEO:
-        outTow = mParcel.single.gpsTOW; //TODO: find better solution
-        state = GnssMs::STATE_TOW_KNOWN;
-        break;
+        case UbxGnssId::SBAS:
+        case UbxGnssId::GALILEO:
+            outTow = mParcel.single.gpsTOW;  //TODO: find better solution
+            state = GnssMs::STATE_TOW_KNOWN;
+            break;
 
-    default:
-        outTow = 0;
-        outState = static_cast<uint32_t>(GnssMs::STATE_UNKNOWN);
-        return UPError::BadInputParameter;
+        default:
+            outTow = 0;
+            outState = static_cast<uint32_t>(GnssMs::STATE_UNKNOWN);
+            return UPError::BadInputParameter;
     }
 
     outTow = this->template ScaleUp(outTow,
-                                UbxParserCommon<ClassType>::msToNsMultiplier);
+                                    UbxParserCommon<ClassType>::msToNsMultiplier);
     outState = static_cast<uint32_t>(state);
     return UPError::Success;
 }
 
 template <typename ClassType>
 UPError UbxRxmMeasx<ClassType>::GetTowAccForGnssId(const UbxGnssId inGnssId,
-        int64_t& outTowAcc, uint32_t& state) {
+                                                   int64_t& outTowAcc, uint32_t& state) {
     if (0 == mParcel.single.TOWset
         || static_cast<uint32_t>(GnssMs::STATE_UNKNOWN) == state) {
         return UPError::InvalidData;
@@ -375,25 +447,25 @@ UPError UbxRxmMeasx<ClassType>::GetTowAccForGnssId(const UbxGnssId inGnssId,
     uint16_t towAccMs = 0;
 
     switch (inGnssId) {
-    case UbxGnssId::GPS ... UbxGnssId::GALILEO:
-        towAccMs = mParcel.single.gpsTOWacc;
-        break;
+        case UbxGnssId::GPS ... UbxGnssId::GALILEO:
+            towAccMs = mParcel.single.gpsTOWacc;
+            break;
 
-    case UbxGnssId::GLONASS:
-        towAccMs = mParcel.single.glonassTOWacc;
-        break;
+        case UbxGnssId::GLONASS:
+            towAccMs = mParcel.single.glonassTOWacc;
+            break;
 
-    case UbxGnssId::QZSS:
-        towAccMs = mParcel.single.qzssTOWacc;
-        break;
+        case UbxGnssId::QZSS:
+            towAccMs = mParcel.single.qzssTOWacc;
+            break;
 
-    case UbxGnssId::BEIDOU:
-        towAccMs = mParcel.single.bdsTOWacc;
-        break;
+        case UbxGnssId::BEIDOU:
+            towAccMs = mParcel.single.bdsTOWacc;
+            break;
 
-    default:
-        state = static_cast<uint32_t>(GnssMs::STATE_UNKNOWN);
-        return UPError::BadInputParameter;
+        default:
+            state = static_cast<uint32_t>(GnssMs::STATE_UNKNOWN);
+            return UPError::BadInputParameter;
     }
 
     int64_t result = this->template ScaleUp(this->template ScaleDown(towAccMs,
@@ -402,65 +474,64 @@ UPError UbxRxmMeasx<ClassType>::GetTowAccForGnssId(const UbxGnssId inGnssId,
     return UPError::Success;
 }
 
-
 template <typename ClassType>
 GnssConstellationType UbxRxmMeasx<ClassType>::GetConstellationFromGnssId(
     const UbxGnssId inGnssId) {
     switch (inGnssId) {
-    case UbxGnssId::GPS:
-        return GnssConstellationType::GPS;
+        case UbxGnssId::GPS:
+            return GnssConstellationType::GPS;
 
-    case UbxGnssId::GLONASS:
-        return GnssConstellationType::GLONASS;
+        case UbxGnssId::GLONASS:
+            return GnssConstellationType::GLONASS;
 
-    case UbxGnssId::GALILEO:
-        return GnssConstellationType::GALILEO;
+        case UbxGnssId::GALILEO:
+            return GnssConstellationType::GALILEO;
 
-    case UbxGnssId::QZSS:
-        return GnssConstellationType::QZSS;
+        case UbxGnssId::QZSS:
+            return GnssConstellationType::QZSS;
 
-    case UbxGnssId::BEIDOU:
-        return GnssConstellationType::BEIDOU;
+        case UbxGnssId::BEIDOU:
+            return GnssConstellationType::BEIDOU;
 
-    case UbxGnssId::SBAS:
-        return GnssConstellationType::SBAS;
+        case UbxGnssId::SBAS:
+            return GnssConstellationType::SBAS;
 
-    default:
-        return GnssConstellationType::UNKNOWN;
+        default:
+            return GnssConstellationType::UNKNOWN;
     }
 }
 
 template <typename ClassType>
 uint8_t UbxRxmMeasx<ClassType>::GetValidSvidForGnssId(const UbxGnssId inGnssId,
-        uint8_t svid) {
+                                                      uint8_t svid) {
     uint8_t resultSvid = svid;
 
     switch (inGnssId) {
-    case UbxGnssId::GPS:
-        this->template InRange<uint8_t>(gpsFirst, gpsLast, resultSvid);
-        break;
+        case UbxGnssId::GPS:
+            this->template InRange<uint8_t>(gpsFirst, gpsLast, resultSvid);
+            break;
 
-    case UbxGnssId::SBAS:
-        this->template InRanges<uint8_t>(sbasOneFirst, sbasOneLast,
-                                        sbasTwoFirst, sbasTwoLast, resultSvid);
-        break;
+        case UbxGnssId::SBAS:
+            this->template InRanges<uint8_t>(sbasOneFirst, sbasOneLast,
+                                             sbasTwoFirst, sbasTwoLast, resultSvid);
+            break;
 
-    case UbxGnssId::GALILEO:
-        this->template InRange<uint8_t>(galileoFirst, galileoLast, resultSvid);
-        break;
+        case UbxGnssId::GALILEO:
+            this->template InRange<uint8_t>(galileoFirst, galileoLast, resultSvid);
+            break;
 
-    case UbxGnssId::QZSS:
-        this->template InRange<uint8_t>(qzssFirst, qzssLast, resultSvid);
-        break;
+        case UbxGnssId::QZSS:
+            this->template InRange<uint8_t>(qzssFirst, qzssLast, resultSvid);
+            break;
 
-    case UbxGnssId::BEIDOU:
-        this->template InRange<uint8_t>(bdFirst, bdLast, resultSvid);
-        break;
+        case UbxGnssId::BEIDOU:
+            this->template InRange<uint8_t>(bdFirst, bdLast, resultSvid);
+            break;
 
-    case UbxGnssId::GLONASS:
-        this->template InRanges<uint8_t>(glonassFirst, glonassLast,
-                                glonassFcnFirst, glonassFcnLast, resultSvid);
-        break;
+        case UbxGnssId::GLONASS:
+            this->template InRanges<uint8_t>(glonassFirst, glonassLast,
+                                             glonassFcnFirst, glonassFcnLast, resultSvid);
+            break;
     }
 
     return resultSvid;
@@ -487,4 +558,4 @@ UbxRxmMeasx<T>::~UbxRxmMeasx() {
     //TODO(g.chabukiani): check if we need to clean up
 }
 
-#endif // UBXRXMMEASX_H
+#endif  // UBXRXMMEASX_H

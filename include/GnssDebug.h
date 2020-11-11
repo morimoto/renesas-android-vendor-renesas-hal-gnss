@@ -29,6 +29,9 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
+/**
+ * @brief GnssDebug
+ */
 struct GnssDebug : public android::hardware::gnss::V2_0::IGnssDebug {
     // Methods from ::android::hardware::gnss::V1_0::IGnssDebug follow.
     Return<void> getDebugData(getDebugData_cb _hidl_cb) override;

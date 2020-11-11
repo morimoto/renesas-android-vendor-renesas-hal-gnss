@@ -29,6 +29,9 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
+/**
+ * @brief GnssBatching
+ */
 struct GnssBatching : public android::hardware::gnss::V2_0::IGnssBatching {
     // Methods from ::android::hardware::gnss::V1_0::IGnssBatching follow.
     Return<bool> init(const

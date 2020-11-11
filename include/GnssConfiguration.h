@@ -29,6 +29,9 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
+/**
+ * @brief GnssConfiguration
+ */
 struct GnssConfiguration : public android::hardware::gnss::V2_0::IGnssConfiguration {
     // Methods from ::android::hardware::gnss::V1_0::IGnssConfiguration follow.
     Return<bool> setSuplEs(bool enabled) override;

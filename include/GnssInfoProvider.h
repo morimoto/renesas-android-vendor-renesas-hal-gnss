@@ -23,31 +23,104 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief GnssCallback_1_0
+ */
 using GnssCallback_1_0
     = ::android::sp<::android::hardware::gnss::V1_0::IGnssCallback>;
+/**
+ * @brief GnssCallback_1_1
+ */
 using GnssCallback_1_1
     = ::android::sp<::android::hardware::gnss::V1_1::IGnssCallback>;
+/**
+ * @brief GnssCallback_2_0
+ */
 using GnssCallback_2_0
     = ::android::sp<::android::hardware::gnss::V2_0::IGnssCallback>;
+/**
+ * @brief GnssCallback_2_1
+ */
 using GnssCallback_2_1
     = ::android::sp<::android::hardware::gnss::V2_1::IGnssCallback>;
+/**
+ * @brief GnssSvStatus_1_0
+ */
 using GnssSvStatus_1_0
     = ::android::hardware::gnss::V1_0::IGnssCallback::GnssSvStatus;
 
+/**
+ * @brief GnssInfoProvider
+ */
 class GnssInfoProvider {
 public:
+    /**
+     * @brief Construct a new Gnss Info Provider object
+     *
+     * @param interval
+     */
     GnssInfoProvider(uint32_t interval);
+
+    /**
+     * @brief Destroy the Gnss Info Provider object
+     */
     virtual ~GnssInfoProvider() = default;
 
+    /**
+     * @brief Start providing gnss info data
+     */
     void StartProviding();
+
+    /**
+     * @brief Stop providing gnss info data
+     */
     void StopProviding();
+
+    /**
+     * @brief Set the Callback 1 0 object
+     *
+     * @param cb
+     */
     void setCallback_1_0(GnssCallback_1_0& cb);
+
+    /**
+     * @brief Set the Callback 1 1 object
+     *
+     * @param cb
+     */
     void setCallback_1_1(GnssCallback_1_1& cb);
+
+    /**
+     * @brief Set the Callback 2 0 object
+     *
+     * @param cb
+     */
     void setCallback_2_0(GnssCallback_2_0& cb);
+
+    /**
+     * @brief Set the Callback 2 1 object
+     *
+     * @param cb
+     */
     void setCallback_2_1(GnssCallback_2_1& cb);
+
+    /**
+     * @brief Set the Update Interval
+     *
+     * @param newInterval
+     */
     void SetUpdateInterval(uint32_t newInterval);
+
+    /**
+     * @brief SetEnabled
+     *
+     * @param isEnabled
+     */
     void SetEnabled(bool isEnabled);
 protected:
+    /**
+     * @brief Provide
+     */
     void Provide();
 private:
     GnssInfoProvider(GnssInfoProvider&) = delete;

@@ -17,39 +17,89 @@
 #ifndef MESSAGEQUEUE_H
 #define MESSAGEQUEUE_H
 
-#include <log/log.h>
-
 #include <condition_variable>
 #include <list>
 #include <mutex>
 #include <queue>
 
-//TODO(g.chabukiani): add doxygen, check all over the project
+#include <log/log.h>
+
+/**
+ * @brief Message Queue
+ */
 class MessageQueue {
 public:
     ~MessageQueue() = default;
+
+    /**
+     * @brief Get the Instance object
+     *
+     * @return MessageQueue&
+     */
     static MessageQueue& GetInstance();
 
-    template<typename T>
+    /**
+     * @brief Push
+     *
+     * @tparam T
+     * @param in
+     */
+    template <typename T>
     void Push(T in);
 
-    template<typename T>
+    /**
+     * @brief Pop
+     *
+     * @tparam T
+     * @return T
+     */
+    template <typename T>
     T Pop();
 
-    template<typename T>
+    /**
+     * @brief Front
+     *
+     * @tparam T
+     * @return T
+     */
+    template <typename T>
     T Front();
 
     // TODO(g.chabukiani): review this design better
-    template<typename T>
+    /**
+     * @brief Empty
+     *
+     * @tparam T
+     * @return true
+     * @return false
+     */
+    template <typename T>
     bool Empty();
 
-    template<typename T>
+    /**
+     * @brief Get the Size object
+     *
+     * @tparam T
+     * @return size_t
+     */
+    template <typename T>
     size_t GetSize();
 
-    template<typename T>
+    /**
+     * @brief Clear message queue
+     *
+     * @tparam T
+     */
+    template <typename T>
     void Clear();
 
-    template<typename T>
+    /**
+     * @brief Get the Condition Variable object
+     *
+     * @tparam T
+     * @return std::condition_variable&
+     */
+    template <typename T>
     std::condition_variable& GetConditionVariable();
 
 private:
@@ -155,7 +205,7 @@ bool MessageQueue::Empty() {
 
 template <typename T>
 void MessageQueue::Clear() {
-    if (!mQueue<T>.empty()){
+    if (!mQueue<T>.empty()) {
         std::queue<T, std::list<T>> empty;
         mQueue<T>.swap(empty);
     }

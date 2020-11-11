@@ -21,6 +21,9 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief Fake receiver class
+ */
 class FakeReceiver : public GnssReceiver {
 public:
     /*!

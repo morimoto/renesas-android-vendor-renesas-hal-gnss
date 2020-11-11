@@ -19,10 +19,29 @@
 #include <string>
 
 namespace android::hardware::gnss::V2_1::renesas {
+/**
+ * @brief BaudRate property
+ */
 static const std::string propBaudRate = {"ro.boot.gps.tty_baudrate"};
+
+/**
+ * @brief Gnss BaudRate property
+ */
 static const std::string propGnssBaudRate = {"ro.boot.gps.gnss_baudrate"};
+
+/**
+ * @brief Requested Receiver property
+ */
 static const std::string propRequestedReceiver = {"ro.boot.gps.mode"};
+
+/**
+ * @brief Sbas property
+ */
 static const std::string propSbas = {"ro.boot.gps.sbas"};
+
+/**
+ * @brief Secmajor property
+ */
 static const std::string propSecmajor = {"ro.boot.gps.secmajor"};
 } // namespace android::hardware::gnss::V2_1::renesas
 

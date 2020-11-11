@@ -21,71 +21,250 @@
 
 namespace android::hardware::gnss::V2_1::renesas {
 
+/**
+ * @brief return error type
+ */
 enum class RError : uint8_t {
+    /**
+     * @brief Success
+     */
     Success,
+
+    /**
+     * @brief Internal Error
+     */
     InternalError,
+
+    /**
+     * @brief Not Supported
+     */
     NotSupported,
+
+    /**
+     * @brief Unknown error
+     */
     Unknown
 };
 
+/**
+ * @brief Gnss Vendor
+ */
 enum class GnssVendor : uint8_t {
+    /**
+     * @brief Ublox
+     */
     Ublox,
+
+    /**
+     * @brief SiRF
+     */
     SiRF,
+
+    /**
+     * @brief MTK
+     */
     MTK,
+
+    /**
+     * @brief Broadcom
+     */
     Broadcom,
+
+    /**
+     * @brief Fake
+     */
     Fake,
+
+    /**
+     * @brief Unknown
+     */
     Unknown,
 };
 
+/**
+ * @brief Gnss Product
+ */
 enum class GnssProduct : uint8_t {
+    /**
+     * @brief M8Q001
+     */
     M8Q001,
+
+    /**
+     * @brief M8Q010
+     */
     M8Q010,
+
+    /**
+     * @brief M8030KT
+     */
     M8030KT,
+
+    /**
+     * @brief M7000
+     */
     M7000,
+
+    /**
+     * @brief Fake
+     */
     Fake,
+
+    /**
+     * @brief Undefined
+     */
     Undefined,
+
+    /**
+     * @brief SiRFIV
+     */
     SiRFIV
 };
 
+/**
+ * @brief Gnss Receiver Type
+ */
 enum class GnssReceiverType : uint8_t {
+    /**
+     * @brief UsbDongle
+     */
     UsbDongle,
+
+    /**
+     * @brief FakeReceiver
+     */
     FakeReceiver,
+
+    /**
+     * @brief OnboardChip
+     */
     OnboardChip,
 };
 
+/**
+ * @brief Supported Protocol
+ */
 enum class SupportedProtocol : uint8_t {
+    /**
+     * @brief NMEA0183
+     */
     NMEA0183,
+
+    /**
+     * @brief Ubx Binary Protocol
+     */
     UbxBinaryProtocol,
+
+    /**
+     * @brief Sirf Binary Protocol
+     */
     SirfBinaryProtocol,
+
+    /**
+     * @brief Fake Receiver Protocol
+     */
     FakeReceiverProtocol,
+
+    /**
+     * @brief Unknown Protocol
+     */
     UnknownProtocol,
 };
 
+/**
+ * @brief Vendor Id
+ *
+ */
 enum class VendorId : uint16_t {
-    SiRF   = 0x067b,
+    /**
+     * @brief SiRF
+     */
+    SiRF = 0x067b,
+
+    /**
+     * @brief Garmin
+     */
     Garmin = 0x091E,
-    Ublox  = 0x1546,
+
+    /**
+     * @brief Ublox
+     */
+    Ublox = 0x1546,
+
+    /**
+     * @brief Unknown
+     */
     Unknown,
 };
 
+/**
+ * @brief convert int to Vendor Id
+ *
+ * @param value int value
+ * @return VendorId
+ */
 VendorId toVendorId(const uint16_t value);
 
+/**
+ * @brief SW Version
+ */
 enum SWVersion : uint16_t {
+    /**
+     * @brief SPG_100
+     */
     SPG_100 = 0,
+
+    /**
+     * @brief SPG_201
+     */
     SPG_201 = 1,
+
+    /**
+     * @brief SPG_301
+     */
     SPG_301 = 2,
+
+    /**
+     * @brief HPG_140
+     */
     HPG_140,
+
+    /**
+     * @brief Unknown
+     */
     TIM_110,
+
+    /**
+     * @brief Unknown
+     */
     Unknown,
 };
 
-enum class Feature: uint32_t{
+/**
+ * @brief Features
+ *
+ */
+enum class Feature : uint32_t {
+    /**
+     * @brief ttyDevice
+     */
     ttyDevice = 1,
 };
 
+/**
+ * @brief min BaudRate
+ */
 const uint32_t minBaudRate = 4800;
+
+/**
+ * @brief max BaudRate
+ *
+ */
 const uint32_t maxBaudRate = 460800;
 
+/**
+ * @brief IGnssReceiver
+ */
 class IGnssReceiver {
 public:
     /*!

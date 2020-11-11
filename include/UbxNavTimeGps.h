@@ -19,12 +19,26 @@
 
 #include <UbxParserCommon.h>
 
+/**
+ * @brief GnssCF
+ */
 using GnssCF =
     android::hardware::gnss::V2_0::IGnssMeasurementCallback::GnssClockFlags;
 
+/**
+ * @brief Ubx NavTimeGps parser implementation
+ *
+ * @tparam ClassType
+ */
 template <typename ClassType>
 class UbxNavTimeGps : public UbxParserCommon<ClassType> {
 public:
+    /**
+     * @brief Construct a new Ubx Nav Time Gps object
+     *
+     * @param in
+     * @param inLen
+     */
     UbxNavTimeGps(const char* in, const size_t& inLen);
     ~UbxNavTimeGps() override;
 
@@ -32,12 +46,55 @@ public:
     UPError GetData(ClassType out) override;
     bool IsValid() override;
 protected:
+    /**
+     * @brief Construct a new Ubx Nav Time Gps object
+     *
+     */
     UbxNavTimeGps();
+
+    /**
+     * @brief Parse
+     *
+     * @return UPError
+     */
     UPError Parse();
+
+    /**
+     * @brief Parse Single Block
+     *
+     * @return UPError
+     */
     UPError ParseSingleBlock();
+
+    /**
+     * @brief Check Flags
+     *
+     * @return UPError
+     */
     UPError CheckFlags();
+
+    /**
+     * @brief Set the Time Nano object
+     *
+     * @return UPError
+     */
     UPError SetTimeNano();
+
+    /**
+     * @brief Validate Parcel
+     *
+     * @return UPError
+     */
     UPError ValidateParcel();
+
+    /**
+     * @brief Is Valid Flag
+     *
+     * @param flags
+     * @param expFlag
+     * @return true
+     * @return false
+     */
     bool IsValidFlag(const uint8_t& flags, const uint8_t& expFlag);
 
 private:

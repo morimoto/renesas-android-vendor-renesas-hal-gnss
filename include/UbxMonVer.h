@@ -17,6 +17,7 @@
 #ifndef UBXMONVER_H
 #define UBXMONVER_H
 
+#include <UbxParserCommon.h>
 #include <log/log.h>
 
 #include <algorithm>
@@ -25,11 +26,20 @@
 #include <string>
 #include <vector>
 
-#include <UbxParserCommon.h>
-
+/**
+ * @brief Ubx MonVer parser implementation
+ *
+ * @tparam ClassType
+ */
 template <typename ClassType>
 class UbxMonVer : public UbxParserCommon<ClassType> {
 public:
+    /**
+     * @brief Construct a new Ubx MonVer object
+     *
+     * @param in
+     * @param inLen
+     */
     UbxMonVer(const char* in, const size_t& inLen);
     ~UbxMonVer() override;
 
@@ -38,10 +48,37 @@ public:
     bool IsValid() override;
 
 protected:
+    /**
+     * @brief Construct a new Ubx MonVer object
+     */
     UbxMonVer();
+
+    /**
+     * @brief Parse
+     *
+     * @return UPError
+     */
     UPError Parse();
+
+    /**
+     * @brief Parse Single Block
+     *
+     * @return UPError
+     */
     UPError ParseSingleBlock();
+
+    /**
+     * @brief Parse Repeated Blocks
+     *
+     * @return UPError
+     */
     UPError ParseRepeatedBlocks();
+
+    /**
+     * @brief Validate Parcel
+     *
+     * @return UPError
+     */
     UPError ValidateParcel();
 
 private:
@@ -73,16 +110,13 @@ private:
 };
 
 template <typename ClassType>
-UbxMonVer<ClassType>::UbxMonVer() :
-    mPayload(nullptr),
-    mPayloadLen(0) {}
-
+UbxMonVer<ClassType>::UbxMonVer() : mPayload(nullptr),
+                                    mPayloadLen(0) {}
 
 template <typename ClassType>
 UbxMonVer<ClassType>::UbxMonVer(const char* in,
-                                const size_t& inLen) :
-    mPayload(in),
-    mPayloadLen(inLen) {
+                                const size_t& inLen) : mPayload(in),
+                                                       mPayloadLen(inLen) {
     ALOGV("UbxMonVer: %s", __func__);
 
     if (UPError::Success == Parse()) {
@@ -158,7 +192,7 @@ bool UbxMonVer<ClassType>::IsValid() {
 
 template <typename ClassType>
 UPError UbxMonVer<ClassType>::ValidateParcel() {
-    auto compare = [&, this] (double a, double epsilon = 0.001) {
+    auto compare = [&, this](double a, double epsilon = 0.001) {
         return std::fabs(a - mVersions.swVersion) < epsilon;
     };
 
@@ -178,4 +212,4 @@ UbxMonVer<T>::~UbxMonVer() {
     //TODO(g.chabukiani): check if we need to clean up
 }
 
-#endif // UBXMONVER_H
+#endif  // UBXMONVER_H

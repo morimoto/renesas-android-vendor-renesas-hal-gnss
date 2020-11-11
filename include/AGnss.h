@@ -29,6 +29,9 @@ using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::sp;
 
+/**
+ * Extended interface for Assisted GNSS support.
+ */
 struct AGnss : public android::hardware::gnss::V2_0::IAGnss {
     // Methods from ::android::hardware::gnss::V2_0::IAGnss follow.
     Return<void> setCallback(const
@@ -41,7 +44,6 @@ struct AGnss : public android::hardware::gnss::V2_0::IAGnss {
         const hidl_string& hostname, int32_t port) override;
     Return<bool> dataConnOpen(uint64_t networkHandle, const hidl_string& apn,
         ::android::hardware::gnss::V2_0::IAGnss::ApnIpType apnIpType) override;
-
 };
 
 }  // namespace android::hardware::gnss::V2_0::renesas
